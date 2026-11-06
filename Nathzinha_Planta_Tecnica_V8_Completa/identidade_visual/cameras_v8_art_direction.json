@@ -1,0 +1,164 @@
+{
+  "projeto": "Restaurante da Nathzinha",
+  "versao": "V8 identidade visual",
+  "fonte_cam": "nathzinha_v7_planta_medidas.json",
+  "notas": "Dados geométricos copiados da V7, sem alterar origem",
+  "cameras": {
+    "CAM01": {
+      "sala": "loja",
+      "posicao_lente_m": [
+        11.05,
+        5.15
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 225,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 13.5,
+      "orientacao_fonte": "Lojinha com parede superior alinhada, cobrindo balcão e acesso para recepção",
+      "direcao_arte": "Foco visual na loja geek, seu balcão original, estantes de mangás e pelúcias autorais; visada interna do canto nordeste voltada para sudoeste. Não enxergar através das paredes."
+    },
+    "CAM02": {
+      "sala": "recepcao",
+      "posicao_lente_m": [
+        19.2,
+        4.0
+      ],
+      "altura_lente_m": 2.6,
+      "azimute_graus": 270,
+      "abertura_horizontal_graus": 95,
+      "alcance_max_m": 15,
+      "orientacao_fonte": "Recepção voltada para entrada principal e parte inferior do salão",
+      "direcao_arte": "Foco no balcão de recepção e na entrada principal ao sul; imagem com perspectiva de vigilância elevada da parede norte para o sul. Acesso ao salão só onde houver abertura."
+    },
+    "CAM03": {
+      "sala": "salao",
+      "posicao_lente_m": [
+        11.5,
+        16.2
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 24,
+      "abertura_horizontal_graus": 92,
+      "alcance_max_m": 21,
+      "orientacao_fonte": "Na divisão das VIPs ampliadas, olhando em direção ao palco principal",
+      "direcao_arte": "Visada diagonal para a região do palco ao norte do salão; incluir palco no enquadramento na medida compatível com a oclusão 2D, mesas e grande espaço público."
+    },
+    "CAM04": {
+      "sala": "salao",
+      "posicao_lente_m": [
+        27.8,
+        10.55
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 208,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 21,
+      "orientacao_fonte": "Câmera na parede oposta, descida para acompanhar a nova circulação WC",
+      "direcao_arte": "Vista diagonal do salão em direção ao sudoeste, priorizar mesas e transição em direção à entrada; não mover palco nem VIPs para caber na câmera."
+    },
+    "CAM05": {
+      "sala": "vip1",
+      "posicao_lente_m": [
+        6.95,
+        21.95
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 322,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 8.5,
+      "orientacao_fonte": "VIP 1 em canto de parede, cobrindo mesas e acesso interno",
+      "direcao_arte": "VIP 1: focar mesa principal e assentos coquette em rosinha, mantendo duas entradas com portões nos lados opostos conforme geometria."
+    },
+    "CAM06": {
+      "sala": "vip2",
+      "posicao_lente_m": [
+        6.95,
+        10.25
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 38,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 8.5,
+      "orientacao_fonte": "VIP 2 em canto de parede, cobrindo mesas e acesso interno",
+      "direcao_arte": "VIP 2: focar mesa principal, o recorte arquitetônico da sala, decoração lavanda e gothic cute, sem transformar em sala retangular simples."
+    },
+    "CAM07": {
+      "sala": "fliperama",
+      "posicao_lente_m": [
+        32.22,
+        0.28
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 138,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 13.5,
+      "orientacao_fonte": "Fliperama em canto de parede, olhando o interior da sala",
+      "direcao_arte": "Fliperama longo e estreito: máquinas arcade, máquinas de garra, neon pastel e passagem em direção à circulação WC apenas onde a planta permitir."
+    },
+    "CAM08": {
+      "sala": "estoque",
+      "posicao_lente_m": [
+        0.25,
+        9.15
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 22,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 13,
+      "orientacao_fonte": "Estoque a partir da parede oeste, cobrindo caixas e acesso ao controle",
+      "direcao_arte": "Estoque com perspectiva na parede oeste, estantes, caixas e caminho para área de controle P02, sem porta inventada à área de serviço."
+    },
+    "CAM09": {
+      "sala": "servico",
+      "posicao_lente_m": [
+        0.25,
+        21.95
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 332,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 12.5,
+      "orientacao_fonte": "Área de serviço a partir do canto oeste superior",
+      "direcao_arte": "Área de serviço, vista superior diagonal de equipamentos funcionais, conexão correta ao corredor P04 e cozinha P06."
+    },
+    "CAM10": {
+      "sala": "cozinha",
+      "posicao_lente_m": [
+        0.25,
+        27.72
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 334,
+      "abertura_horizontal_graus": 84,
+      "alcance_max_m": 15,
+      "orientacao_fonte": "Cozinha a partir do canto superior esquerdo",
+      "direcao_arte": "Cozinha profissional, canto noroeste, evidenciando aço inox e recuo irregular sem reduzir o ambiente a cozinha doméstica."
+    },
+    "CAM11": {
+      "sala": "corredor_servico",
+      "posicao_lente_m": [
+        15.2,
+        22.28
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 135,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 18,
+      "orientacao_fonte": "fim do corredor com mais visão da retirada; girada mais 4 graus à direita",
+      "direcao_arte": "Corredor em L próximo ao palco, enquadramento atualizado com azimute 135°; mostrar porções visíveis da zona de retirada / retaguarda conforme planta, respeitando paredes e aberturas. Não usar ângulo antigo."
+    },
+    "CAM12": {
+      "sala": "corredor_servico",
+      "posicao_lente_m": [
+        32.22,
+        23.25
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 180,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 18,
+      "orientacao_fonte": "Fim do corredor, na parede leste onde antes havia a saída",
+      "direcao_arte": "Extremidade leste do corredor de retaguarda, olhando para oeste, com portões/passagens existentes, sinalização, luz fria e saída superior no local correto quando visível."
+    }
+  }
+}

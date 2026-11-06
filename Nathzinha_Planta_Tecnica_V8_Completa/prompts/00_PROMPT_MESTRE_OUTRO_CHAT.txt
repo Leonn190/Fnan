@@ -1,0 +1,23 @@
+PROMPT MESTRE — RESTAURANTE DA NATHZINHA | V8
+
+LEIA ANTES: o ZIP anexo inclui a V7 exata da arquitetura e os novos documentos V8 de arte. Interprete esses arquivos como documentação de produção de um fangame. Seu trabalho é criar imagens DE CENÁRIO de câmeras de segurança; não redesenhar a planta.
+
+PRIORIDADES EM ORDEM:
+1. Respeite os dados exatos de `nathzinha_v7_planta_medidas.json`, a planta `nathzinha_v7_planta_tecnica.png`, a visibilidade da câmera escolhida em `cameras/CAMXX_visao.png` e a geometria em `nathzinha_v7_visibilidade_calculada.json`.
+2. Use a identidade V8 de `identidade_visual/02_BIBLIA_DE_ARTE_V8.md` e as especificações em `identidade_visual/03_AMBIENTES_V8.md`.
+3. Siga o arquivo `prompts/CAMXX.txt` correspondente à câmera pedida. Não gire câmeras por preferência de composição.
+4. Preserve portas, portões mecânicos, saídas e caminhos; não invente janelas, obstáculos ou acessos.
+5. Gere primeiro UMA imagem-mestra 3D pré-renderizada fotorealista, sem animatrônicos, em condição normal ou noturna conforme solicitado; mudanças de iluminação não mudam a arquitetura.
+
+DIREÇÃO DE ARTE INVARIÁVEL — RESTAURANTE DA NATHZINHA V8
+Restaurante japonês temático original, kawaii + coquette + otaku para fangame de terror com cenários 3D pré-renderizados fotorealistas (não concept art). Clima diurno atraente e aconchegante; modo noturno inquietante pela luz e sombras, nunca convertendo o prédio em outro estilo. Rosa porcelana #F9DDEB e rosa marshmallow #F4BBD4 dominam; lilás #D8C1F2 e lavanda #9C80CB secundários; azul nuvem #CBE9F5 em pequenos acentos; creme #FFF6F2 oferece respiro; contraste grafite ameixa #35283E em pequenas quantidades. Detalhes de lacinhos coquette, corações, estrelas, nuvens, cerejas, rendas discretas, boquinhas :3 em mascotes originais. Fofura sofisticada, ambiente de restaurante real, não quarto infantil.
+Referências de espírito visual: o contraste travesso roxo/rosa de Kuromi e a delicadeza azul-nuvem de Cinnamoroll, SEM personagens oficiais, logotipos Sanrio ou cópias de mascotes. Marca e personagens do Nathzinha devem ser originais.
+Pôsteres de anime adulto fashion, mulheres claramente adultas (25+ na arte), roupas gothic lolita FASHION, idol adulta, maid fashion, moda coquette, blush e expressão :3, sensualidade leve e não explícita; sem nudez, sem sexualização de personagens menores ou com aparência infantil, sem conteúdo pornográfico.
+Estética de game: materiais plausíveis, iluminação fisicamente coerente, microtexturas, leves reflexos, objetos com escala real, sinalização pontual, composição com pontos escuros para sustos e silhuetas. Nada de personagens presentes nos fundos limpos por padrão.
+CONTRATO GEOMÉTRICO: seguir 100% a planta V7 do ZIP (paredes, portas e portões, coordenadas, conexões e câmeras). Arte não substitui a geometria. Campos de visão fornecidos são projeções 2D: reconstituir a perspectiva 3D com oclusão; não tomar área colorida como imagem final.
+
+REGRAS DE COMPOSIÇÃO: perspectiva CCTV fixa, câmera no ponto e altura da planta, azimute e campo de visão horizontal exatos, leve inclinação para baixo somente se for plausível (a inclinação vertical não foi especificada na V7). 16:9 como formato preferencial, visual de frame de videogame 3D, materiais realistas e leitura nítida. Evite texto de interface dentro da imagem de cenário.
+
+RESTRIÇÕES: NÃO GERAR: corredores extras; portas ou janelas inventadas; passagens onde a planta tem paredes; portões em posição errada; mover o palco; duplicar o corredor em L; trocar a função de salas; câmera em outro canto; visão atravessando paredes; layout espelhado; excesso de objetos impedindo passagem; logotipos/personagens Sanrio oficiais; mascotes copiados; excesso de preto ou neon; pastel infantilizado sem realismo; estilo de desenho/2D/concept art; texto ilegível gigante; iluminação plana; pessoas/animatrônicos em fundos limpos; nudez; personagens menores de idade ou com aparência infantil em pôsteres sensuais.
+
+TRABALHO DE VERIFICAÇÃO: antes de finalizar, compare o resultado com a planta e o recorte CAMXX. Em caso de choque entre instrução estilística e layout, mantenha o layout; informe objetivamente qualquer elemento que não pôde ser conferido.

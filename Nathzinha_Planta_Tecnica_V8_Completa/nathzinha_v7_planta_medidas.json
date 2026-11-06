@@ -1,0 +1,1171 @@
+{
+  "projeto": "Restaurante da Nathzinha",
+  "versao": "v3-ajustes-pontuais",
+  "sistema_coordenadas": "origem no canto sudoeste; x=leste; y=norte; metros",
+  "edificio": {
+    "largura_m": 32.5,
+    "profundidade_m": 28.0,
+    "area_bruta_m2": 910.0
+  },
+  "configuracao_visibilidade": {
+    "rays_por_camera": 721,
+    "observacao": "projeção horizontal 2D; paredes e portões bloqueiam a visão quando fechados"
+  },
+  "salas": [
+    {
+      "id": "loja",
+      "nome": "Lojinha",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          0,
+          0
+        ],
+        [
+          12.1,
+          0
+        ],
+        [
+          12.1,
+          5.4
+        ],
+        [
+          3.5,
+          5.4
+        ],
+        [
+          3.5,
+          6.0
+        ],
+        [
+          0,
+          6.0
+        ]
+      ],
+      "area_m2": 67.44,
+      "rotulo_m": [
+        5.8,
+        2.95
+      ],
+      "medidas_rotulo": "≈12,1×6 m · recortes"
+    },
+    {
+      "id": "recepcao",
+      "nome": "Recepção / Entrada",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          12.1,
+          0
+        ],
+        [
+          26.8,
+          0
+        ],
+        [
+          26.8,
+          4.2
+        ],
+        [
+          12.1,
+          4.2
+        ]
+      ],
+      "area_m2": 61.74,
+      "rotulo_m": [
+        19.45,
+        2.1
+      ],
+      "medidas_rotulo": "14,7×4,2 m"
+    },
+    {
+      "id": "fliperama",
+      "nome": "Fliperama",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          26.8,
+          0
+        ],
+        [
+          32.5,
+          0
+        ],
+        [
+          32.5,
+          10.8
+        ],
+        [
+          27.8,
+          10.8
+        ],
+        [
+          27.8,
+          4.2
+        ],
+        [
+          26.8,
+          4.2
+        ]
+      ],
+      "area_m2": 54.96,
+      "rotulo_m": [
+        30.05,
+        5.65
+      ],
+      "medidas_rotulo": "≈5,7×10,8 m"
+    },
+    {
+      "id": "estoque",
+      "nome": "Estoque",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          0,
+          6
+        ],
+        [
+          3.5,
+          6
+        ],
+        [
+          3.5,
+          9.5
+        ],
+        [
+          4.4,
+          9.5
+        ],
+        [
+          4.4,
+          16
+        ],
+        [
+          0,
+          16
+        ]
+      ],
+      "area_m2": 40.85,
+      "rotulo_m": [
+        2.1,
+        12.0
+      ],
+      "medidas_rotulo": "4,4×10 m"
+    },
+    {
+      "id": "controle",
+      "nome": "Sala de Controle",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          3.5,
+          5.4
+        ],
+        [
+          8,
+          5.4
+        ],
+        [
+          8,
+          9.5
+        ],
+        [
+          3.5,
+          9.5
+        ]
+      ],
+      "area_m2": 18.45,
+      "rotulo_m": [
+        5.7,
+        7.5
+      ],
+      "medidas_rotulo": "4,5×4,1 m"
+    },
+    {
+      "id": "armario",
+      "nome": "Armário",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          8,
+          5.4
+        ],
+        [
+          9.4,
+          5.4
+        ],
+        [
+          9.4,
+          7.8
+        ],
+        [
+          8,
+          7.8
+        ]
+      ],
+      "area_m2": 3.36,
+      "rotulo_m": [
+        8.7,
+        6.65
+      ],
+      "medidas_rotulo": "1,4×2,4 m"
+    },
+    {
+      "id": "vip2",
+      "nome": "VIP 2",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          6.8,
+          9.5
+        ],
+        [
+          8.0,
+          9.5
+        ],
+        [
+          8.0,
+          7.8
+        ],
+        [
+          11.4,
+          7.8
+        ],
+        [
+          11.4,
+          16.2
+        ],
+        [
+          6.8,
+          16.2
+        ]
+      ],
+      "area_m2": 36.6,
+      "rotulo_m": [
+        9.15,
+        12.75
+      ],
+      "medidas_rotulo": "4,6×6,7 m + aba"
+    },
+    {
+      "id": "vip1",
+      "nome": "VIP 1",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          6.8,
+          16.2
+        ],
+        [
+          11.4,
+          16.2
+        ],
+        [
+          11.4,
+          22.2
+        ],
+        [
+          6.8,
+          22.2
+        ]
+      ],
+      "area_m2": 27.6,
+      "rotulo_m": [
+        9.1,
+        17.3
+      ],
+      "medidas_rotulo": "4,6×6 m"
+    },
+    {
+      "id": "servico",
+      "nome": "Área de Serviço",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          0,
+          16.0
+        ],
+        [
+          4.4,
+          16.0
+        ],
+        [
+          4.4,
+          22.2
+        ],
+        [
+          0,
+          22.2
+        ]
+      ],
+      "area_m2": 27.28,
+      "rotulo_m": [
+        2.2,
+        19.1
+      ],
+      "medidas_rotulo": "4,4×6,2 m"
+    },
+    {
+      "id": "cozinha",
+      "nome": "Cozinha",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          0,
+          22.2
+        ],
+        [
+          4.4,
+          22.2
+        ],
+        [
+          4.4,
+          24.4
+        ],
+        [
+          10.8,
+          24.4
+        ],
+        [
+          10.8,
+          28.0
+        ],
+        [
+          0,
+          28.0
+        ]
+      ],
+      "area_m2": 48.56,
+      "rotulo_m": [
+        4.8,
+        25.3
+      ],
+      "medidas_rotulo": "cozinha com recuo no canto sudeste"
+    },
+    {
+      "id": "corredor_servico",
+      "nome": "Corredor de Serviço / Retaguarda",
+      "tipo": "corredor",
+      "poligono_m": [
+        [
+          6.8,
+          9.5
+        ],
+        [
+          4.4,
+          9.5
+        ],
+        [
+          4.4,
+          24.4
+        ],
+        [
+          6.8,
+          24.4
+        ],
+        [
+          30.3,
+          24.4
+        ],
+        [
+          30.3,
+          28.0
+        ],
+        [
+          32.5,
+          28.0
+        ],
+        [
+          32.5,
+          24.4
+        ],
+        [
+          32.5,
+          22.2
+        ],
+        [
+          6.8,
+          22.2
+        ]
+      ],
+      "area_m2": 100.22,
+      "rotulo_m": [
+        19.8,
+        22.9
+      ],
+      "medidas_rotulo": "corredor em L"
+    },
+    {
+      "id": "retirada",
+      "nome": "Área de Retirada de Comida",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          10.8,
+          24.4
+        ],
+        [
+          18.0,
+          24.4
+        ],
+        [
+          18.0,
+          28.0
+        ],
+        [
+          10.8,
+          28.0
+        ]
+      ],
+      "area_m2": 25.92,
+      "rotulo_m": [
+        14.4,
+        26.1
+      ],
+      "medidas_rotulo": "7,2×3,6 m"
+    },
+    {
+      "id": "nathzinha",
+      "nome": "Sala da Nathzinha",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          18.0,
+          24.4
+        ],
+        [
+          24.5,
+          24.4
+        ],
+        [
+          24.5,
+          28.0
+        ],
+        [
+          18.0,
+          28.0
+        ]
+      ],
+      "area_m2": 23.4,
+      "rotulo_m": [
+        21.25,
+        26.1
+      ],
+      "medidas_rotulo": "6,5×3,6 m"
+    },
+    {
+      "id": "eletrica",
+      "nome": "Elétrica",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          24.5,
+          24.4
+        ],
+        [
+          30.3,
+          24.4
+        ],
+        [
+          30.3,
+          28
+        ],
+        [
+          24.5,
+          28
+        ]
+      ],
+      "area_m2": 20.88,
+      "rotulo_m": [
+        27.4,
+        26.2
+      ],
+      "medidas_rotulo": "5,8×3,6 m"
+    },
+    {
+      "id": "wc_func",
+      "nome": "WC Funcionários",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          27.8,
+          19.0
+        ],
+        [
+          32.5,
+          19.0
+        ],
+        [
+          32.5,
+          22.2
+        ],
+        [
+          27.8,
+          22.2
+        ]
+      ],
+      "area_m2": 15.04,
+      "rotulo_m": [
+        30.15,
+        20.6
+      ],
+      "medidas_rotulo": "4,7×3,2 m"
+    },
+    {
+      "id": "circ_wc",
+      "nome": "Circulação WC",
+      "tipo": "corredor",
+      "poligono_m": [
+        [
+          27.8,
+          10.8
+        ],
+        [
+          32.5,
+          10.8
+        ],
+        [
+          32.5,
+          13.6
+        ],
+        [
+          27.8,
+          13.6
+        ]
+      ],
+      "area_m2": 13.16,
+      "rotulo_m": [
+        30.15,
+        12.2
+      ],
+      "medidas_rotulo": "4,7×2,8 m"
+    },
+    {
+      "id": "wc_m",
+      "nome": "WC Masc.",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          27.8,
+          13.6
+        ],
+        [
+          30.15,
+          13.6
+        ],
+        [
+          30.15,
+          19.0
+        ],
+        [
+          27.8,
+          19.0
+        ]
+      ],
+      "area_m2": 12.69,
+      "rotulo_m": [
+        28.975,
+        16.3
+      ],
+      "medidas_rotulo": "2,35×5,4 m"
+    },
+    {
+      "id": "wc_f",
+      "nome": "WC Fem.",
+      "tipo": "sala",
+      "poligono_m": [
+        [
+          30.15,
+          13.6
+        ],
+        [
+          32.5,
+          13.6
+        ],
+        [
+          32.5,
+          19.0
+        ],
+        [
+          30.15,
+          19.0
+        ]
+      ],
+      "area_m2": 12.69,
+      "rotulo_m": [
+        31.325,
+        16.3
+      ],
+      "medidas_rotulo": "2,35×5,4 m"
+    },
+    {
+      "id": "salao",
+      "nome": "Salão Principal",
+      "tipo": "salao",
+      "poligono_m": [
+        [
+          11.4,
+          22.2
+        ],
+        [
+          27.8,
+          22.2
+        ],
+        [
+          27.8,
+          19.0
+        ],
+        [
+          27.8,
+          13.6
+        ],
+        [
+          27.8,
+          10.8
+        ],
+        [
+          27.8,
+          4.2
+        ],
+        [
+          12.1,
+          4.2
+        ],
+        [
+          12.1,
+          5.4
+        ],
+        [
+          9.4,
+          5.4
+        ],
+        [
+          9.4,
+          7.8
+        ],
+        [
+          11.4,
+          7.8
+        ]
+      ],
+      "area_m2": 299.16,
+      "rotulo_m": [
+        18.8,
+        12.2
+      ],
+      "medidas_rotulo": "≈15,7×18 m"
+    }
+  ],
+  "aberturas": [
+    {
+      "id": "EXT01",
+      "tipo": "saida",
+      "eixo": "H",
+      "coordenada_fixa_m": 0.0,
+      "inicio_m": 18.0,
+      "fim_m": 20.0,
+      "observacao": "Entrada principal / saída externa"
+    },
+    {
+      "id": "EXT02",
+      "tipo": "saida",
+      "eixo": "V",
+      "coordenada_fixa_m": 0.0,
+      "inicio_m": 10.8,
+      "fim_m": 12.2,
+      "observacao": "Saída lateral oeste"
+    },
+    {
+      "id": "EXT03",
+      "tipo": "saida",
+      "eixo": "H",
+      "coordenada_fixa_m": 28.0,
+      "inicio_m": 31.15,
+      "fim_m": 31.85,
+      "observacao": "Saída superior do corredor"
+    },
+    {
+      "id": "G01",
+      "tipo": "portao",
+      "eixo": "H",
+      "coordenada_fixa_m": 9.5,
+      "inicio_m": 5.05,
+      "fim_m": 6.45,
+      "observacao": "Portão mecânico centralizado no norte da Sala de Controle (centro X=5,75 m)"
+    },
+    {
+      "id": "G02",
+      "tipo": "portao",
+      "eixo": "V",
+      "coordenada_fixa_m": 6.8,
+      "inicio_m": 12.3,
+      "fim_m": 13.7,
+      "observacao": "Corredor ↔ VIP 2"
+    },
+    {
+      "id": "G03",
+      "tipo": "portao",
+      "eixo": "V",
+      "coordenada_fixa_m": 11.4,
+      "inicio_m": 12.3,
+      "fim_m": 13.7,
+      "observacao": "Portão do VIP 2 para o salão, parede leste ampliada"
+    },
+    {
+      "id": "G04",
+      "tipo": "portao",
+      "eixo": "V",
+      "coordenada_fixa_m": 6.8,
+      "inicio_m": 18.5,
+      "fim_m": 19.9,
+      "observacao": "Corredor ↔ VIP 1"
+    },
+    {
+      "id": "G05",
+      "tipo": "portao",
+      "eixo": "V",
+      "coordenada_fixa_m": 11.4,
+      "inicio_m": 18.5,
+      "fim_m": 19.9,
+      "observacao": "Portão do VIP 1 para o salão, parede leste ampliada"
+    },
+    {
+      "id": "G06",
+      "tipo": "portao",
+      "eixo": "H",
+      "coordenada_fixa_m": 22.2,
+      "inicio_m": 24.8,
+      "fim_m": 26.3,
+      "observacao": "Corredor ↔ Salão (lado palco)"
+    },
+    {
+      "id": "G07",
+      "tipo": "portao",
+      "eixo": "V",
+      "coordenada_fixa_m": 27.8,
+      "inicio_m": 11.5,
+      "fim_m": 12.9,
+      "observacao": "Portão do salão para a circulação dos banheiros, descido e centralizado"
+    },
+    {
+      "id": "G08",
+      "tipo": "portao",
+      "eixo": "H",
+      "coordenada_fixa_m": 4.2,
+      "inicio_m": 24.0,
+      "fim_m": 25.8,
+      "observacao": "Recepção ↔ Salão principal"
+    },
+    {
+      "id": "G09",
+      "tipo": "portao",
+      "eixo": "H",
+      "coordenada_fixa_m": 6.0,
+      "inicio_m": 1.25,
+      "fim_m": 2.75,
+      "nome": "Portão mecânico Lojinha ↔ Estoque"
+    },
+    {
+      "id": "P01",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 12.1,
+      "inicio_m": 1.4,
+      "fim_m": 3.2,
+      "observacao": "Lojinha ↔ Recepção"
+    },
+    {
+      "id": "P02",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 3.5,
+      "inicio_m": 7.4,
+      "fim_m": 8.7,
+      "observacao": "Passagem do estoque para a sala de controle, em sua nova parede oeste"
+    },
+    {
+      "id": "P03",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 4.4,
+      "inicio_m": 12.7,
+      "fim_m": 14.0,
+      "observacao": "Estoque ↔ Corredor de serviço"
+    },
+    {
+      "id": "P04",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 4.4,
+      "inicio_m": 18.7,
+      "fim_m": 20.0,
+      "observacao": "Área de serviço ↔ Corredor de serviço"
+    },
+    {
+      "id": "P05",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 8.0,
+      "inicio_m": 6.1,
+      "fim_m": 7.3,
+      "observacao": "Passagem do armário para o salão principal"
+    },
+    {
+      "id": "P06",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 22.2,
+      "inicio_m": 1.4,
+      "fim_m": 2.5,
+      "observacao": "Cozinha ↔ Área de serviço"
+    },
+    {
+      "id": "P07",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 4.4,
+      "inicio_m": 22.8,
+      "fim_m": 23.9,
+      "observacao": "Cozinha ↔ Corredor (pela lateral do recuo)"
+    },
+    {
+      "id": "P08",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 24.4,
+      "inicio_m": 8.7,
+      "fim_m": 9.7,
+      "observacao": "Cozinha ↔ Corredor (pelo fundo do recuo)"
+    },
+    {
+      "id": "P09",
+      "tipo": "livre",
+      "eixo": "V",
+      "coordenada_fixa_m": 10.8,
+      "inicio_m": 25.3,
+      "fim_m": 26.5,
+      "observacao": "Cozinha ↔ Retirada"
+    },
+    {
+      "id": "P10",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 24.4,
+      "inicio_m": 12.9,
+      "fim_m": 17.1,
+      "observacao": "Corredor ↔ Retirada (vão largo)"
+    },
+    {
+      "id": "P11",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 24.4,
+      "inicio_m": 20.0,
+      "fim_m": 21.8,
+      "observacao": "Corredor ↔ Sala da Nathzinha"
+    },
+    {
+      "id": "P12",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 24.4,
+      "inicio_m": 26.9,
+      "fim_m": 28.4,
+      "observacao": "Corredor ↔ Elétrica"
+    },
+    {
+      "id": "P13",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 22.2,
+      "inicio_m": 29.2,
+      "fim_m": 30.5,
+      "observacao": "Corredor ↔ WC Funcionários"
+    },
+    {
+      "id": "P14",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 10.8,
+      "inicio_m": 28.35,
+      "fim_m": 31.95,
+      "observacao": "Passagem ampla do fliperama à circulação horizontal dos banheiros"
+    },
+    {
+      "id": "P15",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 13.6,
+      "inicio_m": 28.4,
+      "fim_m": 29.55,
+      "observacao": "Porta ao norte da circulação para o WC masculino"
+    },
+    {
+      "id": "P16",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 13.6,
+      "inicio_m": 30.65,
+      "fim_m": 31.8,
+      "observacao": "Porta ao norte da circulação para o WC feminino"
+    },
+    {
+      "id": "P17",
+      "tipo": "livre",
+      "eixo": "H",
+      "coordenada_fixa_m": 22.2,
+      "inicio_m": 19.1,
+      "fim_m": 20.9,
+      "observacao": "Passagem azul diretamente atrás do palco, entre o salão e o corredor de serviço"
+    }
+  ],
+  "cameras": [
+    {
+      "id": "CAM01",
+      "sala": "loja",
+      "posicao_lente_m": [
+        11.05,
+        5.15
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 225,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 13.5,
+      "observacao_enquadramento": "Lojinha com parede superior alinhada, cobrindo balcão e acesso para recepção"
+    },
+    {
+      "id": "CAM02",
+      "sala": "recepcao",
+      "posicao_lente_m": [
+        19.2,
+        4.0
+      ],
+      "altura_lente_m": 2.6,
+      "azimute_graus": 270,
+      "abertura_horizontal_graus": 95,
+      "alcance_max_m": 15,
+      "observacao_enquadramento": "Recepção voltada para entrada principal e parte inferior do salão"
+    },
+    {
+      "id": "CAM03",
+      "sala": "salao",
+      "posicao_lente_m": [
+        11.5,
+        16.2
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 24,
+      "abertura_horizontal_graus": 92,
+      "alcance_max_m": 21,
+      "observacao_enquadramento": "Na divisão das VIPs ampliadas, olhando em direção ao palco principal"
+    },
+    {
+      "id": "CAM04",
+      "sala": "salao",
+      "posicao_lente_m": [
+        27.8,
+        10.55
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 208,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 21,
+      "observacao_enquadramento": "Câmera na parede oposta, descida para acompanhar a nova circulação WC"
+    },
+    {
+      "id": "CAM05",
+      "sala": "vip1",
+      "posicao_lente_m": [
+        6.95,
+        21.95
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 322,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 8.5,
+      "observacao_enquadramento": "VIP 1 em canto de parede, cobrindo mesas e acesso interno"
+    },
+    {
+      "id": "CAM06",
+      "sala": "vip2",
+      "posicao_lente_m": [
+        6.95,
+        10.25
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 38,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 8.5,
+      "observacao_enquadramento": "VIP 2 em canto de parede, cobrindo mesas e acesso interno"
+    },
+    {
+      "id": "CAM07",
+      "sala": "fliperama",
+      "posicao_lente_m": [
+        32.22,
+        0.28
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 138,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 13.5,
+      "observacao_enquadramento": "Fliperama em canto de parede, olhando o interior da sala"
+    },
+    {
+      "id": "CAM08",
+      "sala": "estoque",
+      "posicao_lente_m": [
+        0.25,
+        9.15
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 22,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 13,
+      "observacao_enquadramento": "Estoque a partir da parede oeste, cobrindo caixas e acesso ao controle"
+    },
+    {
+      "id": "CAM09",
+      "sala": "servico",
+      "posicao_lente_m": [
+        0.25,
+        21.95
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 332,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 12.5,
+      "observacao_enquadramento": "Área de serviço a partir do canto oeste superior"
+    },
+    {
+      "id": "CAM10",
+      "sala": "cozinha",
+      "posicao_lente_m": [
+        0.25,
+        27.72
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 334,
+      "abertura_horizontal_graus": 84,
+      "alcance_max_m": 15,
+      "observacao_enquadramento": "Cozinha a partir do canto superior esquerdo"
+    },
+    {
+      "id": "CAM11",
+      "sala": "corredor_servico",
+      "posicao_lente_m": [
+        15.2,
+        22.28
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 135,
+      "abertura_horizontal_graus": 88,
+      "alcance_max_m": 18,
+      "observacao_enquadramento": "fim do corredor com mais visão da retirada; girada mais 4 graus à direita"
+    },
+    {
+      "id": "CAM12",
+      "sala": "corredor_servico",
+      "posicao_lente_m": [
+        32.22,
+        23.25
+      ],
+      "altura_lente_m": 2.8,
+      "azimute_graus": 180,
+      "abertura_horizontal_graus": 82,
+      "alcance_max_m": 18,
+      "observacao_enquadramento": "Fim do corredor, na parede leste onde antes havia a saída"
+    }
+  ],
+  "elementos_fixos": [
+    {
+      "id": "PALCO",
+      "nome": "Palco principal",
+      "tipo": "palco",
+      "retangulo_m": [
+        15.3,
+        18.9,
+        23.9,
+        21.8
+      ]
+    },
+    {
+      "id": "BALCAO_ENTRADA",
+      "nome": "Balcão recepção",
+      "tipo": "balcao",
+      "retangulo_m": [
+        17.2,
+        1.1,
+        21.0,
+        2.0
+      ]
+    },
+    {
+      "id": "BALCAO_LOJA",
+      "nome": "Balcão loja",
+      "tipo": "balcao",
+      "retangulo_m": [
+        1.0,
+        4.35,
+        6.6,
+        5.15
+      ]
+    },
+    {
+      "id": "BALCAO_RETIRADA",
+      "nome": "Balcão retirada",
+      "tipo": "balcao",
+      "retangulo_m": [
+        14.2,
+        24.85,
+        16.9,
+        25.6
+      ]
+    },
+    {
+      "id": "MESA_CONTROLE",
+      "nome": "Mesa principal controle",
+      "tipo": "mesa",
+      "retangulo_m": [
+        4.65,
+        6.45,
+        7.1,
+        7.35
+      ]
+    },
+    {
+      "id": "MESA_VIP1",
+      "nome": "Mesa principal VIP 1",
+      "tipo": "mesa",
+      "retangulo_m": [
+        7.65,
+        18.1,
+        10.4,
+        20.0
+      ]
+    },
+    {
+      "id": "MESA_VIP2",
+      "nome": "Mesa principal VIP 2",
+      "tipo": "mesa",
+      "retangulo_m": [
+        7.65,
+        12.1,
+        10.4,
+        14.0
+      ]
+    }
+  ],
+  "notas_de_continuidade": [
+    "Existe um único corredor de serviço em L, que permanece contínuo.",
+    "Não há passagem direta da área de serviço para o estoque.",
+    "Não existe portão direto da sala de controle para a lojinha.",
+    "A VIP 2 tem formato recortado e encosta na face norte do armário.",
+    "As salas VIP têm 4,6 m de largura e acessos pelos dois lados.",
+    "O portão norte da sala de controle fica centralizado sobre a largura total dessa sala.",
+    "A lojinha avança discretamente sobre a recepção e tem um recorte para o controle e armário.",
+    "Há uma passagem azul na parede norte do salão, atrás do palco, para o corredor de serviço.",
+    "A circulação horizontal dos banheiros tem duas portas na parede norte e passagem larga ao fliperama no sul.",
+    "A saída superior permanece na parte de cima do corredor, ao lado da elétrica, que agora é mais estreita."
+  ]
+}

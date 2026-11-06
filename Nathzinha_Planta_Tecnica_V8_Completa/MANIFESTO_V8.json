@@ -1,0 +1,31 @@
+{
+  "nome": "Restaurante da Nathzinha",
+  "versao_entrega": "V8",
+  "tipo_atualizacao": "Apenas identidade visual e guia de produção; nenhuma geometria alterada",
+  "pacote_base": "Nathzinha_Planta_Tecnica_V7_Ajustada(1).zip",
+  "arquivos_base_sha256": {
+    "cameras/CAM11_visao.png": "0bc58818f8dbaf48d7e305cff00f16bb059c7ceeda866a98d14153b9262a0eb0",
+    "cameras/CAM10_visao.png": "9567d2b35b1ff26b48bd1f5751728c03fe25c036d1d935be83a36de3c0b430b6",
+    "cameras/CAM04_visao.png": "c0170165f60599e7526b043a8676d456d3e6110e1d900100ee77ac32d2732fda",
+    "cameras/CAM03_visao.png": "b2c951de460bf6a8ddd7c9e632981e92647a6f2b06e3526b9ecd5c7d3adb5c9a",
+    "cameras/CAM02_visao.png": "1823cb02d55afd60d88f6839a1a23081c46ff5eec8b10226bc469e3104f75d71",
+    "cameras/CAM12_visao.png": "1faaaa84d20c1e837e1f9194ff02473f4cedfaf85a664abfe369bed185ce69fb",
+    "cameras/CAM06_visao.png": "46c00de22a3591a9a23bfc7122c1cc7dda87d370306a7c140768f00978dea15d",
+    "cameras/CAM07_visao.png": "9e118f9ae70d9a52dcf1389c4adc0d5859c4e6bc307c23fa6abeb88ebff3162b",
+    "cameras/CAM08_visao.png": "531fb689418c398a073d9c7324b8147dc23650b2774b86d9379994be3fb4d52c",
+    "cameras/CAM05_visao.png": "0bc12cf8f93e4640779ee5aed388a499e8c70e77e0f93fac795bd34736a7908d",
+    "cameras/CAM01_visao.png": "0ba2683d56cbe5f021b0833bc325cb2009cc5a319f440244fcc52a3c793342bc",
+    "cameras/CAM09_visao.png": "9ebdb0bda1034935f4e5079183af36b102f6eb6a473759576e0d56f0da3b1eea",
+    "nathzinha_v7_planta_tecnica.svg": "2c945007b1c87fe9cc56a4e2d4b79626300a5df005ad5a71ce03bb302fa730e9",
+    "nathzinha_v7_visibilidade_calculada.json": "6623b7aa15e2f0ae9dc432140f902b91fae4a610ecd1d8d7a8af0e6041dec7d5",
+    "nathzinha_v7_todos_campos_de_visao.png": "84128ec6933bb599fae99a2fe3a7750128dacbf553aabf45f5415bbec207c534",
+    "nathzinha_v7_12_cameras_vistas.png": "4f22dbfca060ed4a9b17d0539b0c71bec84157d04c735b67b2d1d1096419ee84",
+    "nathzinha_v7_planta_tecnica.png": "6ee666918351af96dd56c2ede62474310d3c887716e2ffc8ab79ca0dfaf6bcc7",
+    "nathzinha_v7_planta_medidas.json": "586f20e977ffbf323dab7ce8fa79f362d2e6062d10e21a86a00b5165009d1f64",
+    "nathzinha_v7_planta_tecnica.py": "97dab893e61976d15655a2755a1a3ff70d88ce4c83ea6c4711253f03cb71a1ac"
+  },
+  "arquivos_originais_preservados": 19,
+  "setores": 19,
+  "cameras": 12,
+  "nota": "As strings de versão internas da V7 não foram modificadas. Tratar V8 como extensão de arte."
+}

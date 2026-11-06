@@ -1,0 +1,36 @@
+RESTAURANTE DA NATHZINHA V8 — CAM01 — LOJINHA
+
+INSTRUÇÃO: use o ZIP V8 inteiro e leia `prompts/00_PROMPT_MESTRE_OUTRO_CHAT.txt` como condição obrigatória. Anexe/inspecione `nathzinha_v7_planta_tecnica.png`, `nathzinha_v7_planta_medidas.json` e a imagem `cameras/CAM01_visao.png`. NÃO reinterprete o layout por estilo.
+
+CÂMERA (parâmetros exatos da V7):
+- Nome: CAM01
+- Ambiente: Lojinha (loja)
+- Localização da lente em metros (x leste, y norte): (11.05, 5.15)
+- Altura da lente: 2.8 m
+- Azimute horizontal original: 225 graus
+- FOV horizontal original: 88 graus
+- Alcance horizontal máximo na simulação: 13.5 m
+- Nota original: Lojinha com parede superior alinhada, cobrindo balcão e acesso para recepção.
+- A inclinação vertical da lente é parâmetro 3D ainda a definir; não modificá-la gratuitamente entre variantes.
+
+INTENÇÃO DO ENQUADRAMENTO:
+Foco visual na loja geek, seu balcão original, estantes de mangás e pelúcias autorais; visada interna do canto nordeste voltada para sudoeste. Não enxergar através das paredes.
+
+CENOGRAFIA DO AMBIENTE:
+Loja geek/otaku charmosa, prateleiras bem organizadas, vitrines, mangás, acessórios e pelúcias de mascotes originais.
+Materiais e cores: estantes branco-creme e rosa, nichos lavanda, vidro de vitrine, iluminação linear suave. Acessórios: balcão existente na planta; estantes de mangás, miniaturas e artigos temáticos; pelúcias autorais com olhos brilhantes e expressão :3; pôsteres anime adultas de moda coquette.
+Pôsteres: muitos, mas distribuídos sem bloquear a passagem para a recepção.
+GEOMETRIA OBRIGATÓRIA: manter o balcão da loja em sua área demarcada; respeitar os recortes da sala e passagem livre P01 para a recepção.
+
+PADRÃO DE ARTE GLOBAL:
+DIREÇÃO DE ARTE INVARIÁVEL — RESTAURANTE DA NATHZINHA V8
+Restaurante japonês temático original, kawaii + coquette + otaku para fangame de terror com cenários 3D pré-renderizados fotorealistas (não concept art). Clima diurno atraente e aconchegante; modo noturno inquietante pela luz e sombras, nunca convertendo o prédio em outro estilo. Rosa porcelana #F9DDEB e rosa marshmallow #F4BBD4 dominam; lilás #D8C1F2 e lavanda #9C80CB secundários; azul nuvem #CBE9F5 em pequenos acentos; creme #FFF6F2 oferece respiro; contraste grafite ameixa #35283E em pequenas quantidades. Detalhes de lacinhos coquette, corações, estrelas, nuvens, cerejas, rendas discretas, boquinhas :3 em mascotes originais. Fofura sofisticada, ambiente de restaurante real, não quarto infantil.
+Referências de espírito visual: o contraste travesso roxo/rosa de Kuromi e a delicadeza azul-nuvem de Cinnamoroll, SEM personagens oficiais, logotipos Sanrio ou cópias de mascotes. Marca e personagens do Nathzinha devem ser originais.
+Pôsteres de anime adulto fashion, mulheres claramente adultas (25+ na arte), roupas gothic lolita FASHION, idol adulta, maid fashion, moda coquette, blush e expressão :3, sensualidade leve e não explícita; sem nudez, sem sexualização de personagens menores ou com aparência infantil, sem conteúdo pornográfico.
+Estética de game: materiais plausíveis, iluminação fisicamente coerente, microtexturas, leves reflexos, objetos com escala real, sinalização pontual, composição com pontos escuros para sustos e silhuetas. Nada de personagens presentes nos fundos limpos por padrão.
+CONTRATO GEOMÉTRICO: seguir 100% a planta V7 do ZIP (paredes, portas e portões, coordenadas, conexões e câmeras). Arte não substitui a geometria. Campos de visão fornecidos são projeções 2D: reconstituir a perspectiva 3D com oclusão; não tomar área colorida como imagem final.
+
+CAPTURA: uma imagem de cenário limpa SEM pessoas ou animatrônicos, simulação de câmera de segurança realista montada no ponto existente, composição 3D pré-renderizada com iluminação noturna ou normal conforme pedido, perspectiva fisicamente plausível, 16:9 preferencial, sem bordas de câmera/HUD, sem textos sobrepostos. Retenha distância, scale, mobiliário e continuidade com outras câmeras, especialmente as que compartilham a mesma sala.
+
+NEGATIVO:
+NÃO GERAR: corredores extras; portas ou janelas inventadas; passagens onde a planta tem paredes; portões em posição errada; mover o palco; duplicar o corredor em L; trocar a função de salas; câmera em outro canto; visão atravessando paredes; layout espelhado; excesso de objetos impedindo passagem; logotipos/personagens Sanrio oficiais; mascotes copiados; excesso de preto ou neon; pastel infantilizado sem realismo; estilo de desenho/2D/concept art; texto ilegível gigante; iluminação plana; pessoas/animatrônicos em fundos limpos; nudez; personagens menores de idade ou com aparência infantil em pôsteres sensuais.

@@ -1,0 +1,55 @@
+{
+  "projeto": "Restaurante da Nathzinha",
+  "versao": "V8 identidade visual",
+  "cores": [
+    {
+      "nome": "Rosa porcelana",
+      "hex": "#F9DDEB",
+      "aplicacao": "Superfícies amplas, paredes e base do branding",
+      "peso_referencial_percent": 35
+    },
+    {
+      "nome": "Rosa marshmallow",
+      "hex": "#F4BBD4",
+      "aplicacao": "Mobiliário, tecidos, faixas e revestimentos",
+      "peso_referencial_percent": 20
+    },
+    {
+      "nome": "Lilás algodão",
+      "hex": "#D8C1F2",
+      "aplicacao": "Paredes secundárias, VIPs e detalhes",
+      "peso_referencial_percent": 16
+    },
+    {
+      "nome": "Lavanda meia-noite",
+      "hex": "#9C80CB",
+      "aplicacao": "Sinalização e contraste elegante",
+      "peso_referencial_percent": 8
+    },
+    {
+      "nome": "Azul nuvem",
+      "hex": "#CBE9F5",
+      "aplicacao": "Acentos, nuvens, arcade e luz indireta",
+      "peso_referencial_percent": 8
+    },
+    {
+      "nome": "Creme baunilha",
+      "hex": "#FFF6F2",
+      "aplicacao": "Respiro visual, teto, molduras",
+      "peso_referencial_percent": 9
+    },
+    {
+      "nome": "Grafite ameixa",
+      "hex": "#35283E",
+      "aplicacao": "Contraste pontual, equipamentos, letreiros",
+      "peso_referencial_percent": 3
+    },
+    {
+      "nome": "Rosé metálico",
+      "hex": "#C798A8",
+      "aplicacao": "Ferragens e frisos discretos",
+      "peso_referencial_percent": 1
+    }
+  ],
+  "observacao": "Percentuais são referências para áreas públicas; áreas operacionais podem ter maior proporção de creme e neutros."
+}

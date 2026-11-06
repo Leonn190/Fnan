@@ -1,0 +1,288 @@
+{
+  "projeto": "Restaurante da Nathzinha",
+  "versao": "V8 identidade visual",
+  "fonte_geometrica": "nathzinha_v7_planta_medidas.json",
+  "diretrizes": {
+    "loja": {
+      "foco": "loja geek/otaku charmosa, prateleiras bem organizadas, vitrines, mangás, acessórios e pelúcias de mascotes originais",
+      "materiais": "estantes branco-creme e rosa, nichos lavanda, vidro de vitrine, iluminação linear suave",
+      "props": [
+        "balcão existente na planta",
+        "estantes de mangás, miniaturas e artigos temáticos",
+        "pelúcias autorais com olhos brilhantes e expressão :3",
+        "pôsteres anime adultas de moda coquette"
+      ],
+      "posters": "muitos, mas distribuídos sem bloquear a passagem para a recepção",
+      "obrigacoes": [
+        "manter o balcão da loja em sua área demarcada",
+        "respeitar os recortes da sala e passagem livre P01 para a recepção"
+      ]
+    },
+    "recepcao": {
+      "foco": "recepção convidativa, com marca Nathzinha em primeiro plano, balcão de atendimento e comunicação de entrada",
+      "materiais": "painéis rosa porcelana, balcão creme com frisos rosé, luminárias florais suaves",
+      "props": [
+        "balcão de recepção existente na planta",
+        "placa original “Restaurante da Nathzinha”",
+        "menu ilustrado com ícones de sobremesas e comida japonesa",
+        "arcos decorativos com lacinhos"
+      ],
+      "posters": "poucos; foco na legibilidade da entrada principal",
+      "obrigacoes": [
+        "manter a entrada externa principal na parede sul",
+        "não fechar a passagem para a loja nem o acesso ao salão"
+      ]
+    },
+    "salao": {
+      "foco": "salão principal espaçoso e icônico de restaurante japonês kawaii, palco ao norte, mesas e circulação amplas",
+      "materiais": "paredes rosadas, painéis lavanda próximos ao palco, estofados rosa, piso acetinado creme",
+      "props": [
+        "palco nas coordenadas originais",
+        "mesas temáticas em fileiras com corredores de circulação",
+        "iluminação de fita led difusa",
+        "banners de mascotes originais com boquinhas :3",
+        "pôsteres adultos fashion-anime nas paredes laterais"
+      ],
+      "posters": "moderados; área de palco mais limpa para leitura do jogo",
+      "obrigacoes": [
+        "preservar o palco e a passagem atrás do palco P17",
+        "manter os portões G03 G05 G06 G07 G08 nos pontos existentes",
+        "não inventar um segundo palco nem mudar formato do salão"
+      ]
+    },
+    "vip1": {
+      "foco": "sala VIP coquette, elegante e intimista, predominantemente rosa doce com renda delicada e laços",
+      "materiais": "boiserie rosada, lacinhos de tecido, cadeiras estofadas com bordas creme",
+      "props": [
+        "mesa principal existente",
+        "assentos confortáveis em torno da mesa",
+        "espelho decorativo pequeno",
+        "pôsteres anime de mulheres adultas em moda lolita/coquette"
+      ],
+      "posters": "média-alta quantidade, com molduras delicadas",
+      "obrigacoes": [
+        "manter o retângulo de 4,6 × 6 m e acessos G04/G05 em lados opostos"
+      ]
+    },
+    "vip2": {
+      "foco": "sala VIP travessa e gótica-fofa, lavanda e ameixa com rosa pastel, sem perder a fofura",
+      "materiais": "painéis lavanda, apliques ameixa, laços e motivos de estrelas/corações",
+      "props": [
+        "mesa principal existente",
+        "sofás ou cadeiras compactos",
+        "decoração de morceguinhos autorais fofos com :3",
+        "pôsteres anime de mulheres adultas com looks gothic lolita fashion"
+      ],
+      "posters": "média-alta quantidade, tons lilás/preto suave",
+      "obrigacoes": [
+        "respeitar o formato recortado da VIP 2 e sua aba ao sul",
+        "manter acessos G02/G03 e a relação geométrica com o armário"
+      ]
+    },
+    "fliperama": {
+      "foco": "arcade kawaii rosa e lilás com máquinas coloridas, luminosos em azul bebê, atmosfera alegre que vira inquietante à noite",
+      "materiais": "laterais de máquinas peroladas, acrílico colorido, piso fácil de limpar",
+      "props": [
+        "gabinetes de fliperama originais com arte pastel",
+        "máquinas de garra com mascotes próprios",
+        "letreiros neon rosa-lilás suaves",
+        "cartazes anime fashion adultos no alto das paredes"
+      ],
+      "posters": "moderados; manter máquinas como protagonistas",
+      "obrigacoes": [
+        "preservar o formato estreito e alongado",
+        "não obstruir o acesso do fliperama à circulação dos banheiros P14"
+      ]
+    },
+    "estoque": {
+      "foco": "estoque operacional com caixas, prateleiras de suprimentos e produtos temáticos armazenados",
+      "materiais": "metal cinza perolado, caixas kraft, etiquetas rosa, luz fria de serviço",
+      "props": [
+        "prateleiras metálicas",
+        "caixas de ingredientes e produtos",
+        "etiquetas de estoque de marca original",
+        "poucos adesivos :3"
+      ],
+      "posters": "raríssimos; local técnico",
+      "obrigacoes": [
+        "preservar passagem para controle P02 e corredor P03",
+        "não criar uma passagem direta estoque ↔ área de serviço"
+      ]
+    },
+    "servico": {
+      "foco": "área de serviço funcional de apoio à cozinha e ao corredor",
+      "materiais": "piso antiderrapante, aço inox, paredes claras com rodapé lavanda",
+      "props": [
+        "prateleiras de insumos",
+        "carrinho utilitário",
+        "lixeiras e higienização",
+        "adesivos discretos coquette"
+      ],
+      "posters": "quase nenhum; placas práticas são preferíveis",
+      "obrigacoes": [
+        "respeitar acesso P04 ao corredor e P06 à cozinha",
+        "não ligar diretamente ao estoque"
+      ]
+    },
+    "cozinha": {
+      "foco": "cozinha profissional de restaurante japonês em operação, limpa e realista",
+      "materiais": "aço inox, azulejo branco creme, piso antiderrapante e pequenas linhas rosa",
+      "props": [
+        "bancadas de preparação",
+        "fornos e equipamentos de cozinha",
+        "pia e coifas",
+        "caixas organizadoras com etiquetas originais"
+      ],
+      "posters": "nenhum necessário; somente sinalização sanitária",
+      "obrigacoes": [
+        "preservar recuo no canto sudeste",
+        "preservar conexões P06 P07 P08 P09 sem criar passagens novas"
+      ]
+    },
+    "corredor_servico": {
+      "foco": "corredor de retaguarda em L, principal eixo de suspense, com partes úteis e discretos motivos fofos",
+      "materiais": "paredes branco-creme com rodapé lilás, teto com luz técnica fria, portões rosa envelhecido",
+      "props": [
+        "placas de orientação com identidade original",
+        "iluminação de segurança",
+        "carrinhos ocasionais junto às paredes",
+        "poucos cartazes autorizados e adesivos :3"
+      ],
+      "posters": "esparsos e sem cobrir saídas ou portões",
+      "obrigacoes": [
+        "único corredor em L contínuo",
+        "manter passagem P17 atrás do palco",
+        "preservar G06 e saída superior EXT03",
+        "não inventar ramificações"
+      ]
+    },
+    "retirada": {
+      "foco": "área de retirada de pratos com vão largo de serviço, integração visual com corredor",
+      "materiais": "balcão creme e aço inox, paredes rosadas discretas",
+      "props": [
+        "balcão de retirada existente",
+        "bandejas de comida japonesa",
+        "placa “Retirada de Pedidos” com letras fofas"
+      ],
+      "posters": "poucos; foco funcional",
+      "obrigacoes": [
+        "preservar abertura ampla P10 ao corredor, sem transformá-la numa janelinha estreita",
+        "manter conexão P09 com cozinha"
+      ]
+    },
+    "nathzinha": {
+      "foco": "sala privativa da Nathzinha: marca pessoal, maquiagem leve de camarim, espelho e decoração coquette",
+      "materiais": "rosa marshmallow, painéis lavanda, superfícies cremosas, acessórios rosé",
+      "props": [
+        "mesa de trabalho original como proposta (não estrutural)",
+        "espelho oval, laços e flores",
+        "prateleira de mascotes autorais",
+        "pôsteres de anime fashion adultos"
+      ],
+      "posters": "moderados; personalização maior que corredores",
+      "obrigacoes": [
+        "respeitar a sala de 6,5 × 3,6 m e abertura P11 ao corredor"
+      ]
+    },
+    "eletrica": {
+      "foco": "sala elétrica técnica com quadros e conduítes realistas",
+      "materiais": "pintura creme, metal perolado e avisos de perigo legíveis",
+      "props": [
+        "quadros de disjuntores",
+        "conduítes técnicos",
+        "placas de segurança",
+        "adesivo :3 pequeno opcional fora das áreas de risco"
+      ],
+      "posters": "nenhum pôster decorativo sobre quadros elétricos",
+      "obrigacoes": [
+        "respeitar sala de 5,8 × 3,6 m e porta P12",
+        "não deslocar saída superior EXT03 do corredor adjacente"
+      ]
+    },
+    "controle": {
+      "foco": "escritório de segurança noturno utilizável, com monitores e controles mecânicos, contraste com a estética cute",
+      "materiais": "mesa de metal e madeira clara, paredes creme, elementos rosa acinzentado, monitores escuros",
+      "props": [
+        "mesa de controle nas coordenadas originais",
+        "monitores de câmeras e painel de botões",
+        "fiação e objetos de trabalho discretos",
+        "pequeno mascote :3 de mesa"
+      ],
+      "posters": "um ou dois, discretos; priorizar leitura da interface",
+      "obrigacoes": [
+        "portão mecânico G01 centralizado na parede norte",
+        "não inventar portão direto controle ↔ lojinha",
+        "manter passagem P02 ao estoque"
+      ]
+    },
+    "armario": {
+      "foco": "armário técnico pequeno e funcional próximo à segurança",
+      "materiais": "armário branco e metal pintado rosa pálido",
+      "props": [
+        "prateleiras estreitas",
+        "equipamentos e material de manutenção"
+      ],
+      "posters": "nenhum",
+      "obrigacoes": [
+        "respeitar 1,4 × 2,4 m e passagem P05 para o salão"
+      ]
+    },
+    "wc_func": {
+      "foco": "banheiro funcional exclusivo de funcionários, acabamento limpo e simples",
+      "materiais": "azulejos creme, lavanda discreto",
+      "props": [
+        "louças sanitárias",
+        "espelho simples",
+        "sinalização funcional"
+      ],
+      "posters": "nenhum",
+      "obrigacoes": [
+        "manter acesso P13 pelo corredor superior"
+      ]
+    },
+    "circ_wc": {
+      "foco": "circulação dos banheiros de clientes, sinalização kawaii legível e discreta",
+      "materiais": "paredes creme/rosa com molduras lilás, piso acetinado",
+      "props": [
+        "placas WC masc. e WC fem.",
+        "luz indireta leve",
+        "pequeno padrão de laços"
+      ],
+      "posters": "no máximo um pôster discreto, sem confundir a sinalização",
+      "obrigacoes": [
+        "respeitar portão G07 para o salão, passagem P14 ao fliperama e portas P15/P16 ao norte"
+      ]
+    },
+    "wc_m": {
+      "foco": "banheiro masculino de clientes no mesmo universo pastel",
+      "materiais": "azulejos branco-creme, lilás e metais rosé",
+      "props": [
+        "espelho, lavatório e instalações sanitárias",
+        "placa com :3 muito pequena"
+      ],
+      "posters": "nenhum",
+      "obrigacoes": [
+        "manter a porta P15 na parede sul conforme a planta"
+      ]
+    },
+    "wc_f": {
+      "foco": "banheiro feminino de clientes com o mesmo padrão de materiais e detalhes coquette",
+      "materiais": "azulejos creme, rosa sutil e metais rosé",
+      "props": [
+        "espelho, lavatório e instalações sanitárias",
+        "motivos delicados de laço"
+      ],
+      "posters": "nenhum",
+      "obrigacoes": [
+        "manter a porta P16 na parede sul conforme a planta"
+      ]
+    }
+  },
+  "categorias_poster": [
+    "Pastel Idol Adult",
+    "Gothic Lolita Fashion Adult",
+    "Cloud Dream Adult",
+    "Coquette Anime Fashion Adult"
+  ],
+  "seguranca": "Personagens evidentemente adultas, sem nudez e sem aparência infantil em contextos sensuais."
+}
