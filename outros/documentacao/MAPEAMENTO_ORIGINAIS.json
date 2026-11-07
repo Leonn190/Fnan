@@ -1,0 +1,366 @@
+{
+  "descricao": "Relação dos arquivos originais V8, mantidos byte a byte; as imagens WEBP em public/images/ são derivados otimizados para o jogo.",
+  "total": 60,
+  "arquivos": [
+    {
+      "origem_v8": "CHECKLIST_DE_APROVACAO_V8.md",
+      "destino_v1": "outros/documentacao/CHECKLIST_DE_APROVACAO_V8.md",
+      "sha256": "0acaa43bcfc92a3fba9b61c63b2b1ea1acbe6cb7d37d4b2972f9359a3c1df8a1",
+      "bytes": 2206
+    },
+    {
+      "origem_v8": "01_LEIA_PRIMEIRO_V8.md",
+      "destino_v1": "outros/documentacao/01_LEIA_PRIMEIRO_V8.md",
+      "sha256": "ed06cd04ce7ad7108e41a781291af0545f5443ba99feba36ae07c34d0689607c",
+      "bytes": 3579
+    },
+    {
+      "origem_v8": "MANIFESTO_V8.json",
+      "destino_v1": "outros/documentacao/MANIFESTO_V8.json",
+      "sha256": "9082e76423462302143b1234aa1f5495256b26815cd4905aaedb3f9c1653d4f1",
+      "bytes": 2431
+    },
+    {
+      "origem_v8": "identidade_visual/06_GUIA_HUD_MARCA_E_MASCOTES.md",
+      "destino_v1": "outros/identidade_visual/06_GUIA_HUD_MARCA_E_MASCOTES.md",
+      "sha256": "084833b304fed1c5e38145e75abd43192019964f15e64f490dd8fdb75fa31330",
+      "bytes": 1318
+    },
+    {
+      "origem_v8": "identidade_visual/paleta_v8.json",
+      "destino_v1": "outros/identidade_visual/paleta_v8.json",
+      "sha256": "af3423217174a76fd578d673dc10341b3d7664ac3409165e66400bed1db5175b",
+      "bytes": 1623
+    },
+    {
+      "origem_v8": "identidade_visual/03_AMBIENTES_V8.md",
+      "destino_v1": "outros/identidade_visual/03_AMBIENTES_V8.md",
+      "sha256": "e1cda9ee97e7a20a2c0ffd0f1c38d71c95fafd76385bd6ffc53d9a7f90c19008",
+      "bytes": 12056
+    },
+    {
+      "origem_v8": "identidade_visual/02_BIBLIA_DE_ARTE_V8.md",
+      "destino_v1": "outros/identidade_visual/02_BIBLIA_DE_ARTE_V8.md",
+      "sha256": "6effd4da79e3409db1c2f58a5f38abc2f1a4041538dada7bbaab180684082c20",
+      "bytes": 8316
+    },
+    {
+      "origem_v8": "identidade_visual/04_REGRAS_DE_CONTINUIDADE_E_CENAS.md",
+      "destino_v1": "outros/identidade_visual/04_REGRAS_DE_CONTINUIDADE_E_CENAS.md",
+      "sha256": "7335e85cc553448bca1027039c18f81b2c1316c3357cea314b2abad482f70140",
+      "bytes": 4605
+    },
+    {
+      "origem_v8": "identidade_visual/05_POSTERES_SINALIZACAO.md",
+      "destino_v1": "outros/identidade_visual/05_POSTERES_SINALIZACAO.md",
+      "sha256": "4a886299defe885c009df36b31459074ed364d9af328b63f731b0900e307e498",
+      "bytes": 1967
+    },
+    {
+      "origem_v8": "identidade_visual/PRANCHA_PALETA_V8.png",
+      "destino_v1": "outros/identidade_visual/PRANCHA_PALETA_V8.png",
+      "sha256": "8032eebccae8d904b6909a7b8804137b029ddea8a774853d6ec00a36bf61d918",
+      "bytes": 43141
+    },
+    {
+      "origem_v8": "identidade_visual/ambientes_v8.json",
+      "destino_v1": "outros/identidade_visual/ambientes_v8.json",
+      "sha256": "d097d3ecbcf7da72b652ea4d3216f0bc64bf24f3ff1d5b23d3021bf50ad6ab2a",
+      "bytes": 12467
+    },
+    {
+      "origem_v8": "identidade_visual/PRANCHA_PALETA_V8.svg",
+      "destino_v1": "outros/identidade_visual/PRANCHA_PALETA_V8.svg",
+      "sha256": "e1f10885fed9d50ccb4d2d40883cf8bcc7cb7372a9865d1e508294d7b6722091",
+      "bytes": 3113
+    },
+    {
+      "origem_v8": "identidade_visual/cameras_v8_art_direction.json",
+      "destino_v1": "outros/identidade_visual/cameras_v8_art_direction.json",
+      "sha256": "7f95c92ede74be86d26d46144812a45d483c57f9607e368e359ef02c5ebd8c1c",
+      "bytes": 6483
+    },
+    {
+      "origem_v8": "prompts/CAM01.txt",
+      "destino_v1": "outros/prompts/CAM01.txt",
+      "sha256": "dbd63b395535da9065ececbe4bb3036b13ad8d19d420b8f0386df36e41a39970",
+      "bytes": 4794
+    },
+    {
+      "origem_v8": "prompts/CAM05.txt",
+      "destino_v1": "outros/prompts/CAM05.txt",
+      "sha256": "1a47b84c83d01c5e56de4e3a4b01ad71b762d4ff946cf289eebf24a645feb629",
+      "bytes": 4583
+    },
+    {
+      "origem_v8": "prompts/CAM07.txt",
+      "destino_v1": "outros/prompts/CAM07.txt",
+      "sha256": "8db0799361088fcafedfb744093b11e039a153766257dd1b2014828c2ea7ea29",
+      "bytes": 4710
+    },
+    {
+      "origem_v8": "prompts/CAM08.txt",
+      "destino_v1": "outros/prompts/CAM08.txt",
+      "sha256": "5f605b000c26d00b9a2675285fd3323bef8a4584fe8807a7f24d53dbfbcce8f5",
+      "bytes": 4589
+    },
+    {
+      "origem_v8": "prompts/00_PROMPT_MESTRE_OUTRO_CHAT.txt",
+      "destino_v1": "outros/prompts/00_PROMPT_MESTRE_OUTRO_CHAT.txt",
+      "sha256": "04c6c24e0e46d0e6b54134496e493b96a20b119d7205f1676ac003918d09f726",
+      "bytes": 4350
+    },
+    {
+      "origem_v8": "prompts/CAM09.txt",
+      "destino_v1": "outros/prompts/CAM09.txt",
+      "sha256": "4e9482ea98081c37f4b958f79c74415a1d923286896c999fb74a88acef472bdc",
+      "bytes": 4512
+    },
+    {
+      "origem_v8": "prompts/01_INDICE_12_CAMERAS.md",
+      "destino_v1": "outros/prompts/01_INDICE_12_CAMERAS.md",
+      "sha256": "a1e5528e41eec0e1e71af39a9da81dd7a327c9f01969e3d6d89b2e737dffd58f",
+      "bytes": 1605
+    },
+    {
+      "origem_v8": "prompts/CAM11.txt",
+      "destino_v1": "outros/prompts/CAM11.txt",
+      "sha256": "e2f82f63eabef81144b3853090b358b3a1984b7e85e940e6eec01b89aeaf8e93",
+      "bytes": 4840
+    },
+    {
+      "origem_v8": "prompts/CAM03.txt",
+      "destino_v1": "outros/prompts/CAM03.txt",
+      "sha256": "fea1d622bcf66bc6201721e404389203c02fd8ef50db58c845d9926e00cce923",
+      "bytes": 4871
+    },
+    {
+      "origem_v8": "prompts/CAM02.txt",
+      "destino_v1": "outros/prompts/CAM02.txt",
+      "sha256": "49d866d629408f0bfaf68afaed6fa537e942b2b2eb99ea14888b2645f61db910",
+      "bytes": 4764
+    },
+    {
+      "origem_v8": "prompts/CAM06.txt",
+      "destino_v1": "outros/prompts/CAM06.txt",
+      "sha256": "a527cf6cfdef14077380c4f10ef1550e0df155bf5f9acfc1ac33d9ce13e30737",
+      "bytes": 4656
+    },
+    {
+      "origem_v8": "prompts/CAM04.txt",
+      "destino_v1": "outros/prompts/CAM04.txt",
+      "sha256": "56d13fd5da362eface226c12de064ba4ac8c2bbc72692eba3695aabd5eec0e06",
+      "bytes": 4864
+    },
+    {
+      "origem_v8": "prompts/CAM10.txt",
+      "destino_v1": "outros/prompts/CAM10.txt",
+      "sha256": "67156dd0cb4c8c04650ae5d2d72fc5085556cffdc1bf4ee301ebd645396f3b33",
+      "bytes": 4545
+    },
+    {
+      "origem_v8": "prompts/CAM12.txt",
+      "destino_v1": "outros/prompts/CAM12.txt",
+      "sha256": "c293096552f64364ed2e1fe29e943627618e9015dee73a4339c9e366d444e68e",
+      "bytes": 4786
+    },
+    {
+      "origem_v8": "nathzinha_v7_planta_tecnica.svg",
+      "destino_v1": "outros/planta/nathzinha_v7_planta_tecnica.svg",
+      "sha256": "f8d10e88f3abd4c53de2b8a459c5d8b4043f1dcfb3bdc80fa66e81b50abe02b9",
+      "bytes": 250340
+    },
+    {
+      "origem_v8": "nathzinha_v7_planta_tecnica.py",
+      "destino_v1": "outros/planta/nathzinha_v7_planta_tecnica.py",
+      "sha256": "40b1692327d282db555f8ac3ba401b9a155c2af3cd615878626bdd4c3daf3b76",
+      "bytes": 18660
+    },
+    {
+      "origem_v8": "nathzinha_v7_visibilidade_calculada.json",
+      "destino_v1": "outros/planta/nathzinha_v7_visibilidade_calculada.json",
+      "sha256": "38204128686bf1b5b3c41d7b13f9dc472e8af6af5ed3a13486e8c682a3c82abc",
+      "bytes": 526507
+    },
+    {
+      "origem_v8": "nathzinha_v7_planta_medidas.json",
+      "destino_v1": "outros/planta/nathzinha_v7_planta_medidas.json",
+      "sha256": "9a7ca3df1f23dc38489780c2249a631958de2fa46d563cac78f517abd4d39f95",
+      "bytes": 23878
+    },
+    {
+      "origem_v8": "nathzinha_v7_planta_tecnica.png",
+      "destino_v1": "public/reference/maps/nathzinha_v7_planta_tecnica.png",
+      "sha256": "6ee666918351af96dd56c2ede62474310d3c887716e2ffc8ab79ca0dfaf6bcc7",
+      "bytes": 406709
+    },
+    {
+      "origem_v8": "nathzinha_v7_12_cameras_vistas.png",
+      "destino_v1": "public/reference/maps/nathzinha_v7_12_cameras_vistas.png",
+      "sha256": "4f22dbfca060ed4a9b17d0539b0c71bec84157d04c735b67b2d1d1096419ee84",
+      "bytes": 359137
+    },
+    {
+      "origem_v8": "nathzinha_v7_todos_campos_de_visao.png",
+      "destino_v1": "public/reference/maps/nathzinha_v7_todos_campos_de_visao.png",
+      "sha256": "84128ec6933bb599fae99a2fe3a7750128dacbf553aabf45f5415bbec207c534",
+      "bytes": 240683
+    },
+    {
+      "origem_v8": "cameras/CAM09_visao.png",
+      "destino_v1": "public/reference/cameras/CAM09_visao.png",
+      "sha256": "9ebdb0bda1034935f4e5079183af36b102f6eb6a473759576e0d56f0da3b1eea",
+      "bytes": 237300
+    },
+    {
+      "origem_v8": "cameras/CAM07_visao.png",
+      "destino_v1": "public/reference/cameras/CAM07_visao.png",
+      "sha256": "9e118f9ae70d9a52dcf1389c4adc0d5859c4e6bc307c23fa6abeb88ebff3162b",
+      "bytes": 229602
+    },
+    {
+      "origem_v8": "cameras/CAM03_visao.png",
+      "destino_v1": "public/reference/cameras/CAM03_visao.png",
+      "sha256": "b2c951de460bf6a8ddd7c9e632981e92647a6f2b06e3526b9ecd5c7d3adb5c9a",
+      "bytes": 244881
+    },
+    {
+      "origem_v8": "cameras/CAM06_visao.png",
+      "destino_v1": "public/reference/cameras/CAM06_visao.png",
+      "sha256": "46c00de22a3591a9a23bfc7122c1cc7dda87d370306a7c140768f00978dea15d",
+      "bytes": 232768
+    },
+    {
+      "origem_v8": "cameras/CAM02_visao.png",
+      "destino_v1": "public/reference/cameras/CAM02_visao.png",
+      "sha256": "1823cb02d55afd60d88f6839a1a23081c46ff5eec8b10226bc469e3104f75d71",
+      "bytes": 231517
+    },
+    {
+      "origem_v8": "cameras/CAM08_visao.png",
+      "destino_v1": "public/reference/cameras/CAM08_visao.png",
+      "sha256": "531fb689418c398a073d9c7324b8147dc23650b2774b86d9379994be3fb4d52c",
+      "bytes": 236472
+    },
+    {
+      "origem_v8": "cameras/CAM11_visao.png",
+      "destino_v1": "public/reference/cameras/CAM11_visao.png",
+      "sha256": "0bc58818f8dbaf48d7e305cff00f16bb059c7ceeda866a98d14153b9262a0eb0",
+      "bytes": 239249
+    },
+    {
+      "origem_v8": "cameras/CAM05_visao.png",
+      "destino_v1": "public/reference/cameras/CAM05_visao.png",
+      "sha256": "0bc12cf8f93e4640779ee5aed388a499e8c70e77e0f93fac795bd34736a7908d",
+      "bytes": 232640
+    },
+    {
+      "origem_v8": "cameras/CAM01_visao.png",
+      "destino_v1": "public/reference/cameras/CAM01_visao.png",
+      "sha256": "0ba2683d56cbe5f021b0833bc325cb2009cc5a319f440244fcc52a3c793342bc",
+      "bytes": 231035
+    },
+    {
+      "origem_v8": "cameras/CAM10_visao.png",
+      "destino_v1": "public/reference/cameras/CAM10_visao.png",
+      "sha256": "9567d2b35b1ff26b48bd1f5751728c03fe25c036d1d935be83a36de3c0b430b6",
+      "bytes": 238844
+    },
+    {
+      "origem_v8": "cameras/CAM12_visao.png",
+      "destino_v1": "public/reference/cameras/CAM12_visao.png",
+      "sha256": "1faaaa84d20c1e837e1f9194ff02473f4cedfaf85a664abfe369bed185ce69fb",
+      "bytes": 235315
+    },
+    {
+      "origem_v8": "cameras/CAM04_visao.png",
+      "destino_v1": "public/reference/cameras/CAM04_visao.png",
+      "sha256": "c0170165f60599e7526b043a8676d456d3e6110e1d900100ee77ac32d2732fda",
+      "bytes": 240695
+    },
+    {
+      "origem_v8": "imagens/Lojinha Kawaii de Mang#U00e1s e Plushies.png",
+      "destino_v1": "public/images/cameras/originals/CAM01.png",
+      "sha256": "ccaf53d52bcb9a38dce32ef664d263b42fae340697c77f7ef5ce6f5351d737d8",
+      "bytes": 2648341
+    },
+    {
+      "origem_v8": "imagens/Recep#U00e7#U00e3o Kawaii com Lojinha Iluminada.png",
+      "destino_v1": "public/images/cameras/originals/CAM02.png",
+      "sha256": "1ca63b752fde242bd01115da3ead3c48b057cb98abb10128b13b41af6a8bffa5",
+      "bytes": 1967256
+    },
+    {
+      "origem_v8": "imagens/Palco Teatral com Cortinas Magenta.png",
+      "destino_v1": "public/images/cameras/originals/CAM03.png",
+      "sha256": "11d329b7a5b5de250497a0df1dbd10f2144048bb59a43a4244811a9b7d30134f",
+      "bytes": 2278221
+    },
+    {
+      "origem_v8": "imagens/Sala VIP Kawaii com Portas de Servi#U00e7o vip 1.png",
+      "destino_v1": "public/images/cameras/originals/CAM05.png",
+      "sha256": "193856d5f2b61de75e8a58d43469126d4321bcc93d5f7d110f4c82e97c8f9aec",
+      "bytes": 2703414
+    },
+    {
+      "origem_v8": "imagens/Sala VIP G#U00f3tica Kawaii em Lavanda.png",
+      "destino_v1": "public/images/cameras/originals/CAM06.png",
+      "sha256": "bd7b3127d9b203c5e51e2aaefb27960d7c6ad1fcb0b243a034aad3fe7b3c5908",
+      "bytes": 2556947
+    },
+    {
+      "origem_v8": "imagens/Fliperama Neon com Corredor Estreito.png",
+      "destino_v1": "public/images/cameras/originals/CAM07.png",
+      "sha256": "1822f631107f2e8e52135bd22afea5491d3c0a960c28625a732304c7c8487485",
+      "bytes": 1984525
+    },
+    {
+      "origem_v8": "imagens/CAM08_estoque_noturno_4K.png",
+      "destino_v1": "public/images/cameras/originals/CAM08.png",
+      "sha256": "9d5b97d84af806f4b5e4694f8ae9bf653b5b6ddff73c85fc979fe12af12e62f3",
+      "bytes": 6775701
+    },
+    {
+      "origem_v8": "imagens/Cozinha kawaii em vigil#U00e2ncia noturna.png",
+      "destino_v1": "public/images/cameras/originals/CAM10.png",
+      "sha256": "4efa4aaeb0b458f74cbcac3c120de6f36415348fb42cc54cbe7884e5a870ff57",
+      "bytes": 2494644
+    },
+    {
+      "origem_v8": "imagens/Corredor Kawaii da Cozinha Noturna.png",
+      "destino_v1": "public/images/cameras/originals/CAM11.png",
+      "sha256": "df92ca2dc59f961bc59f2ca39377b1dd862f2a2434066888c8c8234538a25a98",
+      "bytes": 2174165
+    },
+    {
+      "origem_v8": "imagens/cam12.png",
+      "destino_v1": "public/images/cameras/originals/CAM12.png",
+      "sha256": "d2d7a6097f0620ddfb492bc9e9cdab2929712b51fc43cae4aa4740c6fa2092c6",
+      "bytes": 2041075
+    },
+    {
+      "origem_v8": "imagens/Escrit#U00f3rio Kawaii de Seguran#U00e7a Noturna.png",
+      "destino_v1": "public/images/office/office-original.png",
+      "sha256": "1fa6baba62bbad298863af840c921af34d49134ac9394b7a3b2be29ee9b6ed70",
+      "bytes": 2119357
+    },
+    {
+      "origem_v8": "imagens/Animatr#U00f4nica Lolita em Rosa e Branco.png",
+      "destino_v1": "public/images/animatronics/nathzinha-original.png",
+      "sha256": "8bcb038c7c8da6947e554d951f0aa820b1a21e39ba5cc981827fc743ae2e9292",
+      "bytes": 1977577
+    },
+    {
+      "origem_v8": "imagens/Animatr#U00f4nica Yandere Escolar em Rosa e Borgonha.png",
+      "destino_v1": "public/images/animatronics/nathzinha-yandere.png",
+      "sha256": "b9a099c40fd2196b131b9c1e67c27949d5ec46f6cab359d595126405c82adc20",
+      "bytes": 2039274
+    },
+    {
+      "origem_v8": "imagens/Nathzinha Animatr#U00f4nica em Lolita G#U00f3tica.png",
+      "destino_v1": "public/images/animatronics/nathzinha-gotica.png",
+      "sha256": "f3980f4cacef50793add935fca20cc033276b718b17d94cf2bf95e98af43853b",
+      "bytes": 2005505
+    }
+  ]
+}

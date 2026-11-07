@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#120e19">
+  <meta name="description" content="Restaurante da Nathzinha — uma experiência de vigilância noturna inspirada nos clássicos de terror. Explore o escritório e as 12 câmeras do restaurante.">
+  <title>Restaurante da Nathzinha | Noite 01</title>
+  <link rel="icon" type="image/svg+xml" href="./public/images/branding/favicon.svg">
+  <link rel="preload" as="image" type="image/webp" href="./public/images/office/office.webp" fetchpriority="high">
+  <link rel="stylesheet" href="./src/styles/main.css">
+  <script type="module" src="./src/main.js"></script>
+</head>
+<body>
+  <main class="game" id="game" data-mode="office">
+    <section class="office-view" id="office-view" aria-label="Escritório de segurança do restaurante">
+      <div class="office-scene" id="office-scene">
+        <img class="office-art" src="./public/images/office/office.webp" alt="Escritório panorâmico noturno em rosa e lavanda, com monitor de segurança sobre a mesa e passagem central escura" draggable="false">
+        <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Clicar no monitor da mesa para abrir as câmeras">
+          <span class="hotspot-corner top-left"></span><span class="hotspot-corner top-right"></span>
+          <span class="hotspot-corner bottom-left"></span><span class="hotspot-corner bottom-right"></span>
+          <span class="hotspot-label">ABRIR MONITOR <span aria-hidden="true">↗</span></span>
+        </button>
+      </div>
+      <div class="office-shading" aria-hidden="true"></div>
+      <div class="office-pan-guide" id="pan-guide" aria-hidden="true"><span>◂</span><span>OLHE AO REDOR</span><span>▸</span></div>
+      <span class="office-reticle" aria-hidden="true"></span>
+      <div class="office-location"><span class="location-dot"></span> ESCRITÓRIO DE SEGURANÇA <span class="location-sub">/ CONTROLE</span></div>
+    </section>
+
+    <section class="cameras-view" id="cameras-view" aria-label="Monitor de câmeras de segurança" hidden>
+      <div class="camera-feed" id="camera-feed">
+        <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async">
+        <div class="technical-feed" id="technical-feed" hidden>
+          <div class="technical-frame">
+            <p class="technical-overline">MODO DE REFERÊNCIA</p>
+            <img id="technical-art" alt="Planta técnica com campo de visão da câmera selecionada" decoding="async">
+            <div class="technical-caption"><span id="technical-number">CAM 04</span> · CENÁRIO CINEMATOGRÁFICO AINDA NÃO INCLUÍDO</div>
+          </div>
+        </div>
+        <div class="feed-color" aria-hidden="true"></div>
+        <div class="feed-scanlines" aria-hidden="true"></div>
+        <div class="feed-noise" aria-hidden="true"></div>
+        <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
+      </div>
+
+      <div class="feed-heading">
+        <div class="feed-heading-first"><span class="rec-light"></span> <span>REC</span><span class="feed-divider"></span><strong id="cam-number">CAM 01</strong></div>
+        <div class="feed-room" id="cam-room">Lojinha</div>
+      </div>
+      <div class="feed-timestamp" aria-label="Horário da gravação"><span id="feed-time">00:00:00</span><span>RDN / CCTV-01</span></div>
+      <div class="feed-caption" id="feed-caption">CÂMERA CONECTADA <span>•</span> NENHUM ANIMATRÔNICO EM CAMPO</div>
+
+      <aside class="map-panel" id="map-panel" aria-label="Mapa de câmeras">
+        <div class="map-header"><div><span class="map-eyebrow">RESTAURANTE DA NATHZINHA</span><strong>MAPA DO SISTEMA</strong></div><button class="map-minimize" id="map-minimize" type="button" aria-label="Recolher ou expandir o mapa" aria-expanded="true">⌄</button></div>
+        <div class="map-body" id="map-body">
+          <div class="map-canvas" id="map-canvas" aria-label="Mapa interativo da planta arquitetônica V8"></div>
+          <div class="map-selector" id="map-selector" aria-label="Selecione uma câmera"></div>
+          <div class="map-footer"><span><i class="footer-icon render"></i> CENÁRIO</span><span><i class="footer-icon ref"></i> PLANTA TÉCNICA</span><span id="map-selected">01 / 12</span></div>
+        </div>
+      </aside>
+      <div class="feed-direction-tip" aria-hidden="true">← → TROCAR DE CÂMERA</div>
+    </section>
+
+    <div class="global-vignette" aria-hidden="true"></div>
+    <div class="screen-grain" aria-hidden="true"></div>
+
+    <header class="hud-top">
+      <div class="brand"><div class="brand-mark">:3<span>✿</span></div><div class="brand-lines"><strong>NATHZINHA</strong><span>NIGHT SECURITY SYSTEM</span></div></div>
+      <div class="night-clock"><div class="clock-time" id="clock-label">12 <small>AM</small></div><span>NOITE <strong>01</strong></span></div>
+    </header>
+
+    <div class="hud-bottom-left"><div class="power-row"><span>ENERGIA</span><strong id="power-number">100%</strong></div><div class="power-track"><div class="power-fill" id="power-fill"></div></div><div class="usage-row"><span>USO</span><span class="usage-bars" id="usage-bars"><b></b><b></b><b></b><b></b></span><span class="usage-caption" id="usage-caption">NORMAL</span></div></div>
+    <div class="utility-buttons"><button type="button" id="sound-toggle" title="Ativar ou desativar o som" aria-label="Ativar o som" aria-pressed="false">♪<span class="utility-label" id="sound-label">SOM OFF</span></button><button type="button" id="help-toggle" title="Ajuda e controles" aria-label="Abrir instruções">?<span class="utility-label">AJUDA</span></button></div>
+    <button class="monitor-handle" id="monitor-handle" type="button" aria-label="Abrir as câmeras de segurança"><span class="handle-edge">⌃</span><span class="handle-icon">▣</span><span id="handle-label">ABRIR MONITOR</span><small id="handle-shortcut">ESPAÇO</small></button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR DA MESA OU USE A BARRA INFERIOR</div>
+
+    <dialog class="help-dialog" id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-inside"><div class="dialog-head"><span>MANUAL DO VIGIA · V1</span><button type="button" id="help-close" aria-label="Fechar instruções">✕</button></div><div class="dialog-brand">✿ <span>Restaurante da Nathzinha</span></div><h1 id="help-title">Seu primeiro turno começa aqui.</h1><p>Você já está no escritório. Observe a sala, abra o monitor sobre a mesa e troque entre as 12 câmeras pelo mapa ou pela grade numerada. Nesta versão ainda não há animatrônicos nem ataques.</p><div class="controls-grid"><div><kbd>ESPAÇO</kbd><span>Abrir / abaixar monitor</span></div><div><kbd>ESC</kbd><span>Abaixar monitor</span></div><div><kbd>←</kbd> <kbd>→</kbd><span>Olhar ao redor / trocar câmera</span></div><div><kbd>A</kbd> <kbd>D</kbd><span>Olhar ao redor no escritório</span></div><div><kbd>M</kbd><span>Abrir / abaixar monitor</span></div><div><kbd>CLIQUES</kbd><span>Câmeras e monitor interativos</span></div></div><p class="dialog-note">CAM04 e CAM09 exibem, por enquanto, a referência técnica da planta original: ainda não existem imagens finais dessas duas câmeras no material fornecido.</p><button class="dialog-okay" type="button" id="help-okay">VOLTAR AO TURNO</button></div>
+    </dialog>
+
+    <div class="shift-complete" id="shift-complete" hidden role="dialog" aria-modal="true" aria-label="Turno encerrado">
+      <div class="shift-light">✿</div><div class="shift-time">6:00 <small>AM</small></div><h2>O turno terminou.</h2><p>Primeira noite concluída. Ainda não há animatrônicos nesta versão exploratória.</p><button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
+    </div>
+  </main>
+</body>
+</html>
