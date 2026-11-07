@@ -135,17 +135,17 @@
       "direcao_arte": "Cozinha profissional, canto noroeste, evidenciando aço inox e recuo irregular sem reduzir o ambiente a cozinha doméstica."
     },
     "CAM11": {
-      "sala": "corredor_servico",
+      "sala": "retirada",
       "posicao_lente_m": [
-        15.2,
-        22.28
+        17.75,
+        27.75
       ],
       "altura_lente_m": 2.8,
-      "azimute_graus": 135,
-      "abertura_horizontal_graus": 88,
+      "azimute_graus": 223,
+      "abertura_horizontal_graus": 90,
       "alcance_max_m": 18,
-      "orientacao_fonte": "fim do corredor com mais visão da retirada; girada mais 4 graus à direita",
-      "direcao_arte": "Corredor em L próximo ao palco, enquadramento atualizado com azimute 135°; mostrar porções visíveis da zona de retirada / retaguarda conforme planta, respeitando paredes e aberturas. Não usar ângulo antigo."
+      "orientacao_fonte": "Retirada, canto nordeste, olhando diagonalmente sudoeste para balcão e P10; P09 a oeste",
+      "direcao_arte": "CAM11 genuinamente da Área de Retirada 7,2 × 3,6 m: lente (17,75; 27,75) m, 223°, FOV 90°, a 2,8 m de altura. Balcão fixo X14,2–16,9 Y24,85–25,6. P10 larga na parede sul Y24,4 de X12,9–17,1 revela apenas parte do corredor; P09 oeste X10,8 de Y25,3–26,5 para a cozinha, se visível. Cena 3D pré-renderizada, CCTV 16:9, leve tilt negativo, realismo noturno kawaii/coquette, creme, rosa pastel, lilás e inox. Sem personagens nem HUD. Não reutilizar antigo corredor; continuidade CAM10/CAM12."
     },
     "CAM12": {
       "sala": "corredor_servico",
