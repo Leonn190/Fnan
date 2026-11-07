@@ -71,7 +71,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 |---|---|---|
 | CAM01 | Lojinha | Cena 3D final |
 | CAM02 | Recepção | Cena 3D final |
-| CAM03 | Salão principal, virada para o palco | Nova cena do palco |
+| CAM03 | Salão principal, virada para o palco | Palco vazio e sete variantes com as Nathzinhas |
 | CAM04 | Salão principal, parede oposta | Portão sul G08 aberto ou fechado |
 | CAM05 | VIP 1 rosa | Quatro estados visuais dos portões G04/G05 |
 | CAM06 | VIP 2 lavanda | Cena 3D final |
@@ -79,7 +79,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | CAM08 | Estoque | Cena 3D 4K |
 | CAM09 | Área de serviço | Cena da sala técnica |
 | CAM10 | Cozinha | Cena 3D final |
-| CAM11 | Corredor de serviço, oeste | Cena 3D do corredor de pedidos/cozinha |
+| CAM11 | Área de retirada | Balcão de retirada de pedidos |
 | CAM12 | Corredor de serviço, leste | Cena 3D do corredor da retaguarda |
 
 As 12 câmeras têm cenas próprias, com `CAM01.webp` a `CAM12.webp` na pasta `public/images/cameras/` e os PNG mestres numerados em `originals/`. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.

@@ -39,6 +39,15 @@ const CAMERAS = [
     "angle": 24,
     "fov": 92,
     "image": "./public/images/cameras/CAM03.webp",
+    "stageStateImages": {
+      "original": "./public/images/cameras/states/CAM03-original.png",
+      "yandere": "./public/images/cameras/states/CAM03-yandere.png",
+      "gotica": "./public/images/cameras/states/CAM03-gotica.png",
+      "original-yandere": "./public/images/cameras/states/CAM03-original-yandere.png",
+      "original-gotica": "./public/images/cameras/states/CAM03-original-gotica.png",
+      "yandere-gotica": "./public/images/cameras/states/CAM03-yandere-gotica.png",
+      "todas": "./public/images/cameras/states/CAM03-todas.png"
+    },
     "technical": "./public/reference/cameras/CAM03_visao.png",
     "renderAvailable": true
   },
@@ -152,11 +161,11 @@ const CAMERAS = [
   {
     "id": "CAM11",
     "number": 11,
-    "name": "Corredor • Oeste",
-    "room": "corredor_servico",
-    "x": 15.2,
-    "y": 22.28,
-    "angle": 135,
+    "name": "Retirada de Pedidos",
+    "room": "retirada",
+    "x": 11.55,
+    "y": 25.15,
+    "angle": 68,
     "fov": 88,
     "image": "./public/images/cameras/CAM11.webp",
     "technical": "./public/reference/cameras/CAM11_visao.png",

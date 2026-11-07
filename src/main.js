@@ -1,6 +1,7 @@
 (() => {
 'use strict';
 const { CAMERAS, OFFICE, makeCameraMap, SoundEngine } = window.NathGame;
+const stageCamera = CAMERAS.find(cam => cam.id === 'CAM03');
 
 // A primeira versão funciona como site estático: sem build, sem servidor de jogo e sem backend.
 const $ = selector => document.querySelector(selector);
@@ -30,7 +31,7 @@ function playSound(effect) {
   else audioReady?.then(enabled => { if (enabled) sound[effect](); });
 }
 const state = {
-  mode: 'office', cameraIndex: 0, elapsed: 0,
+  mode: 'office', cameraIndex: 0, stageState: 'vazia', elapsed: 0,
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now()
 };
@@ -48,7 +49,7 @@ function announce(message) {
 
 function preloadCamera(cam) {
   if (!cam?.image) return;
-  const sources = cam.gateStateImages ? Object.values(cam.gateStateImages.images) : [cam.image];
+  const sources = cam.gateStateImages ? Object.values(cam.gateStateImages.images) : [cameraImage(cam)];
   preloadImages(sources);
 }
 
@@ -100,9 +101,19 @@ function showTechnical(cam) {
 
 function cameraImage(cam) {
   const views = cam.gateStateImages;
-  if (!views) return cam.image;
+  if (!views) return cam.stageStateImages?.[state.stageState] ?? cam.image;
   const key = views.gates.map(id => map.isGateClosed(id) ? 'closed' : 'open').join('-');
   return views.images[key] ?? cam.image;
+}
+
+// Seleção explícita para o código do jogo. Use "vazia" para restaurar a imagem padrão.
+function setCam03StageState(key) {
+  if (typeof key !== 'string' || (key !== 'vazia' && !Object.hasOwn(stageCamera.stageStateImages, key))) {
+    return false;
+  }
+  state.stageState = key;
+  if (CAMERAS[state.cameraIndex] === stageCamera) updateCameraFeed(stageCamera);
+  return true;
 }
 
 function updateCameraFeed(cam) {
@@ -311,6 +322,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(dom.game);
 
 // The site opens directly inside the office: no menu or splash screen.
+window.NathGame.setCam03StageState = setCam03StageState;
 changeCamera(CAMERAS[0].id);
 updateOfficeView();
 preloadImages(Object.values(OFFICE.images));
