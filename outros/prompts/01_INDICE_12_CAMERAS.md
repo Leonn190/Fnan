@@ -12,5 +12,5 @@ Cada arquivo `.txt` em `prompts/` foi preparado para ser colado em outro chat **
 - **CAM08 — Estoque:** lente 0.25, 9.15 m; altura 2.8 m; azimute 22°; FOV 82°. Arquivo: `CAM08.txt`.
 - **CAM09 — Área de Serviço:** lente 0.25, 21.95 m; altura 2.8 m; azimute 332°; FOV 82°. Arquivo: `CAM09.txt`.
 - **CAM10 — Cozinha:** lente 0.25, 27.72 m; altura 2.8 m; azimute 334°; FOV 84°. Arquivo: `CAM10.txt`.
-- **CAM11 — Corredor de Serviço / Retaguarda:** lente 15.2, 22.28 m; altura 2.8 m; azimute 135°; FOV 88°. Arquivo: `CAM11.txt`.
+- **CAM11 — Área de Retirada • Corredor:** lente 17,75, 27,75 m; altura 2,8 m; azimute 223°; FOV 90°. P10 revela parte do corredor e P09 conduz à cozinha. Nova arte 3D pendente; fallback técnico. Arquivo: `CAM11.txt`.
 - **CAM12 — Corredor de Serviço / Retaguarda:** lente 32.22, 23.25 m; altura 2.8 m; azimute 180°; FOV 82°. Arquivo: `CAM12.txt`.
