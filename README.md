@@ -20,7 +20,7 @@ Restaurante_da_Nathzinha_Web_V1/
 ├── public/                          # Recursos consumidos pelo navegador
 │   ├── images/
 │   │   ├── office/                  # Panorama usado no jogo + PNG original
-│   │   ├── cameras/                 # WEBP otimizadas: CAM01–08, CAM10–12
+│   │   ├── cameras/                 # WEBP otimizadas: CAM01–12
 │   │   │   └── originals/           # Imagens PNG originais preservadas
 │   │   ├── animatronics/            # As três artes 2D, não aparecem nesta V1
 │   │   └── branding/                # Ícone do site
@@ -72,29 +72,25 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | CAM01 | Lojinha | Cena 3D final |
 | CAM02 | Recepção | Cena 3D final |
 | CAM03 | Salão principal, virada para o palco | Nova cena do palco |
-| CAM04 | Salão principal, parede oposta | Cena final do outro lado do salão |
+| CAM04 | Salão principal, parede oposta | Portão sul G08 aberto ou fechado |
 | CAM05 | VIP 1 rosa | Quatro estados visuais dos portões G04/G05 |
 | CAM06 | VIP 2 lavanda | Cena 3D final |
 | CAM07 | Fliperama | Cena 3D final |
 | CAM08 | Estoque | Cena 3D 4K |
-| CAM09 | Área de serviço | **Apenas referência técnica** |
+| CAM09 | Área de serviço | Cena da sala técnica |
 | CAM10 | Cozinha | Cena 3D final |
 | CAM11 | Corredor de serviço, oeste | Cena 3D do corredor de pedidos/cozinha |
 | CAM12 | Corredor de serviço, leste | Cena 3D do corredor da retaguarda |
 
-**Atenção:** somente CAM09 ainda usa referência técnica (`public/reference/cameras/CAM09_visao.png`). CAM03 e CAM04 agora usam as novas imagens fornecidas (`novacampalco.png` e `cam salao principal fantando.png`), otimizadas para WEBP. A arte anterior do palco foi removida a pedido; o manifesto V8 permanece como registro histórico dos arquivos originalmente recebidos.
+As 12 câmeras têm cenas próprias, com `CAM01.webp` a `CAM12.webp` na pasta `public/images/cameras/` e os PNG mestres numerados em `originals/`. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.
+
+Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. A imagem padrão mostra o portão aberto com breu atrás; fechar o G08 mostra o portão baixado. Detalhes e prompt: `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
 
 A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. Os portões G04/G05 no mapa controlam as quatro imagens da sala, inclusive quando um deles é reaberto automaticamente pelo limite de três fechados. A sala usa a mesma base de pixels em todos os estados. Detalhes e prompts: `outros/prompts/CAM05_ESTADOS_PORTOES.md`. G04 controla a esquerda e G05 a direita na imagem.
 
 Verificação dos portões e escritório: `node tests/camera-gates.cjs` testa a luz F, os três estados do escritório, a CAM05 e a ligação com os portões. `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 
-Os três estados do escritório estão em `public/images/office/states/`; o panorama original permanece intacto. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
-
-### Colocar uma câmera nova depois
-
-1. Adicione sua imagem `public/images/cameras/CAM09.webp`. Prefira 16:9, qualidade consistente e **sem animatrônicos** para a imagem-mestra.
-2. Em `src/data/game-data.js`, encontre o objeto correspondente e atualize `"image": "./public/images/cameras/CAM09.webp"` e `"renderAvailable": true`.
-3. Salve, envie o commit ao GitHub. A cena será exibida na próxima publicação, sem recompilação.
+Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
 O mapa da interface é desenhado automaticamente com os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** do `nathzinha_v7_planta_medidas.json`. As plantas e documentos V8 continuam disponíveis como fonte de referência; o jogo não muda a arquitetura definida.
 

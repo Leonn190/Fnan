@@ -101,9 +101,8 @@ function showTechnical(cam) {
 function cameraImage(cam) {
   const views = cam.gateStateImages;
   if (!views) return cam.image;
-  const left = map.isGateClosed(views.leftGate) ? 'closed' : 'open';
-  const right = map.isGateClosed(views.rightGate) ? 'closed' : 'open';
-  return views.images[`${left}-${right}`];
+  const key = views.gates.map(id => map.isGateClosed(id) ? 'closed' : 'open').join('-');
+  return views.images[key] ?? cam.image;
 }
 
 function updateCameraFeed(cam) {
@@ -315,8 +314,8 @@ resizeObserver.observe(dom.game);
 changeCamera(CAMERAS[0].id);
 updateOfficeView();
 preloadImages(Object.values(OFFICE.images));
-// Load all four CAM05 states before the player starts toggling its gates.
-preloadCamera(CAMERAS.find(cam => cam.gateStateImages));
+// Load state variants before the player starts toggling their gates.
+for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
 updateClockUI();
 requestAnimationFrame(tick);
 

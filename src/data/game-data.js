@@ -52,6 +52,13 @@ const CAMERAS = [
     "angle": 208,
     "fov": 88,
     "image": "./public/images/cameras/CAM04.webp",
+    "gateStateImages": {
+      "gates": ["G08"],
+      "images": {
+        "open": "./public/images/cameras/states/CAM04-open.webp",
+        "closed": "./public/images/cameras/CAM04.webp"
+      }
+    },
     "technical": "./public/reference/cameras/CAM04_visao.png",
     "renderAvailable": true
   },
@@ -64,10 +71,9 @@ const CAMERAS = [
     "y": 21.95,
     "angle": 322,
     "fov": 82,
-    "image": "./public/images/cameras/states/CAM05-open-open.png",
+    "image": "./public/images/cameras/CAM05.webp",
     "gateStateImages": {
-      "leftGate": "G04",
-      "rightGate": "G05",
+      "gates": ["G04", "G05"],
       "images": {
         "open-open": "./public/images/cameras/states/CAM05-open-open.png",
         "open-closed": "./public/images/cameras/states/CAM05-open-closed.png",
@@ -126,9 +132,9 @@ const CAMERAS = [
     "y": 21.95,
     "angle": 332,
     "fov": 82,
-    "image": null,
+    "image": "./public/images/cameras/CAM09.webp",
     "technical": "./public/reference/cameras/CAM09_visao.png",
-    "renderAvailable": false
+    "renderAvailable": true
   },
   {
     "id": "CAM10",

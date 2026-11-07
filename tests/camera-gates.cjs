@@ -105,14 +105,28 @@ gate('G06'); assert(!isClosed('G01')); office('dark');
 nodes['monitor-handle'].fire('click');
 pressF(); office('lit');
 nodes['office-monitor'].fire('click'); office('dark');
-assert.equal(window.NathGame.CAMERAS[2].renderAvailable, true);
-assert.equal(window.NathGame.CAMERAS[3].renderAvailable, true);
-assert(!fs.existsSync(path.join(root, 'public/images/cameras/originals/CAM03.png')));
-// Check every remaining camera can still select its correct existing asset.
+// The southern hall gate controls only the large left shutter in CAM04.
+const checkHall = open => assert.equal(nodes['feed-art'].src, open
+  ? './public/images/cameras/states/CAM04-open.webp'
+  : './public/images/cameras/CAM04.webp');
+camera('CAM04'); checkHall(true);
+gate('G08'); checkHall(false);
+gate('G08'); checkHall(true);
+camera('CAM09');
+assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09.webp');
+assert.equal(nodes['technical-feed'].hidden, true);
+gate('G08');
+camera('CAM04'); checkHall(false);
+gate('G07'); assert(!isClosed('G08')); checkHall(true);
+// All 12 cameras have a standardized base render and master PNG.
 for (const cam of window.NathGame.CAMERAS) {
   camera(cam.id);
   assert.equal(nodes['cam-number'].textContent, cam.id.replace('CAM', 'CAM '));
-  const src = cam.image ? nodes['feed-art'].src : nodes['technical-art'].src;
-  assert(fs.existsSync(path.join(root, src)), src);
+  assert.equal(cam.image, `./public/images/cameras/${cam.id}.webp`);
+  assert.equal(cam.renderAvailable, true);
+  assert.equal(nodes['technical-feed'].hidden, true);
+  for (const src of [cam.image, nodes['feed-art'].src, `public/images/cameras/originals/${cam.id}.png`]) {
+    assert(fs.existsSync(path.join(root, src)), src);
+  }
 }
-console.log('PASS: office dark/light/closed, F toggle/repeat/blur, G01 automatic reopening, corrected CAM05 sides, all 12 cameras, new stage/hall assets and reset.');
+console.log('PASS: all 12 camera renders and originals, CAM04 G08 open/closed/reopened, CAM05, office and shift reset.');

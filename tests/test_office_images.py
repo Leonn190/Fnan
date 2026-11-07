@@ -9,16 +9,18 @@ views = {name: Image.open(OFFICE / f'states/office-{name}.webp').convert('RGB')
          for name in ['open-dark', 'open-lit', 'closed']}
 assert original.size == (2172, 724)
 # Test every pixel outside the central aperture's bounding rectangle.
-regions = [(0, 0, 2172, 198), (0, 548, 2172, 724),
-           (0, 198, 865, 548), (1308, 198, 2172, 548)]
+regions = [(0, 0, 2172, 197), (0, 547, 2172, 724),
+           (0, 197, 864, 547), (1310, 197, 2172, 547)]
 for name, image in views.items():
     assert image.size == original.size, name
     for region in regions:
         assert ImageChops.difference(original.crop(region), image.crop(region)).getbbox() is None, (name, region)
-    # Foreground radio/antenna crossing the passage stays on top of all views.
-    for point in [(1299, 485), (1295, 535), (748, 573)]:
+    # The left monitor, the radio antenna and right mug stay in the foreground.
+    for point in [(655, 479), (872, 502), (888, 544), (1308, 545)]:
         assert image.getpixel(point) == original.getpixel(point), (name, point)
 
+assert ImageChops.difference(views['open-dark'], original).getbbox() is None
+assert not (OFFICE / 'office.webp').exists()
 corridor = (890, 210, 1280, 530)
 mean = lambda image, box: sum(ImageStat.Stat(image.crop(box)).mean) / 3
 assert mean(views['open-dark'], corridor) < 3

@@ -1,36 +1,30 @@
-# Escritório — portão principal e iluminação F
+# Sala de controle — portão e iluminação
 
-Ferramenta: `image_gen` integrada, em modo de edição. Alvo: `public/images/office/office-original.png`, 2172 × 724. O original está preservado.
+A nova arte fornecida em `NOVA.png` é o PNG mestre `public/images/office/office-original.png`, com os mesmos bytes e dimensões de 2172 × 724. Ela já traz o corredor escuro. A arte e os estados da sala anterior foram retirados.
 
-## Imagens finais
+- `public/images/office/states/office-open-dark.webp`: portão aberto no breu, exportação sem perdas da nova arte.
+- `public/images/office/states/office-open-lit.webp`: o corredor aparece no centro da luz circular.
+- `public/images/office/states/office-closed.webp`: o portão cobre a passagem.
 
-- `public/images/office/states/office-open-dark.webp`: estado inicial, portão aberto e corredor quase totalmente escuro.
-- `public/images/office/states/office-open-lit.webp`: portão aberto, luz circular com borda suave revelando o corredor original.
-- `public/images/office/states/office-closed.webp`: portão hidráulico fechado.
+Os dois estados editados foram criados com o ImageGen integrado. Na finalização, somente a passagem recebeu os recortes gerados; a moldura e os objetos em primeiro plano foram preservados na nova arte. A sala mantém o panorama 3:1.
 
-Os WEBP finais são sem perdas. Na finalização, os pixels fora da passagem central foram restaurados do original. O portão fechado aproveita a arte gerada dentro dessa passagem. A luz foi recomposta sobre o corredor original com um círculo de raio 138 px, centro (1086, 367), borda desfocada de 18 px. O estado escuro retém 3,5% da intensidade original do corredor; o centro iluminado revela os detalhes originais com intensidade até 1,75×. Mesa, rádio em primeiro plano, monitor, molduras, pistões e iluminação do restante da sala permanecem estáveis.
+**F** alterna a luz circular quando o portão está aberto. **G01** no mapa controla o portão, inclusive em reaberturas automáticas. A área clicável foi movida para o monitor grande no lado esquerdo da mesa e acompanha o panorama.
 
-## Mecânica
+## Prompts do ImageGen
 
-G01 abre/fecha o portão principal pelo mapa. O escritório acompanha a reabertura automática do G01 quando o limite de três portões fechados exige isso. F alterna a luz apenas no escritório e com o portão aberto; repetição de tecla não alterna repetidamente. Abrir o monitor, perder o foco ou reiniciar o turno desliga a luz. O cenário inteiro, incluindo o círculo de luz, acompanha o panorama, sem aumentar o campo de visão em ultrawide.
+### Fechado
 
-## Prompts usados
+Use case: precise-object-edit. Edit target: the attached NEW 2172×724 security control room panorama, with a large desktop computer monitor on the LEFT, pink radio and fan on the RIGHT, and a black central doorway. Change ONLY the black opening between the existing hydraulic pistons: close it with a heavy, horizontally ribbed dark plum steel rolling shutter, fitted below the existing hazard-striped header, down to the original threshold. Match the pink room's reflections, with a narrow yellow and black warning band on the shutter's lower edge. Preserve the new desktop monitor on the left, the walkie-talkie antenna in front of the door's left edge, mug at right, and all foreground objects. Every pixel outside the existing black opening must stay unchanged. Preserve the exact 3:1 panorama, original dimensions and crop. No changes to the side doors, framing, decor, light or furniture. No people, UI or added text. Output one full-frame scene.
 
-### Portão fechado
+### Aberto com luz circular
 
-Use case: precise-object-edit. Edit target is this existing 2172x724 panoramic game security office. Produce ONE same-size panorama. Change ONLY the central/front hydraulic gate: close it completely by lowering a heavy realistic ribbed steel security shutter inside the EXISTING central rectangular opening. It must fit exactly between the existing hydraulic columns and below the existing header, bottom edge at the existing threshold behind the desk. Dark plum-grey metal, subtle pink reflected office light, a narrow yellow/black safety band at its bottom. Entire corridor should be occluded by the closed solid shutter. The shutter is behind ALL original desk objects including the mug, desk edge, radio, monitors. Preserve every pixel outside that central opening: original room architecture, existing hydraulic pistons, frames, warning header, desk, fan, papers, monitors, posters, cabinet, flowers, lamps, walls, lights, colors, shadows and perspective. Do not move the desk or gate frame. No people or animatronics. No UI, text overlays, collage or reframing. Return one full panoramic background, matching the original 3:1 aspect ratio.
+Use case: localized lighting edit. Image 1 is the sole EDIT TARGET: the NEW control room panorama, with a large computer on the left and fan and pink radio on the right. Image 2 is a visual reference ONLY for the corridor behind the central gate; never copy any foreground or office objects from image 2. In image 1 keep the central hydraulic gate open and the opening black except for one soft-edged circular flashlight beam in the middle, about two-thirds of the opening width. Within the beam reveal the same dim corridor from the reference, including the checkerboard floor, distant red torii motif and small hanging lanterns. Outside the beam keep the opening pitch black. Do not move or redraw anything in the new office: keep the monitor at left, mug at right, and walkie-talkie and antenna in the foreground intact. Only edit the black central opening. No new objects or people. Exact original camera pose and 2172×724 (3:1) framing. Return one full panorama without UI or text.
 
-### Portão aberto / breu
-
-Use case: lighting-weather, strict local edit of existing game background. Edit target: this 2172x724 security office panorama. Make ONLY the corridor seen through the central open hydraulic gate almost completely dark, near-total black, with essentially no visible detail in the distance. Keep gate fully OPEN and its existing hydraulic frame unchanged. The desk and its objects, fan, mug, radio, monitors, walls, all office lights, the cabinets, posters, side doorway, and all other pixels outside the central corridor opening must remain IDENTICAL. Do not darken the whole office. Only the recess beyond the central gate should become a pitch-dark corridor. Preserve original 3:1 panoramic framing, no new objects, no UI or collage. One full panoramic image.
-
-### Portão aberto / luz circular
-
-Use case: lighting-weather. Strict local edit of the attached 2172x724 panoramic security office. Only change the corridor INSIDE the central OPEN hydraulic gate: make it almost totally black except for ONE medium-sized ROUND flashlight beam in the middle of that opening, softly feathered, centered on the distant corridor, revealing the same original corridor furniture, hanging lanterns, torii ornament and checkerboard floor that are already in the reference. The beam should show the ORIGINAL corridor, not invent objects or new geometry. Outside the circular beam the hallway is pitch dark. Do NOT illuminate the whole doorway. Do NOT draw a flashlight object. Every pixel of the OFFICE OUTSIDE the central passage must be unchanged: door frame and pistons, header, desk, fan, mug, radio, monitors, cabinets, side door, posters, lamps, reflections, color and exposure. Same original 3:1 panorama, exact camera pose, one image, no UI, no text or panels.
+Na edição iluminada, o antigo panorama serviu apenas de referência para o corredor. Nenhum objeto ou pixel do antigo escritório foi copiado para a nova sala.
 
 ## Novas câmeras fornecidas
 
-- `public/images/cameras/novacampalco.png` → `CAM03.webp`, substituindo a arte antiga do palco (incluindo remoção do PNG antigo).
-- `public/images/cameras/cam salao principal fantando.png` → `CAM04.webp`, preenchendo o ângulo que faltava no salão.
-- Os novos PNG fornecidos foram mantidos intactos; WEBP foram exportados com qualidade 88.
+- `public/images/cameras/originals/CAM03.png` (antes `novacampalco.png`) → `CAM03.webp`, substituindo a arte antiga do palco (incluindo remoção do PNG antigo).
+- `public/images/cameras/originals/CAM04.png` (antes `cam salao principal fantando.png`) → `CAM04.webp`, preenchendo o ângulo que faltava no salão.
+- Os PNG fornecidos foram renomeados sem alterar seu conteúdo; os WEBP de base foram exportados com qualidade 88.
 - CAM05: vínculo corrigido para G04 à esquerda e G05 à direita na imagem, conforme teste visual do usuário.
