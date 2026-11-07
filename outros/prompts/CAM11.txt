@@ -1,26 +1,23 @@
-RESTAURANTE DA NATHZINHA V8 — CAM11 — CORREDOR DE SERVIÇO / RETAGUARDA
+RESTAURANTE DA NATHZINHA — CAM11 — ÁREA DE RETIRADA • CORREDOR | REVISÃO OPERACIONAL 07/11/2026
 
-INSTRUÇÃO: use o ZIP V8 inteiro e leia `prompts/00_PROMPT_MESTRE_OUTRO_CHAT.txt` como condição obrigatória. Anexe/inspecione `nathzinha_v7_planta_tecnica.png`, `nathzinha_v7_planta_medidas.json` e a imagem `cameras/CAM11_visao.png`. NÃO reinterprete o layout por estilo.
+Analisar rigorosamente a versão ATUAL do repositório, sobretudo outros/planta/nathzinha_v7_planta_medidas.json, nathzinha_v7_planta_tecnica.py, nathzinha_v7_visibilidade_calculada.json, public/reference/cameras/CAM11_visao.png e public/reference/maps/. Conferir CAM10 e CAM12 para continuidade. Documentos e hashes V8 históricos permanecem como registros anteriores.
 
-CÂMERA (parâmetros exatos da V7):
-- Nome: CAM11
-- Ambiente: Corredor de Serviço / Retaguarda (corredor_servico)
-- Localização da lente em metros (x leste, y norte): (15.2, 22.28)
-- Altura da lente: 2.8 m
-- Azimute horizontal original: 135 graus
-- FOV horizontal original: 88 graus
-- Alcance horizontal máximo na simulação: 18 m
-- Nota original: fim do corredor com mais visão da retirada; girada mais 4 graus à direita.
-- A inclinação vertical da lente é parâmetro 3D ainda a definir; não modificá-la gratuitamente entre variantes.
+COORDENADAS E CÂMERA (x cresce para leste, y cresce para norte, em metros; azimute cartesiano, 0° leste e 90° norte):
+- CAM11: sala 'retirada', interface 'Retirada • Corredor'.
+- Lente no canto nordeste (x=17,75; y=27,75), altura de 2,8 m.
+- Direção azimutal 223° para SUDOESTE; FOV horizontal 90°; alcance horizontal do estudo 18 m. Montagem CCTV elevada, leve inclinação vertical para baixo.
+- Sala de RETIRADA retangular, limites X 10,8–18,0 e Y 24,4–28,0 (7,2 × 3,6 m).
+- Balcão EXISTENTE obrigatório: X 14,2–16,9, Y 24,85–25,6 m; acabamento creme/inox, bandejas, apoio, sinalização funcional. Não deslocar.
+- P10: parede SUL Y=24,4; abertura horizontal de X=12,9 até 17,1 m, largura de 4,2 m. VÃO LARGO DE PASSAGEM, nunca janela/portinha de balcão. Permite visão PARCIAL do corredor de serviço em L, só onde o alinhamento e as paredes permitirem.
+- P09: parede OESTE X=10,8, abertura de Y=25,3 até 26,5 m. Comunica com COZINHA; pode aparecer no quadro, mas não forçar visão geometricamente impossível.
+- CAM12 permanece no corredor leste em (32,22; 23,25), direção 180° FOV 82°. Preservar CAM10 e CAM12 como referências de materiais; não copiá-las como nova imagem da CAM11.
 
-INTENÇÃO DO ENQUADRAMENTO:
-Corredor em L próximo ao palco, enquadramento atualizado com azimute 135°; mostrar porções visíveis da zona de retirada / retaguarda conforme planta, respeitando paredes e aberturas. Não usar ângulo antigo.
+OBJETIVO VISUAL:
+Reconstruir uma sala de retirada de comida de restaurante japonês em 3D fotorrealista pré-renderizado, não um corredor rebatizado. Ângulo da lente no teto nordeste mirando para sudoeste, perspectiva fixa 16:9, sem distorções artificiais. A retirada e balcão predominam. Através do vão P10, uma pequena profundidade do corredor real deve ser vista, com breu e pontos cegos. Continuar piso, rodapés lilás, revestimentos creme, inox, luz de serviço e pequenos detalhes rosa pastel/azul pastel; estética kawaii/coquette sofisticada e horror noturno tipo FNAF 1. O que não está no campo de visão fica oculto: não atravessar paredes nem deslocar portas, balcão ou mobiliário.
+NUNCA gerar animatrônicos/pessoas na base. NÃO colocar HUD, relógio, linhas de CCTV, moldura, logo sobreposto ou glitch na arte-mestra. A interface já cuida disso.
 
-CENOGRAFIA DO AMBIENTE:
-Corredor de retaguarda em l, principal eixo de suspense, com partes úteis e discretos motivos fofos.
-Materiais e cores: paredes branco-creme com rodapé lilás, teto com luz técnica fria, portões rosa envelhecido. Acessórios: placas de orientação com identidade original; iluminação de segurança; carrinhos ocasionais junto às paredes; poucos cartazes autorizados e adesivos :3.
-Pôsteres: esparsos e sem cobrir saídas ou portões.
-GEOMETRIA OBRIGATÓRIA: único corredor em L contínuo; manter passagem P17 atrás do palco; preservar G06 e saída superior EXT03; não inventar ramificações.
+ENTREGA DE ARTE:
+A nova CAM11 precisa ser uma cena real nova, arquitetonicamente fiel. Não substituir os arquivos public/images/cameras/originals/CAM11.png e public/images/cameras/CAM11.webp enquanto não existir e for aprovada essa nova renderização. Até esse ponto, o jogo deve exibir public/reference/cameras/CAM11_visao.png como fallback técnico, mantendo image=null e renderAvailable=false em src/data/game-data.js.
 
 PADRÃO DE ARTE GLOBAL:
 DIREÇÃO DE ARTE INVARIÁVEL — RESTAURANTE DA NATHZINHA V8
