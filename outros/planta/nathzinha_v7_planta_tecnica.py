@@ -234,7 +234,7 @@ def generate_plan(data, room_polys, walls, closed_gates, out):
     draw_cameras(ax, data)
     scale_bar(ax)
     fig.text(.052,.954,'RESTAURANTE DA NATHZINHA | PLANTA TÉCNICA V7', size=18, weight='bold')
-    fig.text(.052,.93,'Revisão V7: portão da Sala de Controle centralizado; CAM11 girada 4° à direita', size=10.6)
+    fig.text(.052,.93,'CAM11 atual: retirada (17,75; 27,75) m; azimute 223°, FOV 90°', size=10.6)
     fig.text(.747,.874,'LEGENDA', size=14, weight='bold')
     entries=[('Paredes opacas','#111827'),('Porta / passagem livre',COLOR_PASS),('Portão mecânico (G)',COLOR_GATE),('Saída externa',COLOR_EXIT),('Câmera com direção',COLOR_CAM)]
     for j,(lbl,c) in enumerate(entries):
