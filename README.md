@@ -2,7 +2,7 @@
 
 Primeira versão navegável do fangame de terror **Restaurante da Nathzinha**. O jogo abre diretamente no escritório de segurança: explore a imagem panorâmica, clique no monitor da mesa e alterne entre as doze câmeras pela planta interativa do restaurante.
 
-**Projeto estático puro:** HTML + CSS + JavaScript ES Modules. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
+**Projeto estático puro:** HTML + CSS + JavaScript com scripts locais. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
 
 ## Estrutura
 
@@ -20,7 +20,7 @@ Restaurante_da_Nathzinha_Web_V1/
 ├── public/                          # Recursos consumidos pelo navegador
 │   ├── images/
 │   │   ├── office/                  # Panorama usado no jogo + PNG original
-│   │   ├── cameras/                 # WEBP otimizadas: CAM01,02,03,05,06,07,08,10,11,12
+│   │   ├── cameras/                 # WEBP otimizadas: CAM01–08, CAM10–12
 │   │   │   └── originals/           # Imagens PNG originais preservadas
 │   │   ├── animatronics/            # As três artes 2D, não aparecem nesta V1
 │   │   └── branding/                # Ícone do site
@@ -46,14 +46,23 @@ O arquivo `outros/documentacao/MAPEAMENTO_ORIGINAIS.json` registra **os 60 arqui
 
 Também funciona com a opção clássica **Deploy from a branch → main → /(root)** em repositórios que permitam essa modalidade. Os endereços são relativos (`./public/...`, `./src/...`) e funcionam tanto no site de projeto quanto no site de usuário.
 
+## Testar localmente e enquadramento
+
+Abra `index.html` diretamente no navegador, inclusive por `file://`. Os scripts locais carregam em ordem, sem módulos ES ou requisições de dados que exijam servidor. Também funciona por HTTP e no GitHub Pages.
+
+A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Monitores ultrawide, incluindo modelos curvos, recebem bordas pretas nas laterais: escritório, câmeras, mapa e HUD usam a mesma área útil. A curvatura física não é detectável pelo navegador; a proporção da tela define as bordas. O movimento do panorama usa as bordas da área do jogo.
+
 ## Como jogar
 
 - **Ao entrar:** você já está no escritório, olhando a imagem panorâmica.
 - **Mouse nas bordas esquerda/direita** ou **A/D e ←/→** no escritório: olhar para os lados.
 - **Toque e arraste** no escritório em telas touch: deslocar o panorama.
 - **Clique no monitor da mesa**, clique na aba inferior ou pressione **Espaço/M**: abrir/fechar as câmeras.
-- **Na tela de câmeras:** selecione um ponto do mapa, os botões `01` a `12` ou use as setas **←/→**.
-- **Esc:** abaixa o monitor. **?** abre o manual. **♪** liga/desliga o áudio (desligado inicialmente devido às regras dos navegadores).
+- **Na tela de câmeras:** clique em uma das 12 câmeras na planta ou use as setas **←/→**.
+- **Portões no mapa:** clique para alternar entre aberto (amarelo) e fechado (vermelho). Ao fechar um quarto portão, o último que havia sido fechado abre automaticamente. Os portões voltam a abrir ao reiniciar o turno.
+- **F no escritório:** alterna a luz circular no corredor. Ao abrir o monitor ou trocar de janela, a luz desliga. Com o G01 fechado, a luz não revela o corredor.
+- **G01 no mapa:** abre/fecha o portão principal do escritório. O estado acompanha também a reabertura automática pelo limite de três fechados.
+- **Esc:** abaixa o monitor.
 - O contador de horas vai de 12 AM a 6 AM; ao terminar, é possível reiniciar. Sem animatrônicos, dano, ataques ou mortes nesta versão.
 
 ## Câmeras e imagens disponíveis
@@ -62,9 +71,9 @@ Também funciona com a opção clássica **Deploy from a branch → main → /(r
 |---|---|---|
 | CAM01 | Lojinha | Cena 3D final |
 | CAM02 | Recepção | Cena 3D final |
-| CAM03 | Salão principal, virada para o palco | Cena 3D do palco |
-| CAM04 | Salão principal, parede oposta | **Apenas referência técnica** |
-| CAM05 | VIP 1 rosa | Cena 3D final |
+| CAM03 | Salão principal, virada para o palco | Nova cena do palco |
+| CAM04 | Salão principal, parede oposta | Cena final do outro lado do salão |
+| CAM05 | VIP 1 rosa | Quatro estados visuais dos portões G04/G05 |
 | CAM06 | VIP 2 lavanda | Cena 3D final |
 | CAM07 | Fliperama | Cena 3D final |
 | CAM08 | Estoque | Cena 3D 4K |
@@ -73,12 +82,18 @@ Também funciona com a opção clássica **Deploy from a branch → main → /(r
 | CAM11 | Corredor de serviço, oeste | Cena 3D do corredor de pedidos/cozinha |
 | CAM12 | Corredor de serviço, leste | Cena 3D do corredor da retaguarda |
 
-**Atenção:** CAM04 e CAM09 estão presentes e selecionáveis, mas não havia imagens finais desses dois ângulos no ZIP recebido. Para evitar usar um render de outra sala ou falsificar a arquitetura, o jogo mostra as imagens `public/reference/cameras/CAM04_visao.png` e `CAM09_visao.png`, identificadas como referências técnicas.
+**Atenção:** somente CAM09 ainda usa referência técnica (`public/reference/cameras/CAM09_visao.png`). CAM03 e CAM04 agora usam as novas imagens fornecidas (`novacampalco.png` e `cam salao principal fantando.png`), otimizadas para WEBP. A arte anterior do palco foi removida a pedido; o manifesto V8 permanece como registro histórico dos arquivos originalmente recebidos.
+
+A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. Os portões G04/G05 no mapa controlam as quatro imagens da sala, inclusive quando um deles é reaberto automaticamente pelo limite de três fechados. A sala usa a mesma base de pixels em todos os estados. Detalhes e prompts: `outros/prompts/CAM05_ESTADOS_PORTOES.md`. G04 controla a esquerda e G05 a direita na imagem.
+
+Verificação dos portões e escritório: `node tests/camera-gates.cjs` testa a luz F, os três estados do escritório, a CAM05 e a ligação com os portões. `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
+
+Os três estados do escritório estão em `public/images/office/states/`; o panorama original permanece intacto. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
 ### Colocar uma câmera nova depois
 
-1. Adicione sua imagem `public/images/cameras/CAM04.webp` ou `CAM09.webp`. Prefira 16:9, qualidade consistente e **sem animatrônicos** para a imagem-mestra.
-2. Em `src/data/game-data.js`, encontre o objeto correspondente e atualize `"image": "./public/images/cameras/CAM04.webp"` e `"renderAvailable": true` (idem CAM09).
+1. Adicione sua imagem `public/images/cameras/CAM09.webp`. Prefira 16:9, qualidade consistente e **sem animatrônicos** para a imagem-mestra.
+2. Em `src/data/game-data.js`, encontre o objeto correspondente e atualize `"image": "./public/images/cameras/CAM09.webp"` e `"renderAvailable": true`.
 3. Salve, envie o commit ao GitHub. A cena será exibida na próxima publicação, sem recompilação.
 
 O mapa da interface é desenhado automaticamente com os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** do `nathzinha_v7_planta_medidas.json`. As plantas e documentos V8 continuam disponíveis como fonte de referência; o jogo não muda a arquitetura definida.
@@ -87,6 +102,6 @@ O mapa da interface é desenhado automaticamente com os **polígonos das salas, 
 
 - O projeto não usa os sprites dos animatrônicos ainda. Os três PNGs foram guardados em `public/images/animatronics/` para expansão futura.
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
-- Os efeitos de som são sintetizados localmente pelo navegador e só tocam após ativação voluntária.
+- Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.
-- A V1 é uma **base de exploração e vigilância**, não um FNAF completo: ataques, IA, portas funcionais, energia como condição de derrota, jumpscares e missões podem vir em versões futuras.
+- A V1 é uma **base de exploração e vigilância**, não um FNAF completo: ataques, IA, jumpscares e missões podem vir em versões futuras.

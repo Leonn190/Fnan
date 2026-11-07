@@ -1,5 +1,7 @@
+(() => {
+'use strict';
 // Sons eletrônicos originais gerados no navegador. Nenhum arquivo de áudio ou serviço externo.
-export class SoundEngine {
+class SoundEngine {
   constructor() { this.enabled = false; this.context = null; this.ambient = null; }
   async enable() {
     const Ctor = window.AudioContext || window.webkitAudioContext;
@@ -12,11 +14,6 @@ export class SoundEngine {
       return true;
     } catch { return false; }
   }
-  disable() {
-    this.enabled = false;
-    this.stopAmbience();
-    this.context?.suspend().catch(()=>{});
-  }
   startAmbience() {
     if (!this.enabled || !this.context || this.ambient) return;
     const osc = this.context.createOscillator();
@@ -28,11 +25,6 @@ export class SoundEngine {
     osc.connect(filter).connect(gain).connect(this.context.destination);
     osc.start();
     this.ambient = {osc,gain};
-  }
-  stopAmbience() {
-    if (!this.ambient) return;
-    try {this.ambient.osc.stop();this.ambient.osc.disconnect();this.ambient.gain.disconnect();}catch{}
-    this.ambient=null;
   }
   tone({frequency=330, endingFrequency=120, duration=.12, volume=.06, wave='triangle'}={}) {
     if (!this.enabled || !this.context || this.context.state!=='running') return;
@@ -53,3 +45,7 @@ export class SoundEngine {
   switch(){this.tone({frequency:520,endingFrequency:180,duration:.08,volume:.055,wave:'square'});}
   finish(){this.tone({frequency:440,endingFrequency:660,duration:.55,volume:.06});}
 }
+
+window.NathGame.SoundEngine = SoundEngine;
+
+})();

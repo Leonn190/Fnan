@@ -1,6 +1,8 @@
+(() => {
+'use strict';
 // Gerado a partir do projeto V8: outros/planta/nathzinha_v7_planta_medidas.json
 // Coordenadas: origem sudoeste, x=leste, y=norte, em metros.
-export const CAMERAS = [
+const CAMERAS = [
   {
     "id": "CAM01",
     "number": 1,
@@ -49,9 +51,9 @@ export const CAMERAS = [
     "y": 10.55,
     "angle": 208,
     "fov": 88,
-    "image": null,
+    "image": "./public/images/cameras/CAM04.webp",
     "technical": "./public/reference/cameras/CAM04_visao.png",
-    "renderAvailable": false
+    "renderAvailable": true
   },
   {
     "id": "CAM05",
@@ -62,7 +64,17 @@ export const CAMERAS = [
     "y": 21.95,
     "angle": 322,
     "fov": 82,
-    "image": "./public/images/cameras/CAM05.webp",
+    "image": "./public/images/cameras/states/CAM05-open-open.png",
+    "gateStateImages": {
+      "leftGate": "G04",
+      "rightGate": "G05",
+      "images": {
+        "open-open": "./public/images/cameras/states/CAM05-open-open.png",
+        "open-closed": "./public/images/cameras/states/CAM05-open-closed.png",
+        "closed-open": "./public/images/cameras/states/CAM05-closed-open.png",
+        "closed-closed": "./public/images/cameras/originals/CAM05.png"
+      }
+    },
     "technical": "./public/reference/cameras/CAM05_visao.png",
     "renderAvailable": true
   },
@@ -159,7 +171,7 @@ export const CAMERAS = [
   }
 ];
 
-export const VENUE = {
+const VENUE = {
   "width": 32.5,
   "height": 28.0,
   "rooms": [
@@ -981,3 +993,16 @@ export const VENUE = {
     }
   ]
 };
+
+const OFFICE = {
+  gate: 'G01',
+  images: {
+    dark: './public/images/office/states/office-open-dark.webp',
+    lit: './public/images/office/states/office-open-lit.webp',
+    closed: './public/images/office/states/office-closed.webp'
+  }
+};
+
+window.NathGame = { CAMERAS, VENUE, OFFICE };
+
+})();

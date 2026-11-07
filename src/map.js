@@ -1,9 +1,12 @@
-import { CAMERAS, VENUE } from './data/game-data.js';
+(() => {
+'use strict';
+const { CAMERAS, VENUE } = window.NathGame;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCALE = 10.5;
 const PAD_X = 18;
 const PAD_Y = 18;
+const MAX_CLOSED_GATES = 3;
 const X = value => PAD_X + value * SCALE;
 const Y = value => PAD_Y + (VENUE.height - value) * SCALE;
 
@@ -12,6 +15,20 @@ function makeSvg(tag, attrs = {}, content = null) {
   for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, String(value));
   if (content !== null) element.textContent = content;
   return element;
+}
+
+function bindMapButton(node, activate) {
+  node.addEventListener('click', activate);
+  node.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (!event.repeat) activate();
+  });
+}
+
+function setGateClosed(gate, closed) {
+  gate.classList.toggle('closed', closed);
+  gate.setAttribute('aria-pressed', String(closed));
 }
 
 // Positions inside their corresponding rooms, rather than approximated rectangles.
@@ -32,18 +49,12 @@ const LABELS = {
   circ_wc: ['WC', 30.15, 12.15],
 };
 
-export function makeCameraMap({ canvas, selector, onSelect }) {
+function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => {} }) {
   const svg = makeSvg('svg', {
     viewBox: '0 0 380 332',
-    role: 'img',
-    'aria-label': 'Planta V8: 12 câmeras nas coordenadas reais do restaurante',
+    role: 'group',
+    'aria-label': 'Planta do restaurante: 12 câmeras e portões interativos',
   });
-  const defs = makeSvg('defs');
-  const pattern = makeSvg('pattern', {id:'map-grid', width:SCALE * 2, height:SCALE * 2, patternUnits:'userSpaceOnUse'});
-  pattern.append(makeSvg('path', {d:`M ${SCALE * 2} 0 L 0 0 0 ${SCALE * 2}`,fill:'none',stroke:'#93a1bd','stroke-width':'.4',opacity:'.20'}));
-  defs.append(pattern);
-  svg.append(defs);
-  svg.append(makeSvg('rect', {width:380,height:332,fill:'url(#map-grid)'}));
 
   const polygons = new Map();
   for (const room of VENUE.rooms) {
@@ -60,15 +71,45 @@ export function makeCameraMap({ canvas, selector, onSelect }) {
     svg.append(makeSvg('text',{x:X((x0+x1)/2),y:Y((y0+y1)/2)+3,class:'map-label'},'PALCO'));
   }
 
-  for (const opening of VENUE.openings) {
-    const {axis,at,start,end,type} = opening;
+  const gateLayer = makeSvg('g', { role: 'group', 'aria-label': 'Portões' });
+  const closedGates = [];
+  for (const {id,axis,at,start,end,type} of VENUE.openings) {
     const horizontal = axis === 'H';
-    svg.append(makeSvg('line', {
+    const coords = {
       x1: X(horizontal ? start : at),
       y1: Y(horizontal ? at : start),
       x2: X(horizontal ? end : at),
       y2: Y(horizontal ? at : end),
-      class:`map-opening ${type==='portao'?'gate':type==='saida'?'exit':'passage'}`,
+    };
+    if (type === 'portao') {
+      const label = `Portão ${id}`;
+      const gate = makeSvg('g', {
+        class: 'map-gate', 'data-gate': id, tabindex: '0', role: 'button',
+        'aria-label': label, 'aria-pressed': 'false',
+      });
+      gate.append(makeSvg('title', {}, label));
+      gate.append(makeSvg('line', {...coords, class: 'gate-hit-area'}));
+      gate.append(makeSvg('line', {...coords, class: 'gate-line'}));
+      bindMapButton(gate, () => {
+        if (!canToggleGate()) return;
+        const index = closedGates.indexOf(gate);
+        if (index !== -1) {
+          closedGates.splice(index, 1);
+          setGateClosed(gate, false);
+          onGatesChange();
+          return;
+        }
+        if (closedGates.length === MAX_CLOSED_GATES) setGateClosed(closedGates.pop(), false);
+        closedGates.push(gate);
+        setGateClosed(gate, true);
+        onGatesChange();
+      });
+      gateLayer.append(gate);
+      continue;
+    }
+    svg.append(makeSvg('line', {
+      ...coords,
+      class:`map-opening ${type==='saida'?'exit':'passage'}`,
       'stroke-dasharray': type==='livre'?'3 2':'none',
     }));
   }
@@ -78,7 +119,6 @@ export function makeCameraMap({ canvas, selector, onSelect }) {
   }
 
   const cameraNodes = new Map();
-  const cameraButtons = new Map();
   for (const cam of CAMERAS) {
     const px = X(cam.x), py = Y(cam.y);
     const g = makeSvg('g', {
@@ -98,44 +138,35 @@ export function makeCameraMap({ canvas, selector, onSelect }) {
     g.append(makeSvg('circle',{cx:px,cy:py,r:13,class:'pin-halo'}));
     g.append(makeSvg('circle',{cx:px,cy:py,r:10.7,class:'pin-body'}));
     g.append(makeSvg('text',{x:px,y:py+3.5,class:'pin-number'},String(cam.number).padStart(2,'0')));
-    g.addEventListener('click', () => onSelect(cam.id));
-    g.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onSelect(cam.id);
-      }
-    });
+    bindMapButton(g, () => onSelect(cam.id));
     const tip = makeSvg('title',{},`${cam.id} — ${cam.name}`);
     g.append(tip);
     svg.append(g);
     cameraNodes.set(cam.id,g);
-
-    const button=document.createElement('button');
-    button.type='button';
-    button.className=`camera-chip ${cam.renderAvailable?'':'reference'}`;
-    button.dataset.cam=cam.id;
-    button.title=`${cam.id} • ${cam.name}${cam.renderAvailable?'':' • referência técnica'}`;
-    button.setAttribute('aria-label',button.title);
-    const dot=document.createElement('i');dot.className='chip-dot';dot.setAttribute('aria-hidden','true');
-    const num=document.createElement('span');num.textContent=String(cam.number).padStart(2,'0');
-    button.append(dot,num);
-    button.addEventListener('click',()=>onSelect(cam.id));
-    selector.append(button);
-    cameraButtons.set(cam.id,button);
   }
 
+  // The gate targets sit above camera halos where their coordinates are close.
+  svg.append(gateLayer);
   canvas.append(svg);
   return {
+    isGateClosed(id) {
+      return closedGates.some(gate => gate.getAttribute('data-gate') === id);
+    },
+    resetGates() {
+      for (const gate of closedGates) setGateClosed(gate, false);
+      closedGates.length = 0;
+      onGatesChange();
+    },
     setActive(camera) {
       for (const [id,node] of cameraNodes) {
         node.classList.toggle('active',id===camera.id);
         node.setAttribute('aria-pressed',String(id===camera.id));
       }
-      for (const [id,button] of cameraButtons) {
-        button.classList.toggle('active',id===camera.id);
-        button.setAttribute('aria-pressed',String(id===camera.id));
-      }
       for (const [id,polygon] of polygons) polygon.classList.toggle('highlight',id===camera.room);
     },
   };
 }
+
+window.NathGame.makeCameraMap = makeCameraMap;
+
+})();

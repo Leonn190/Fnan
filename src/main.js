@@ -1,24 +1,17 @@
-import { CAMERAS } from './data/game-data.js';
-import { makeCameraMap } from './map.js';
-import { SoundEngine } from './sound.js';
+(() => {
+'use strict';
+const { CAMERAS, OFFICE, makeCameraMap, SoundEngine } = window.NathGame;
 
 // A primeira versão funciona como site estático: sem build, sem servidor de jogo e sem backend.
 const $ = selector => document.querySelector(selector);
 const dom = {
   game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'),
-  officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'),
-  panGuide: $('#pan-guide'), feedArt: $('#feed-art'), tech: $('#technical-feed'),
+  officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
+  feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
-  camNumber: $('#cam-number'), camRoom: $('#cam-room'), camCaption: $('#feed-caption'),
-  feedTime: $('#feed-time'), flash: $('#camera-switch-flash'),
-  clock: $('#clock-label'), power: $('#power-number'), powerFill: $('#power-fill'),
-  usageBars: [...document.querySelectorAll('#usage-bars b')], usageCaption: $('#usage-caption'),
-  mapPanel: $('#map-panel'), mapBody: $('#map-body'), mapMinimize: $('#map-minimize'),
-  mapSelected: $('#map-selected'),
-  handle: $('#monitor-handle'), handleLabel: $('#handle-label'),
-  soundToggle: $('#sound-toggle'), soundLabel: $('#sound-label'),
-  helpToggle: $('#help-toggle'), help: $('#help-dialog'), helpClose: $('#help-close'),
-  helpOkay: $('#help-okay'), hint: $('#initial-hint'),
+  camNumber: $('#cam-number'), camRoom: $('#cam-room'), flash: $('#camera-switch-flash'),
+  clock: $('#clock-label'), handle: $('#monitor-handle'), handleLabel: $('#handle-label'),
+  hint: $('#initial-hint'),
   toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift')
 };
 
@@ -26,9 +19,19 @@ const HOURS_PER_SHIFT = 6;
 const SECONDS_PER_HOUR = 90;
 const TOTAL_SHIFT_SECONDS = HOURS_PER_SHIFT * SECONDS_PER_HOUR;
 const sound = new SoundEngine();
+let audioReady;
+// Browsers unlock audio after the first interaction with the game.
+for (const event of ['click', 'keydown']) {
+  document.addEventListener(event, () => { audioReady ??= sound.enable(); }, { capture: true, once: true });
+}
+
+function playSound(effect) {
+  if (sound.enabled) sound[effect]();
+  else audioReady?.then(enabled => { if (enabled) sound[effect](); });
+}
 const state = {
-  mode: 'office', cameraIndex: 0, elapsed: 0, power: 100,
-  complete: false, pan: 0, targetPan: 0,
+  mode: 'office', cameraIndex: 0, elapsed: 0,
+  complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now()
 };
 let toastTimeout;
@@ -44,30 +47,85 @@ function announce(message) {
 }
 
 function preloadCamera(cam) {
-  if (!cam?.image || imageCache.has(cam.image)) return;
-  const image = new Image();
-  image.decoding = 'async';
-  image.src = cam.image;
-  imageCache.set(cam.image, image);
+  if (!cam?.image) return;
+  const sources = cam.gateStateImages ? Object.values(cam.gateStateImages.images) : [cam.image];
+  preloadImages(sources);
+}
+
+function preloadImages(sources) {
+  for (const source of sources) {
+    if (imageCache.has(source)) continue;
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = source;
+    imageCache.set(source, image);
+  }
 }
 
 const map = makeCameraMap({
-  canvas: $('#map-canvas'), selector: $('#map-selector'),
+  canvas: $('#map-canvas'),
+  canToggleGate: () => state.mode === 'cameras' && !state.complete,
+  onGatesChange: () => {
+    updateOfficeView();
+    const cam = CAMERAS[state.cameraIndex];
+    if (cam.gateStateImages) updateCameraFeed(cam);
+  },
   onSelect: id => {
     if (state.complete) return;
     changeCamera(id, true);
   }
 });
 
+function updateOfficeView() {
+  const closed = map.isGateClosed(OFFICE.gate);
+  if (closed) state.flashlight = false;
+  const view = closed ? 'closed' : state.flashlight ? 'lit' : 'dark';
+  dom.office.dataset.gate = closed ? 'closed' : 'open';
+  dom.office.dataset.flashlight = String(state.flashlight);
+  const source = OFFICE.images[view];
+  if (dom.officeArt.getAttribute('src') !== source) dom.officeArt.src = source;
+  dom.officeArt.alt = closed
+    ? 'Escritório de segurança, portão principal fechado'
+    : state.flashlight
+      ? 'Escritório de segurança, portão aberto e corredor iluminado por luz circular'
+      : 'Escritório de segurança, portão principal aberto e corredor escuro';
+}
+
 function showTechnical(cam) {
   dom.feedArt.hidden = true;
   dom.tech.hidden = false;
   dom.techArt.src = cam.technical;
   dom.techNumber.textContent = cam.id.replace('CAM', 'CAM ');
-  dom.camCaption.textContent = 'REFERÊNCIA DE VISIBILIDADE 2D • IMAGEM FINAL PENDENTE';
 }
 
-function changeCamera(id, playSound = false) {
+function cameraImage(cam) {
+  const views = cam.gateStateImages;
+  if (!views) return cam.image;
+  const left = map.isGateClosed(views.leftGate) ? 'closed' : 'open';
+  const right = map.isGateClosed(views.rightGate) ? 'closed' : 'open';
+  return views.images[`${left}-${right}`];
+}
+
+function updateCameraFeed(cam) {
+  const source = cameraImage(cam);
+  if (!source) {
+    showTechnical(cam);
+    return;
+  }
+  dom.tech.hidden = true;
+  dom.feedArt.hidden = false;
+  dom.feedArt.alt = `Câmera ${cam.id}: ${cam.name}, cenário noturno`;
+  dom.feedArt.onerror = () => {
+    if (CAMERAS[state.cameraIndex].id === cam.id && dom.feedArt.getAttribute('src') === source) {
+      showTechnical(cam);
+      announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
+    }
+  };
+  if (dom.feedArt.getAttribute('src') !== source) dom.feedArt.src = source;
+  else if (dom.feedArt.complete && dom.feedArt.naturalWidth === 0) showTechnical(cam);
+}
+
+function changeCamera(id, withSound = false) {
   const index = CAMERAS.findIndex(camera => camera.id === id);
   if (index < 0) return;
   const changed = state.cameraIndex !== index;
@@ -75,25 +133,10 @@ function changeCamera(id, playSound = false) {
   const cam = CAMERAS[index];
   dom.camNumber.textContent = cam.id.replace('CAM', 'CAM ');
   dom.camRoom.textContent = cam.name.toUpperCase();
-  dom.mapSelected.textContent = `${String(cam.number).padStart(2, '0')} / ${CAMERAS.length}`;
   map.setActive(cam);
 
-  if (cam.image) {
-    dom.tech.hidden = true;
-    dom.feedArt.hidden = false;
-    dom.feedArt.alt = `Câmera ${cam.id}: ${cam.name}, cenário noturno sem animatrônicos`;
-    dom.camCaption.innerHTML = 'CÂMERA CONECTADA <span>•</span> NENHUM ANIMATRÔNICO EM CAMPO';
-    // A imagem requisitada pode estar ausente após uma edição do repositório.
-    dom.feedArt.onerror = () => {
-      if (state.cameraIndex === index) {
-        showTechnical(cam);
-        announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
-      }
-    };
-    dom.feedArt.src = cam.image;
-  } else {
-    showTechnical(cam);
-  }
+  updateCameraFeed(cam);
+  preloadCamera(cam);
 
   clearTimeout(flashTimeout);
   dom.flash.classList.remove('active');
@@ -101,7 +144,7 @@ function changeCamera(id, playSound = false) {
   void dom.flash.offsetWidth;
   dom.flash.classList.add('active');
   flashTimeout = setTimeout(() => dom.flash.classList.remove('active'), 360);
-  if (playSound && changed) sound.switch();
+  if (withSound && changed) playSound('switch');
   preloadCamera(CAMERAS[(index + 1) % CAMERAS.length]);
 }
 
@@ -115,12 +158,15 @@ function setMode(mode) {
   dom.handleLabel.textContent = watching ? 'ABAIXAR MONITOR' : 'ABRIR MONITOR';
   dom.handle.setAttribute('aria-label', watching ? 'Abaixar o monitor para voltar ao escritório' : 'Abrir câmeras de segurança');
   dom.hint.hidden = true;
-  sound.monitor();
+  state.dragging = false;
+  state.pointerX = null;
+  state.flashlight = false;
+  updateOfficeView();
+  playSound('monitor');
   if (watching) {
     changeCamera(CAMERAS[state.cameraIndex].id);
     preloadCamera(CAMERAS[0]);
   }
-  updatePowerUI();
 }
 
 function toggleMonitor() { setMode(state.mode === 'office' ? 'cameras' : 'office'); }
@@ -130,52 +176,38 @@ function cycleCamera(direction) {
   changeCamera(CAMERAS[next].id, true);
 }
 
-function updatePowerUI() {
-  const percent = Math.max(0, Math.ceil(state.power));
-  dom.power.textContent = `${percent}%`;
-  dom.powerFill.style.width = `${Math.max(0, state.power)}%`;
-  dom.powerFill.classList.toggle('low', state.power <= 25);
-  const usage = state.mode === 'cameras' ? 2 : 1;
-  dom.usageBars.forEach((bar, i) => bar.classList.toggle('on', i < usage));
-  dom.usageCaption.textContent = usage === 1 ? 'NORMAL' : 'MONITOR';
-}
-
 function updateClockUI() {
   const hours = Math.floor(state.elapsed / SECONDS_PER_HOUR);
   const label = hours === 0 ? '12' : String(Math.min(6, hours));
   dom.clock.innerHTML = `${label} <small>AM</small>`;
-  const simulatedSeconds = Math.floor(state.elapsed / SECONDS_PER_HOUR * 3600);
-  const hour = Math.floor(simulatedSeconds / 3600);
-  const minute = Math.floor(simulatedSeconds % 3600 / 60);
-  const second = simulatedSeconds % 60;
-  dom.feedTime.textContent = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
 }
 
 function finishShift() {
   state.complete = true;
   dom.complete.hidden = false;
-  sound.finish();
+  playSound('finish');
 }
 
 function resetShift() {
   state.elapsed = 0;
-  state.power = 100;
+  state.flashlight = false;
+  map.resetGates();
   state.complete = false;
   state.mode = 'cameras'; // Force setMode to apply the initial office state.
   dom.complete.hidden = true;
   setMode('office');
   updateClockUI();
-  updatePowerUI();
 }
 
 function maxPanShift() {
   // The office panorama is exactly 2172:724 (3:1), never distorted.
-  return Math.max(0, (Math.max(window.innerWidth, window.innerHeight * 3) - window.innerWidth) / 2);
+  return Math.max(0, (dom.officeScene.offsetWidth - dom.game.clientWidth) / 2);
 }
 
 function setEdgePan(clientX) {
   if (state.dragging) return;
-  const ratio = clientX / window.innerWidth;
+  const bounds = dom.game.getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
   let signed = 0;
   const edge = .17;
   if (ratio < edge) signed = (edge - ratio) / edge;
@@ -193,14 +225,11 @@ function moveCamera(dt) {
 function tick(now) {
   const delta = Math.max(0, Math.min(100, now - state.lastFrame));
   state.lastFrame = now;
-  if (!state.complete && !dom.help.open && !document.hidden) {
+  if (!state.complete && !document.hidden) {
     const seconds = delta / 1000;
     state.elapsed += seconds;
-    // A base explora a noite sem ameaças: o consumo informa o uso, não causa game over.
-    state.power = Math.max(0, state.power - seconds * (state.mode === 'cameras' ? .026 : .014));
     if (now >= nextHudUpdate) {
       updateClockUI();
-      updatePowerUI();
       nextHudUpdate = now + 200;
     }
     if (state.elapsed >= TOTAL_SHIFT_SECONDS) finishShift();
@@ -211,26 +240,7 @@ function tick(now) {
 
 dom.officeMonitor.addEventListener('click', () => setMode('cameras'));
 dom.handle.addEventListener('click', toggleMonitor);
-dom.mapMinimize.addEventListener('click', () => {
-  const collapsed = dom.mapPanel.classList.toggle('collapsed');
-  dom.mapMinimize.setAttribute('aria-expanded', String(!collapsed));
-});
-dom.helpToggle.addEventListener('click', () => dom.help.showModal());
-dom.helpClose.addEventListener('click', () => dom.help.close());
-dom.helpOkay.addEventListener('click', () => dom.help.close());
 dom.restart.addEventListener('click', resetShift);
-
-dom.soundToggle.addEventListener('click', async () => {
-  if (sound.enabled) sound.disable();
-  else if (!(await sound.enable())) {
-    announce('ÁUDIO NÃO SUPORTADO NESTE NAVEGADOR');
-    return;
-  }
-  dom.soundToggle.setAttribute('aria-pressed', String(sound.enabled));
-  dom.soundToggle.setAttribute('aria-label', sound.enabled ? 'Desativar o som' : 'Ativar o som');
-  dom.soundLabel.textContent = sound.enabled ? 'SOM ON' : 'SOM OFF';
-  sound.switch();
-});
 
 dom.office.addEventListener('pointermove', event => {
   if (event.pointerType === 'touch') {
@@ -249,17 +259,24 @@ dom.office.addEventListener('pointerdown', event => {
   if (event.pointerType !== 'touch' || event.target.closest('button')) return;
   state.dragging = true;
   state.pointerX = event.clientX;
+  dom.office.setPointerCapture(event.pointerId);
 });
 for (const eventName of ['pointerup','pointercancel']) dom.office.addEventListener(eventName, () => { state.dragging = false; });
 
 const panKeys = new Set();
 document.addEventListener('keydown', event => {
-  if (dom.help.open || state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
   const key = event.key.toLowerCase();
-  const focusedButton = event.target instanceof HTMLElement && Boolean(event.target.closest('button'));
+  const focusedButton = event.target instanceof Element && Boolean(event.target.closest('button, [role="button"]'));
   if ((key === ' ' && !focusedButton) || key === 'm') {
     event.preventDefault();
-    toggleMonitor();
+    if (!event.repeat) toggleMonitor();
+  } else if (key === 'f' && state.mode === 'office') {
+    event.preventDefault();
+    if (!event.repeat && !map.isGateClosed(OFFICE.gate)) {
+      state.flashlight = !state.flashlight;
+      updateOfficeView();
+    }
   } else if (key === 'escape') {
     if (state.mode === 'cameras') {
       event.preventDefault();
@@ -281,13 +298,26 @@ document.addEventListener('keyup', event => {
   const key = event.key.toLowerCase();
   if (panKeys.delete(key) && state.mode === 'office' && panKeys.size === 0) state.targetPan = 0;
 });
-window.addEventListener('blur', () => {panKeys.clear();state.targetPan = 0;});
-window.addEventListener('resize', () => {
-  state.targetPan = Math.min(maxPanShift(), Math.max(-maxPanShift(), state.targetPan));
+window.addEventListener('blur', () => {
+  panKeys.clear();
+  state.targetPan = 0;
+  state.flashlight = false;
+  updateOfficeView();
 });
+const resizeObserver = new ResizeObserver(() => {
+  const limit = maxPanShift();
+  state.targetPan = Math.min(limit, Math.max(-limit, state.targetPan));
+  state.pan = Math.min(limit, Math.max(-limit, state.pan));
+});
+resizeObserver.observe(dom.game);
 
 // The site opens directly inside the office: no menu or splash screen.
 changeCamera(CAMERAS[0].id);
+updateOfficeView();
+preloadImages(Object.values(OFFICE.images));
+// Load all four CAM05 states before the player starts toggling its gates.
+preloadCamera(CAMERAS.find(cam => cam.gateStateImages));
 updateClockUI();
-updatePowerUI();
 requestAnimationFrame(tick);
+
+})();
