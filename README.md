@@ -79,10 +79,10 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | CAM08 | Estoque | Cena 3D 4K |
 | CAM09 | Área de serviço | Cena da sala técnica |
 | CAM10 | Cozinha | Cena 3D final |
-| CAM11 | Corredor de serviço, oeste | Cena 3D do corredor de pedidos/cozinha |
+| CAM11 | Área de Retirada • Corredor | Visão técnica até nova arte 3D da retirada |
 | CAM12 | Corredor de serviço, leste | Cena 3D do corredor da retaguarda |
 
-As 12 câmeras têm cenas próprias, com `CAM01.webp` a `CAM12.webp` na pasta `public/images/cameras/` e os PNG mestres numerados em `originals/`. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.
+O projeto continua com 12 câmeras. **CAM11 foi realocada** para a área de retirada: até uma renderização 3D genuína da nova perspectiva ser produzida, o jogo exibe apenas a visão técnica `public/reference/cameras/CAM11_visao.png`. O antigo WebP/PNG de CAM11 permanece no repositório como referência legada, **não exibida no jogo**. As outras 11 câmeras mantêm suas imagens e geometria. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.
 
 Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. A imagem padrão mostra o portão aberto com breu atrás; fechar o G08 mostra o portão baixado. Detalhes e prompt: `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
 
@@ -92,7 +92,7 @@ Verificação dos portões e escritório: `node tests/camera-gates.cjs` testa a 
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
-O mapa da interface é desenhado automaticamente com os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** do `nathzinha_v7_planta_medidas.json`. As plantas e documentos V8 continuam disponíveis como fonte de referência; o jogo não muda a arquitetura definida.
+O mapa da interface usa os **polígonos, aberturas, posições e azimutes das 12 câmeras** exportados de `nathzinha_v7_planta_medidas.json` para `src/data/game-data.js`. Para a CAM11, a seta segue a convenção cartesiana verdadeira do gerador (0°=leste, 90°=norte). As outras 11 setas legadas mantêm a aparência anterior. Ver `outros/documentacao/CAM11_RELOCALIZACAO_2026-11-07.md`. As plantas e documentos V8 continuam disponíveis como fonte de referência; o jogo não muda a arquitetura definida.
 
 ## Observações
 
