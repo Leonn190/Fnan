@@ -152,15 +152,16 @@ const CAMERAS = [
   {
     "id": "CAM11",
     "number": 11,
-    "name": "Corredor • Oeste",
-    "room": "corredor_servico",
-    "x": 15.2,
-    "y": 22.28,
-    "angle": 135,
-    "fov": 88,
-    "image": "./public/images/cameras/CAM11.webp",
+    "name": "Retirada • Corredor",
+    "room": "retirada",
+    "x": 17.75,
+    "y": 27.75,
+    "angle": 223,
+    "fov": 90,
+    "angleConvention": "cartesian",
+    "image": null,
     "technical": "./public/reference/cameras/CAM11_visao.png",
-    "renderAvailable": true
+    "renderAvailable": false
   },
   {
     "id": "CAM12",
