@@ -145,7 +145,7 @@
 
 **Geometria que deve ser preservada:** único corredor em L contínuo; manter passagem P17 atrás do palco; preservar G06 e saída superior EXT03; não inventar ramificações.
 
-## 12. Área de Retirada de Comida (`retirada`)
+## 12. Área de Retirada de Comida (`retirada`) — CAM11 realocada
 **Base da planta:** 7,2×3,6 m.
 
 **Conceito:** área de retirada de pratos com vão largo de serviço, integração visual com corredor.
@@ -157,6 +157,8 @@
 **Pôsteres:** poucos; foco funcional.
 
 **Geometria que deve ser preservada:** preservar abertura ampla P10 ao corredor, sem transformá-la numa janelinha estreita; manter conexão P09 com cozinha.
+
+**CAM11 operacional (alteração posterior à V8 original):** lente no canto nordeste X=17,75, Y=27,75 m, altura 2,8 m, azimute 223°, FOV 90°. O balcão fixo X=14,2–16,9/Y=24,85–25,6 m deve aparecer. P10 ocupa o sul Y=24,4 de X=12,9 a 17,1 m; P09 está a oeste X=10,8, Y=25,3–26,5 m. Preservar ambas e mostrar somente corredor efetivamente visível. Continuidade com cozinha CAM10 e corredor CAM12.
 
 ## 13. Sala da Nathzinha (`nathzinha`)
 **Base da planta:** 6,5×3,6 m.
