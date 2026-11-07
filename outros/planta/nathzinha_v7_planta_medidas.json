@@ -1052,16 +1052,16 @@
     },
     {
       "id": "CAM11",
-      "sala": "corredor_servico",
+      "sala": "retirada",
       "posicao_lente_m": [
-        15.2,
-        22.28
+        17.75,
+        27.75
       ],
       "altura_lente_m": 2.8,
-      "azimute_graus": 135,
-      "abertura_horizontal_graus": 88,
+      "azimute_graus": 223,
+      "abertura_horizontal_graus": 90,
       "alcance_max_m": 18,
-      "observacao_enquadramento": "fim do corredor com mais visão da retirada; girada mais 4 graus à direita"
+      "observacao_enquadramento": "Canto nordeste da Área de Retirada, com balcão fixo, P10 e visão parcial do corredor; P09 comunica com cozinha"
     },
     {
       "id": "CAM12",
