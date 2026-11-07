@@ -130,8 +130,12 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
     });
     const length = 20;
     const rads = cam.angle * Math.PI / 180;
+    // A CAM11 segue o azimute cartesiano da planta (0° leste, 90° norte);
+    // as outras setas já aprovadas continuam sem mudanças neste PR.
+    const dx = cam.angleConvention === 'cartesian' ? Math.cos(rads) : Math.sin(rads);
+    const dy = cam.angleConvention === 'cartesian' ? Math.sin(rads) : Math.cos(rads);
     g.append(makeSvg('path',{
-      d:`M ${px} ${py} L ${px+Math.sin(rads)*length} ${py-Math.cos(rads)*length}`,
+      d:`M ${px} ${py} L ${px+dx*length} ${py-dy*length}`,
       stroke:'#a8e5f1','stroke-width':'1.6','stroke-dasharray':'2 3',fill:'none',opacity:'.6',
     }));
     g.append(makeSvg('circle',{cx:px,cy:py,r:16,class:'pin-area'}));
