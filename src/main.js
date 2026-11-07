@@ -1,6 +1,7 @@
 (() => {
 'use strict';
 const { CAMERAS, OFFICE, makeCameraMap, SoundEngine } = window.NathGame;
+const shopCamera = CAMERAS.find(cam => cam.id === 'CAM01');
 const stageCamera = CAMERAS.find(cam => cam.id === 'CAM03');
 
 // A primeira versão funciona como site estático: sem build, sem servidor de jogo e sem backend.
@@ -31,7 +32,7 @@ function playSound(effect) {
   else audioReady?.then(enabled => { if (enabled) sound[effect](); });
 }
 const state = {
-  mode: 'office', cameraIndex: 0, stageState: 'vazia', elapsed: 0,
+  mode: 'office', cameraIndex: 0, characterStates: new Map(), elapsed: 0,
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now()
 };
@@ -99,20 +100,24 @@ function showTechnical(cam) {
   dom.techNumber.textContent = cam.id.replace('CAM', 'CAM ');
 }
 
+function characterStateImages(cam) {
+  return cam.characterStateImages ?? cam.stageStateImages;
+}
+
 function cameraImage(cam) {
   const views = cam.gateStateImages;
-  if (!views) return cam.stageStateImages?.[state.stageState] ?? cam.image;
+  if (!views) return characterStateImages(cam)?.[state.characterStates.get(cam.id)] ?? cam.image;
   const key = views.gates.map(id => map.isGateClosed(id) ? 'closed' : 'open').join('-');
   return views.images[key] ?? cam.image;
 }
 
 // Seleção explícita para o código do jogo. Use "vazia" para restaurar a imagem padrão.
-function setCam03StageState(key) {
-  if (typeof key !== 'string' || (key !== 'vazia' && !Object.hasOwn(stageCamera.stageStateImages, key))) {
+function setCameraCharacterState(cam, key) {
+  if (typeof key !== 'string' || (key !== 'vazia' && !Object.hasOwn(characterStateImages(cam), key))) {
     return false;
   }
-  state.stageState = key;
-  if (CAMERAS[state.cameraIndex] === stageCamera) updateCameraFeed(stageCamera);
+  state.characterStates.set(cam.id, key);
+  if (CAMERAS[state.cameraIndex] === cam) updateCameraFeed(cam);
   return true;
 }
 
@@ -322,7 +327,8 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(dom.game);
 
 // The site opens directly inside the office: no menu or splash screen.
-window.NathGame.setCam03StageState = setCam03StageState;
+window.NathGame.setCam01ShopState = key => setCameraCharacterState(shopCamera, key);
+window.NathGame.setCam03StageState = key => setCameraCharacterState(stageCamera, key);
 changeCamera(CAMERAS[0].id);
 updateOfficeView();
 preloadImages(Object.values(OFFICE.images));

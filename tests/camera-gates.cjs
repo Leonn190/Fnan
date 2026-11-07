@@ -56,6 +56,12 @@ const check = expected => {
 };
 assert.equal(cameras.length, 12);
 assert.equal(gates.length, 9);
+const openings = window.NathGame.VENUE.openings;
+assert(!openings.some(opening => opening.id === 'P17'));
+const backstage = openings.find(opening => opening.id === 'G06');
+assert.equal(backstage.axis, 'H');
+assert.equal(backstage.at, 22.2);
+assert.equal((backstage.start + backstage.end) / 2, 20);
 const office = view => {
   assert.equal(nodes['office-art'].src, window.NathGame.OFFICE.images[view]);
   assert(fs.existsSync(path.join(root, nodes['office-art'].src)));
@@ -118,6 +124,21 @@ assert.equal(nodes['technical-feed'].hidden, true);
 gate('G08');
 camera('CAM04'); checkHall(false);
 gate('G07'); assert(!isClosed('G08')); checkHall(true);
+// The relocated G06 reveals the backstage on CAM12.
+const checkBackstage = open => {
+  const src = nodes['feed-art'].src;
+  assert.equal(src, open
+    ? './public/images/cameras/states/CAM12-open.webp'
+    : './public/images/cameras/CAM12.webp');
+  assert(fs.existsSync(path.join(root, src)), src);
+};
+camera('CAM12'); checkBackstage(true);
+gate('G06'); checkBackstage(false);
+gate('G06'); checkBackstage(true);
+camera('CAM09');
+gate('G06');
+camera('CAM12'); checkBackstage(false);
+gate('G07'); assert(!isClosed('G06')); checkBackstage(true);
 // All 12 cameras have a standardized base render and master PNG.
 for (const cam of window.NathGame.CAMERAS) {
   camera(cam.id);
@@ -129,4 +150,4 @@ for (const cam of window.NathGame.CAMERAS) {
     assert(fs.existsSync(path.join(root, src)), src);
   }
 }
-console.log('PASS: all 12 camera renders and originals, CAM04 G08 open/closed/reopened, CAM05, office and shift reset.');
+console.log('PASS: 12 camera renders, CAM04/G08, CAM05/G04/G05, CAM12/G06, office and shift reset.');

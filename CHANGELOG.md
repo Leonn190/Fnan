@@ -1,5 +1,12 @@
 # Histórico
 
+## Ajustes das câmeras — 07/11/2026
+
+- Nova arte da sala de manutenção técnica integrada ao feed da CAM09.
+- Removida a passagem azul ao norte do salão no minimapa. O portão hidráulico G06 agora ocupa o mesmo trecho, atrás do palco.
+- A CAM12 acompanha o G06. O portão aberto revela as cortinas vermelhas dos bastidores do palco visto na CAM03.
+- Padronizados os nomes das artes avulsas, removidas as cópias idênticas e arquivadas as versões anteriores da CAM09.
+
 ## Web V1 — 07/11/2026
 
 - Migração organizada do pacote de referência V8 para um repositório de site estático (`src`, `public`, `outros`).

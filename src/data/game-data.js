@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-// Gerado a partir do projeto V8: outros/planta/nathzinha_v7_planta_medidas.json
+// Base do projeto V8: outros/planta/nathzinha_v7_planta_medidas.json
 // Coordenadas: origem sudoeste, x=leste, y=norte, em metros.
 const CAMERAS = [
   {
@@ -13,6 +13,23 @@ const CAMERAS = [
     "angle": 225,
     "fov": 88,
     "image": "./public/images/cameras/CAM01.webp",
+    "characterStateImages": {
+      "original": "./public/images/cameras/states/CAM01-original.webp",
+      "yandere": "./public/images/cameras/states/CAM01-yandere.webp",
+      "gotica": "./public/images/cameras/states/CAM01-gotica.webp",
+      "platinada": "./public/images/cameras/states/CAM01-platinada.webp",
+      "original-yandere": "./public/images/cameras/states/CAM01-original-yandere.webp",
+      "original-gotica": "./public/images/cameras/states/CAM01-original-gotica.webp",
+      "original-platinada": "./public/images/cameras/states/CAM01-original-platinada.webp",
+      "yandere-gotica": "./public/images/cameras/states/CAM01-yandere-gotica.webp",
+      "yandere-platinada": "./public/images/cameras/states/CAM01-yandere-platinada.webp",
+      "gotica-platinada": "./public/images/cameras/states/CAM01-gotica-platinada.webp",
+      "original-yandere-gotica": "./public/images/cameras/states/CAM01-original-yandere-gotica.webp",
+      "original-yandere-platinada": "./public/images/cameras/states/CAM01-original-yandere-platinada.webp",
+      "original-gotica-platinada": "./public/images/cameras/states/CAM01-original-gotica-platinada.webp",
+      "yandere-gotica-platinada": "./public/images/cameras/states/CAM01-yandere-gotica-platinada.webp",
+      "todas": "./public/images/cameras/states/CAM01-todas.webp"
+    },
     "technical": "./public/reference/cameras/CAM01_visao.png",
     "renderAvailable": true
   },
@@ -181,6 +198,13 @@ const CAMERAS = [
     "angle": 180,
     "fov": 82,
     "image": "./public/images/cameras/CAM12.webp",
+    "gateStateImages": {
+      "gates": ["G06"],
+      "images": {
+        "open": "./public/images/cameras/states/CAM12-open.webp",
+        "closed": "./public/images/cameras/CAM12.webp"
+      }
+    },
     "technical": "./public/reference/cameras/CAM12_visao.png",
     "renderAvailable": true
   }
@@ -770,8 +794,8 @@ const VENUE = {
       "id": "G06",
       "axis": "H",
       "at": 22.2,
-      "start": 24.8,
-      "end": 26.3,
+      "start": 19.25,
+      "end": 20.75,
       "type": "portao"
     },
     {
@@ -924,14 +948,6 @@ const VENUE = {
       "at": 13.6,
       "start": 30.65,
       "end": 31.8,
-      "type": "livre"
-    },
-    {
-      "id": "P17",
-      "axis": "H",
-      "at": 22.2,
-      "start": 19.1,
-      "end": 20.9,
       "type": "livre"
     }
   ],

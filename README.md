@@ -15,27 +15,29 @@ Restaurante_da_Nathzinha_Web_V1/
 │   ├── main.js                      # Escritório, monitor, noite, HUD, entradas
 │   ├── map.js                       # Mapa clicável da planta real
 │   ├── sound.js                     # Efeitos sonoros gerados no navegador
-│   ├── data/game-data.js            # Dados autoritativos exportados da planta
+│   ├── data/game-data.js            # Dados da planta usados no jogo
 │   └── styles/main.css              # Interface e animações
 ├── public/                          # Recursos consumidos pelo navegador
 │   ├── images/
 │   │   ├── office/                  # Panorama usado no jogo + PNG original
 │   │   ├── cameras/                 # WEBP otimizadas: CAM01–12
-│   │   │   └── originals/           # Imagens PNG originais preservadas
-│   │   ├── animatronics/            # As três artes 2D, não aparecem nesta V1
+│   │   │   ├── originals/           # PNGs mestres das cenas base
+│   │   │   └── states/              # Variantes de portões e do palco
+│   │   ├── animatronics/            # Artes 2D e camadas de composição do palco
 │   │   └── branding/                # Ícone do site
 │   ├── reference/
 │   │   ├── cameras/                 # CAM01...CAM12_visao.png, visões técnicas 2D
 │   │   └── maps/                    # Imagens da planta V7/V8
 │   └── models/                      # Reserva para futuros modelos 3D
 └── outros/                          # Arquivos de produção e documentação
+    ├── arquivo/cameras/             # Renders anteriores da CAM09
     ├── documentacao/               # V8, checklist, manifesto e hashes
     ├── identidade_visual/          # Bíblia visual, paleta e materiais
     ├── planta/                     # Fonte técnica em JSON/Python/SVG
     └── prompts/                     # Prompt mestre + 12 prompts de câmera
 ```
 
-O arquivo `outros/documentacao/MAPEAMENTO_ORIGINAIS.json` registra **os 60 arquivos originais** do ZIP V8: de onde vieram, onde foram colocados, hashes SHA-256 e tamanho original. Esses arquivos foram copiados sem modificações. A versão para o navegador usa imagens WEBP menores, preservando os PNG mestres.
+O arquivo `outros/documentacao/MAPEAMENTO_ORIGINAIS.json` registra a importação dos **60 arquivos originais** do ZIP V8, com os caminhos e hashes SHA-256 da época. As cenas base atuais usam WebP no navegador e têm PNGs mestres numerados em `public/images/cameras/originals/`.
 
 ## Publicar no GitHub Pages (sem build)
 
@@ -69,7 +71,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 
 | ID | Sala da planta | Recurso exibido |
 |---|---|---|
-| CAM01 | Lojinha | Cena 3D final |
+| CAM01 | Lojinha | Loja vazia e quinze variantes com as Nathzinhas |
 | CAM02 | Recepção | Cena 3D final |
 | CAM03 | Salão principal, virada para o palco | Palco vazio e sete variantes com as Nathzinhas |
 | CAM04 | Salão principal, parede oposta | Portão sul G08 aberto ou fechado |
@@ -77,26 +79,30 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | CAM06 | VIP 2 lavanda | Cena 3D final |
 | CAM07 | Fliperama | Cena 3D final |
 | CAM08 | Estoque | Cena 3D 4K |
-| CAM09 | Área de serviço | Cena da sala técnica |
+| CAM09 | Área de serviço | Nova arte da sala de manutenção técnica |
 | CAM10 | Cozinha | Cena 3D final |
 | CAM11 | Área de retirada | Balcão de retirada de pedidos |
-| CAM12 | Corredor de serviço, leste | Cena 3D do corredor da retaguarda |
+| CAM12 | Corredor de serviço, leste | Portão G06 aberto com cortinas vermelhas à vista ou fechado |
 
 As 12 câmeras têm cenas próprias, com `CAM01.webp` a `CAM12.webp` na pasta `public/images/cameras/` e os PNG mestres numerados em `originals/`. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.
+
+As combinações da CAM01 ficam em `public/images/cameras/states/`. O jogo pode selecionar uma delas com `NathGame.setCam01ShopState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a loja vazia.
 
 Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. A imagem padrão mostra o portão aberto com breu atrás; fechar o G08 mostra o portão baixado. Detalhes e prompt: `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
 
 A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. Os portões G04/G05 no mapa controlam as quatro imagens da sala, inclusive quando um deles é reaberto automaticamente pelo limite de três fechados. A sala usa a mesma base de pixels em todos os estados. Detalhes e prompts: `outros/prompts/CAM05_ESTADOS_PORTOES.md`. G04 controla a esquerda e G05 a direita na imagem.
 
-Verificação dos portões e escritório: `node tests/camera-gates.cjs` testa a luz F, os três estados do escritório, a CAM05 e a ligação com os portões. `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
+Na CAM12, o portão hidráulico G06 começa aberto e revela as cortinas vermelhas dos bastidores do palco da CAM03. Clique no G06 ao norte do salão para baixar ou levantar o portão.
+
+O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório e a ligação dos portões com as câmeras. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
-O mapa da interface é desenhado automaticamente com os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** do `nathzinha_v7_planta_medidas.json`. As plantas e documentos V8 continuam disponíveis como fonte de referência; o jogo não muda a arquitetura definida.
+O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 
 ## Observações
 
-- O projeto não usa os sprites dos animatrônicos ainda. Os três PNGs foram guardados em `public/images/animatronics/` para expansão futura.
+- As artes individuais dos animatrônicos ficam em `public/images/animatronics/`. As variantes da CAM03 já trazem as personagens compostas na cena.
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
 - Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.
