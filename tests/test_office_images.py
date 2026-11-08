@@ -4,8 +4,8 @@ from PIL import Image, ImageChops, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 OFFICE = ROOT / 'public/images/office'
-original = Image.open(OFFICE / 'office-original.png').convert('RGB')
-views = {name: Image.open(OFFICE / f'states/office-{name}.webp').convert('RGB')
+original = Image.open(OFFICE / 'master.png').convert('RGB')
+views = {name: Image.open(OFFICE / f'states/{name}.webp').convert('RGB')
          for name in ['open-dark', 'open-lit', 'closed']}
 assert original.size == (2172, 724)
 # Test every pixel outside the central aperture's bounding rectangle.

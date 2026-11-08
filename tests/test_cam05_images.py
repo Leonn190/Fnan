@@ -4,14 +4,17 @@ import hashlib
 from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
-CAMERAS = ROOT / 'public/images/cameras'
-original_path = CAMERAS / 'originals/CAM05.png'
+CAMERA = ROOT / 'public/images/cameras/CAM05'
+original_path = CAMERA / 'master.png'
 original = Image.open(original_path).convert('RGB')
-left = Image.open(CAMERAS / 'states/CAM05-open-closed.png').convert('RGB')
-right = Image.open(CAMERAS / 'states/CAM05-closed-open.png').convert('RGB')
-both = Image.open(CAMERAS / 'states/CAM05-open-open.png').convert('RGB')
+closed = Image.open(CAMERA / 'base.webp').convert('RGB')
+left = Image.open(CAMERA / 'states/open-closed/vazia.webp').convert('RGB')
+right = Image.open(CAMERA / 'states/closed-open/vazia.webp').convert('RGB')
+both = Image.open(CAMERA / 'states/open-open/vazia.webp').convert('RGB')
 assert original.size == (1672, 941)
 assert all(image.size == original.size for image in [left, right, both])
+assert closed.size == original.size
+assert ImageChops.difference(closed, original).getbbox() is None
 
 # Closing one side must restore that half to the untouched original.
 left_half, right_half = (0, 0, 836, 941), (836, 0, 1672, 941)

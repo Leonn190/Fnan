@@ -6,14 +6,14 @@ from pathlib import Path
 from PIL import Image
 
 
-IMAGES = Path(__file__).resolve().parents[1] / "public" / "images"
-STATES = IMAGES / "cameras" / "states"
-STAGE = IMAGES / "animatronics" / "stage"
+ROOT = Path(__file__).resolve().parents[1]
+STATES = ROOT / "public/images/cameras/CAM03/states"
+STAGE = ROOT / "outros/arte/cameras/CAM03"
 CHARACTERS = ("original", "yandere", "gotica")
 
 
 def main():
-    with Image.open(STATES / "CAM03-todas.png") as source:
+    with Image.open(STATES / "todas.webp") as source:
         trio = source.convert("RGBA")
 
     removals = {}
@@ -32,7 +32,7 @@ def main():
                 if character not in group:
                     frame.alpha_composite(removals[character])
             name = "-".join(group)
-            frame.convert("RGB").save(STATES / f"CAM03-{name}.png", optimize=True)
+            frame.convert("RGB").save(STATES / f"{name}.webp", lossless=True)
 
 
 if __name__ == "__main__":

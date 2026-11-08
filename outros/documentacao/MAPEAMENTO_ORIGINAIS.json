@@ -1,5 +1,5 @@
 {
-  "descricao": "Relação dos arquivos originais V8, mantidos byte a byte; as imagens WEBP em public/images/ são derivados otimizados para o jogo.",
+  "descricao": "Registro histórico da importação do V8. destino_v1 e sha256 registram os caminhos e conteúdos da época da importação.",
   "total": 60,
   "arquivos": [
     {

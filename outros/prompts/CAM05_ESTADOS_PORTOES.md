@@ -1,6 +1,6 @@
 # CAM05 — estados dos portões
 
-Ferramenta: `image_gen` integrada, em modo de edição. Alvo das três gerações: `public/images/cameras/originals/CAM05.png`. O arquivo original foi preservado e continua sendo o estado com ambos fechados.
+As três aberturas foram geradas com o ImageGen integrado, a partir do PNG mestre em `public/images/cameras/CAM05/master.png`. O estado com ambos os portões fechados usa uma cópia WebP sem perdas desse mestre.
 
 ## Prompts usados
 
@@ -20,12 +20,12 @@ Use case: precise-object-edit. Edit target: attached original CAM05 game room im
 
 A geração introduziu pequenas diferenças fora das portas. Para os arquivos finais, essas áreas foram restauradas a partir do PNG original, sem recompressão com perdas. As aberturas pretas foram limitadas aos interiores dos portões; a luminária e o laço em primeiro plano foram preservados. Os mesmos recortes são usados nas combinações para evitar que a sala mude entre estados.
 
-| Esquerdo na imagem | Direito na imagem | Arquivo em `public/images/cameras/` |
+| Esquerdo na imagem | Direito na imagem | Arquivo em `public/images/cameras/CAM05/` |
 |---|---|---|
-| Aberto | Aberto | `states/CAM05-open-open.png` (padrão) |
-| Aberto | Fechado | `states/CAM05-open-closed.png` |
-| Fechado | Aberto | `states/CAM05-closed-open.png` |
-| Fechado | Fechado | `originals/CAM05.png` (original intacto) |
+| Aberto | Aberto | `states/open-open/vazia.webp` (inicial) |
+| Aberto | Fechado | `states/open-closed/vazia.webp` |
+| Fechado | Aberto | `states/closed-open/vazia.webp` |
+| Fechado | Fechado | `base.webp` |
 
 Todos os arquivos têm 1672 × 941 pixels. A troca altera a imagem completa, sem filtros ou animações adicionais na sala.
 

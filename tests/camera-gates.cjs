@@ -48,8 +48,8 @@ const isClosed = id => gates.find(node => node.attrs['data-gate'] === id).attrs[
 const check = expected => {
   const src = nodes['feed-art'].src;
   assert.equal(src, expected === 'closed-closed'
-    ? './public/images/cameras/originals/CAM05.png'
-    : `./public/images/cameras/states/CAM05-${expected}.png`);
+    ? './public/images/cameras/CAM05/base.webp'
+    : `./public/images/cameras/CAM05/states/${expected}/vazia.webp`);
   assert.equal(nodes['technical-feed'].hidden, true);
   assert.equal(nodes['cam-number'].textContent, 'CAM 05');
   assert(fs.existsSync(path.join(root, src)), src);
@@ -113,13 +113,13 @@ pressF(); office('lit');
 nodes['office-monitor'].fire('click'); office('dark');
 // The southern hall gate controls only the large left shutter in CAM04.
 const checkHall = open => assert.equal(nodes['feed-art'].src, open
-  ? './public/images/cameras/states/CAM04-open.webp'
-  : './public/images/cameras/CAM04.webp');
+  ? './public/images/cameras/CAM04/states/open/vazia.webp'
+  : './public/images/cameras/CAM04/base.webp');
 camera('CAM04'); checkHall(true);
 gate('G08'); checkHall(false);
 gate('G08'); checkHall(true);
 camera('CAM09');
-assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09.webp');
+assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09/base.webp');
 assert.equal(nodes['technical-feed'].hidden, true);
 gate('G08');
 camera('CAM04'); checkHall(false);
@@ -128,8 +128,8 @@ gate('G07'); assert(!isClosed('G08')); checkHall(true);
 const checkBackstage = open => {
   const src = nodes['feed-art'].src;
   assert.equal(src, open
-    ? './public/images/cameras/states/CAM12-open.webp'
-    : './public/images/cameras/CAM12.webp');
+    ? './public/images/cameras/CAM12/states/open/vazia.webp'
+    : './public/images/cameras/CAM12/base.webp');
   assert(fs.existsSync(path.join(root, src)), src);
 };
 camera('CAM12'); checkBackstage(true);
@@ -139,15 +139,21 @@ camera('CAM09');
 gate('G06');
 camera('CAM12'); checkBackstage(false);
 gate('G07'); assert(!isClosed('G06')); checkBackstage(true);
-// All 12 cameras have a standardized base render and master PNG.
+// Check every registered asset after the move, including inactive states.
 for (const cam of window.NathGame.CAMERAS) {
   camera(cam.id);
   assert.equal(nodes['cam-number'].textContent, cam.id.replace('CAM', 'CAM '));
-  assert.equal(cam.image, `./public/images/cameras/${cam.id}.webp`);
+  const folder = `./public/images/cameras/${cam.id}`;
+  assert.equal(cam.image, `${folder}/base.webp`);
+  assert.equal(cam.technical, `${folder}/technical.png`);
   assert.equal(cam.renderAvailable, true);
   assert.equal(nodes['technical-feed'].hidden, true);
-  for (const src of [cam.image, nodes['feed-art'].src, `public/images/cameras/originals/${cam.id}.png`]) {
+  const gateImages = Object.values(cam.gateStateImages?.images ?? {});
+  const characterImages = Object.values(cam.characterStateImages ?? cam.stageStateImages ?? {})
+    .flatMap(view => typeof view === 'string' ? [view] : Object.values(view));
+  for (const src of [cam.image, cam.technical, nodes['feed-art'].src, `${folder}/master.png`, ...gateImages, ...characterImages]) {
+    assert(src.startsWith(`${folder}/`), src);
     assert(fs.existsSync(path.join(root, src)), src);
   }
 }
-console.log('PASS: 12 camera renders, CAM04/G08, CAM05/G04/G05, CAM12/G06, office and shift reset.');
+console.log('PASS: 12 camera folders and all states, CAM04/G08, CAM05/G04/G05, CAM12/G06, office and shift reset.');

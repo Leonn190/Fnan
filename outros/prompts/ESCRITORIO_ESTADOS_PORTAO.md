@@ -1,10 +1,10 @@
 # Sala de controle — portão e iluminação
 
-A nova arte fornecida em `NOVA.png` é o PNG mestre `public/images/office/office-original.png`, com os mesmos bytes e dimensões de 2172 × 724. Ela já traz o corredor escuro. A arte e os estados da sala anterior foram retirados.
+A arte fornecida em `NOVA.png` é o PNG mestre `public/images/office/master.png`, com os mesmos bytes e dimensões de 2172 × 724. Ela já traz o corredor escuro.
 
-- `public/images/office/states/office-open-dark.webp`: portão aberto no breu, exportação sem perdas da nova arte.
-- `public/images/office/states/office-open-lit.webp`: o corredor aparece no centro da luz circular.
-- `public/images/office/states/office-closed.webp`: o portão cobre a passagem.
+- `public/images/office/states/open-dark.webp` mostra o portão aberto no breu e usa a arte mestre sem perdas.
+- `public/images/office/states/open-lit.webp` mostra o corredor no centro da luz circular.
+- `public/images/office/states/closed.webp` mostra o portão cobrindo a passagem.
 
 Os dois estados editados foram criados com o ImageGen integrado. Na finalização, somente a passagem recebeu os recortes gerados; a moldura e os objetos em primeiro plano foram preservados na nova arte. A sala mantém o panorama 3:1.
 
@@ -24,7 +24,7 @@ Na edição iluminada, o antigo panorama serviu apenas de referência para o cor
 
 ## Novas câmeras fornecidas
 
-- `public/images/cameras/originals/CAM03.png` (antes `novacampalco.png`) → `CAM03.webp`, substituindo a arte antiga do palco (incluindo remoção do PNG antigo).
-- `public/images/cameras/originals/CAM04.png` (antes `cam salao principal fantando.png`) → `CAM04.webp`, preenchendo o ângulo que faltava no salão.
+- A arte do palco passou a usar `public/images/cameras/CAM03/master.png` com o render em `CAM03/base.webp`.
+- O outro ângulo do salão passou a ter um render próprio, hoje em `public/images/cameras/CAM04/base.webp`.
 - Os PNG fornecidos foram renomeados sem alterar seu conteúdo; os WEBP de base foram exportados com qualidade 88.
 - CAM05: vínculo corrigido para G04 à esquerda e G05 à direita na imagem, conforme teste visual do usuário.

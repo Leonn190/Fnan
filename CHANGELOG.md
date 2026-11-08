@@ -1,5 +1,10 @@
 # Histórico
 
+## Organização dos recursos — 08/11/2026
+
+- Cada câmera reúne o fundo, a planta técnica e os estados em uma pasta própria. Os portões têm subpastas por posição.
+- As referências de produção passaram para `outros/arte/`. As cópias idênticas de fundos e dois renders substituídos da CAM09 foram removidos.
+
 ## Ajustes das câmeras — 07/11/2026
 
 - Nova arte da sala de manutenção técnica integrada ao feed da CAM09.

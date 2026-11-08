@@ -19,25 +19,26 @@ Restaurante_da_Nathzinha_Web_V1/
 │   └── styles/main.css              # Interface e animações
 ├── public/                          # Recursos consumidos pelo navegador
 │   ├── images/
-│   │   ├── office/                  # Panorama usado no jogo + PNG original
-│   │   ├── cameras/                 # WEBP otimizadas: CAM01–12
-│   │   │   ├── originals/           # PNGs mestres das cenas base
-│   │   │   └── states/              # Variantes de portões e do palco
-│   │   ├── animatronics/            # Artes 2D e camadas de composição do palco
+│   │   ├── office/                  # master.png e estados do escritório
+│   │   ├── cameras/
+│   │   │   └── CAM01/ … CAM12/      # Uma pasta por câmera
+│   │   │       ├── base.webp        # Fundo usado pelo jogo
+│   │   │       ├── master.png       # PNG mestre do fundo
+│   │   │       ├── technical.png    # Imagem de fallback da planta
+│   │   │       └── states/          # WebPs de personagens e portões
 │   │   └── branding/                # Ícone do site
 │   ├── reference/
-│   │   ├── cameras/                 # CAM01...CAM12_visao.png, visões técnicas 2D
 │   │   └── maps/                    # Imagens da planta V7/V8
 │   └── models/                      # Reserva para futuros modelos 3D
 └── outros/                          # Arquivos de produção e documentação
-    ├── arquivo/cameras/             # Renders anteriores da CAM09
+    ├── arte/                        # Referências PNG por câmera e artes individuais
     ├── documentacao/               # V8, checklist, manifesto e hashes
     ├── identidade_visual/          # Bíblia visual, paleta e materiais
     ├── planta/                     # Fonte técnica em JSON/Python/SVG
     └── prompts/                     # Prompt mestre + 12 prompts de câmera
 ```
 
-O arquivo `outros/documentacao/MAPEAMENTO_ORIGINAIS.json` registra a importação dos **60 arquivos originais** do ZIP V8, com os caminhos e hashes SHA-256 da época. As cenas base atuais usam WebP no navegador e têm PNGs mestres numerados em `public/images/cameras/originals/`.
+O arquivo `outros/documentacao/MAPEAMENTO_ORIGINAIS.json` registra a importação dos **60 arquivos originais** do ZIP V8, com os caminhos e hashes SHA-256 da época.
 
 ## Publicar no GitHub Pages (sem build)
 
@@ -74,27 +75,29 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | CAM01 | Lojinha | Loja vazia e quinze variantes com as Nathzinhas |
 | CAM02 | Recepção | Recepção vazia e quinze variantes com as Nathzinhas |
 | CAM03 | Salão principal, virada para o palco | Palco vazio e sete variantes com as Nathzinhas |
-| CAM04 | Salão principal, parede oposta | Portão sul G08 aberto ou fechado |
+| CAM04 | Salão principal, parede oposta | 32 combinações de personagens e portão G08 |
 | CAM05 | VIP 1 rosa | 64 combinações de personagens e portões G04/G05 |
 | CAM06 | VIP 2 lavanda | Sala vazia e 31 variantes com as Nathzinhas |
 | CAM07 | Fliperama | Sala vazia e quinze variantes com as Nathzinhas |
-| CAM08 | Estoque | Cena 3D 4K |
+| CAM08 | Estoque | Novo estoque vazio e quinze variantes com as Nathzinhas |
 | CAM09 | Área de serviço | Nova arte da sala de manutenção técnica |
 | CAM10 | Cozinha | Cozinha vazia sem HUD na arte e quinze variantes com as Nathzinhas |
 | CAM11 | Área de retirada | Balcão vazio e quinze variantes com as Nathzinhas |
 | CAM12 | Corredor de serviço, leste | 16 combinações de personagens e portão G06 |
 
-As 12 câmeras têm cenas próprias, com `CAM01.webp` a `CAM12.webp` na pasta `public/images/cameras/` e os PNG mestres numerados em `originals/`. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.
+Cada câmera reúne o fundo, o PNG mestre e a planta técnica em `public/images/cameras/CAMxx/`. As variantes ficam em `states/` com o nome da combinação, por exemplo `CAM01/states/original-platinada.webp`. Nas câmeras com portões, uma subpasta indica a posição dos portões, como `CAM04/states/open/` ou `CAM05/states/open-closed/`. Nessas subpastas, `vazia.webp` é a sala sem personagens. O fundo fechado padrão fica em `base.webp`.
 
-As combinações da CAM01 e da CAM02 ficam em `public/images/cameras/states/`. O jogo pode selecionar a variante da loja com `NathGame.setCam01ShopState('original-platinada')` e a da recepção com `NathGame.setCam02ReceptionState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a sala vazia.
+O jogo pode selecionar a variante da loja com `NathGame.setCam01ShopState('original-platinada')` e a da recepção com `NathGame.setCam02ReceptionState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a sala vazia.
 
-Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. A imagem padrão mostra o portão aberto com breu atrás; fechar o G08 mostra o portão baixado. Detalhes e prompt: `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
+Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. Cada posição do portão tem 16 combinações de personagens sobre a nova base. Selecione uma com `NathGame.setCam04HallState('gotica-platinada')`, `todas` ou `vazia`. A câmera começa com o portão aberto e mantém as personagens selecionadas ao alterná-lo. Veja `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
 
 A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. G04 controla o portão esquerdo e G05, o direito. Cada configuração dos portões tem 16 combinações de personagens. Selecione uma com `NathGame.setCam05VipState('original-maid')`, `todas` ou `vazia`. A troca de portões mantém as personagens selecionadas, inclusive em reaberturas automáticas. Os recortes da Padrão e da Yandere incluem ajustes nas cadeiras conforme a referência ocupada. Os quatro fundos vazios estão documentados em `outros/prompts/CAM05_ESTADOS_PORTOES.md`.
 
 A CAM06 usa o mesmo fundo para as 32 combinações de personagens. Selecione uma com `NathGame.setCam06VipState('original-platinada-maid')`, `todas` ou `vazia`. A cadeira da Padrão acompanha a posição em que ela aparece sentada na referência.
 
 A CAM07 tem 16 combinações com a Padrão, a Yandere, a Gótica e a Platinada. Selecione uma com `NathGame.setCam07ArcadeState('gotica-platinada')`, `todas` ou `vazia`.
+
+A CAM08 usa a nova imagem do estoque, guardada como `CAM08/master.png`, para as 16 combinações com a Padrão, a Yandere, a Gótica e a Platinada. Selecione uma com `NathGame.setCam08StockroomState('gotica-platinada')`, `todas` ou `vazia`.
 
 A CAM10 usa a nova arte da cozinha sem HUD como base para as 16 combinações da Padrão, da Yandere, da Gótica e da Maid preto e branco. Selecione uma com `NathGame.setCam10KitchenState('yandere-maid')`, `todas` ou `vazia`.
 
@@ -104,7 +107,7 @@ Na CAM12, o portão hidráulico G06 começa aberto e revela as cortinas vermelha
 
 Cada estado do G06 tem oito combinações com a Padrão, a Yandere ao fundo e a Gótica. Selecione uma com `NathGame.setCam12CorridorState('original-gotica')`, `todas` ou `vazia`. A seleção permanece ao alternar o portão.
 
-O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório e a ligação dos portões com as câmeras. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
+O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório, a ligação dos portões com as câmeras e os caminhos de todos os estados. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
@@ -112,7 +115,7 @@ O mapa da interface usa os **polígonos das salas, aberturas, posições e azimu
 
 ## Observações
 
-- As artes individuais dos animatrônicos ficam em `public/images/animatronics/`. As variantes da CAM03 já trazem as personagens compostas na cena.
+- As referências com personagens ficam em `outros/arte/cameras/CAMxx/` e as artes individuais em `outros/arte/animatronics/`. As máscaras do palco ficam em `outros/arte/cameras/CAM03/`. Use `python scripts/compose_cam03.py` para recompor as seis variantes parciais do palco.
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
 - Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.
