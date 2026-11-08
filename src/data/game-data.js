@@ -20,6 +20,27 @@ const VIP1_CHARACTER_STATES = [
 const TRIO = ['original', 'yandere', 'gotica'];
 const WITH_CAT = [...TRIO, 'platinada'];
 const WITH_MAID = [...TRIO, 'maid'];
+const CAM03_FLOOR_STATES = [
+  'palco-vazio--salao-original',
+  'palco-vazio--salao-yandere',
+  'palco-vazio--salao-gotica',
+  'palco-vazio--salao-original-yandere',
+  'palco-vazio--salao-original-gotica',
+  'palco-vazio--salao-yandere-gotica',
+  'palco-vazio--salao-original-yandere-gotica',
+  'palco-original--salao-yandere',
+  'palco-original--salao-gotica',
+  'palco-original--salao-yandere-gotica',
+  'palco-yandere--salao-original',
+  'palco-yandere--salao-gotica',
+  'palco-yandere--salao-original-gotica',
+  'palco-gotica--salao-original',
+  'palco-gotica--salao-yandere',
+  'palco-gotica--salao-original-yandere',
+  'palco-original-yandere--salao-gotica',
+  'palco-original-gotica--salao-yandere',
+  'palco-yandere-gotica--salao-original'
+];
 const CAMERAS = [
   {
     "id": "CAM01",
@@ -101,7 +122,8 @@ const CAMERAS = [
       "original-yandere": "./public/images/cameras/CAM03/states/original-yandere.webp",
       "original-gotica": "./public/images/cameras/CAM03/states/original-gotica.webp",
       "yandere-gotica": "./public/images/cameras/CAM03/states/yandere-gotica.webp",
-      "todas": "./public/images/cameras/CAM03/states/todas.webp"
+      "todas": "./public/images/cameras/CAM03/states/todas.webp",
+      ...Object.fromEntries(CAM03_FLOOR_STATES.map(key => [key, `./public/images/cameras/CAM03/states/${key}.webp`]))
     },
     "technical": "./public/images/cameras/CAM03/technical.png",
     "renderAvailable": true

@@ -172,6 +172,22 @@ for (const cam of window.NathGame.CAMERAS) {
     assert(fs.existsSync(path.join(root, src)), src);
   }
 }
+// Every character can be absent, on stage or in the hall, with no duplicates.
+camera('CAM03');
+const stageCast = ['original', 'yandere', 'gotica'];
+let floorCases = 0;
+for (let assignment = 0; assignment < 27; assignment++) {
+  const stage = stageCast.filter((_, index) => Math.floor(assignment / 3 ** index) % 3 === 1);
+  const floor = stageCast.filter((_, index) => Math.floor(assignment / 3 ** index) % 3 === 2);
+  if (!floor.length) continue;
+  const key = `palco-${stage.join('-') || 'vazio'}--salao-${floor.join('-')}`;
+  assert(window.NathGame.setCam03StageState(key), key);
+  assert.equal(nodes['feed-art'].src, `./public/images/cameras/CAM03/states/${key}.webp`);
+  floorCases++;
+}
+assert.equal(floorCases, 19);
+assert.equal(window.NathGame.setCam03StageState('palco-original--salao-original'), false);
+
 // Each legal office arrangement must preserve the lateral doorway occupant across G01.
 const { OFFICE, setOfficeCharacterState } = window.NathGame;
 const visibleOfficeLayers = () => nodes['office-characters'].children

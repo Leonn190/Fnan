@@ -3,7 +3,7 @@
 A arte fornecida em `NOVA.png` é o PNG mestre `public/images/office/master.png`, com os mesmos bytes e dimensões de 2172 × 724. Ela já traz o corredor escuro.
 
 - `public/images/office/states/open-dark.webp` mostra o portão aberto no breu e usa a arte mestre sem perdas.
-- `public/images/office/states/open-lit.webp` é a nova arte fornecida do corredor iluminado, exportada sem perdas de `outros/arte/office/open-lit.png`.
+- `public/images/office/states/open-lit.webp` usa a mesma base do estado escuro, com apenas o feixe central de `outros/arte/office/open-lit.png` reaplicado com alcance menor, borda suave e menos detalhes visíveis no fundo.
 - `public/images/office/states/closed.webp` mostra o portão cobrindo a passagem.
 
 O fundo fechado foi criado com o ImageGen integrado e recortado para preservar a moldura e os objetos em primeiro plano. Os três fundos mantêm o panorama 3:1.

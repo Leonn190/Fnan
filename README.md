@@ -122,7 +122,7 @@ O jogo encontra as salas dos dois lados do ponto médio de cada abertura usando 
 |---|---|---|
 | CAM01 | Lojinha | Loja vazia e quinze variantes com as Nathzinhas |
 | CAM02 | Recepção | Recepção vazia e quinze variantes com as Nathzinhas |
-| CAM03 | Salão principal, virada para o palco | Palco vazio e sete variantes com as Nathzinhas |
+| CAM03 | Salão principal, virada para o palco | 27 combinações entre palco e salão, incluindo a cena vazia |
 | CAM04 | Salão principal, parede oposta | 32 combinações de personagens e portão G08 |
 | CAM05 | VIP 1 rosa | 64 combinações de personagens e portões G04/G05 |
 | CAM06 | VIP 2 lavanda | Sala vazia e 31 variantes com as Nathzinhas |
@@ -136,6 +136,8 @@ O jogo encontra as salas dos dois lados do ponto médio de cada abertura usando 
 Cada câmera reúne o fundo, o PNG mestre e a planta técnica em `public/images/cameras/CAMxx/`. As variantes ficam em `states/` com o nome da combinação, por exemplo `CAM01/states/original-platinada.webp`. Nas câmeras com portões, uma subpasta indica a posição dos portões, como `CAM04/states/open/` ou `CAM05/states/open-closed/`. Nessas subpastas, `vazia.webp` é a sala sem personagens. O fundo fechado padrão fica em `base.webp`.
 
 O jogo pode selecionar a variante da loja com `NathGame.setCam01ShopState('original-platinada')` e a da recepção com `NathGame.setCam02ReceptionState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a sala vazia.
+
+Na CAM03, a Padrão, a Yandere e a Gótica têm uma pose no palco e outra no salão. As 19 imagens com alguém fora do palco usam nomes como `palco-original--salao-yandere-gotica.webp`. Para conferir uma delas no jogo, use `NathGame.setCam03StageState('palco-original--salao-yandere-gotica')`.
 
 Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. Cada posição do portão tem 16 combinações de personagens sobre a nova base. Selecione uma com `NathGame.setCam04HallState('gotica-platinada')`, `todas` ou `vazia`. A câmera começa com o portão aberto e mantém as personagens selecionadas ao alterná-lo. Veja `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
 
@@ -161,11 +163,13 @@ Os três estados da nova sala de controle estão em `public/images/office/states
 
 O escritório aceita até três animatrônicas na sala e uma diferente na porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto no escuro, 101 com ele fechado e seis com o corredor iluminado e a sala vazia. Use `NathGame.setOfficeCharacterState([], 'yandere')` e pressione **F** para ver a Yandere na porta lateral com o corredor iluminado. Chame a função sem argumentos para esvaziar a cena. Para exportar os 208 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow. Acrescente `--lit-only` para exportar apenas os seis iluminados.
 
+Os 111 panoramas com as poses do corredor ficam em `public/images/office/states/corridor/`. O `manifest.json` lista os arquivos, os ocupantes da porta e do corredor e a ordem dos slots para cada quantidade. Para exportá-los novamente, rode `python scripts/export_office_corridor.py "public/images/Alinhamento das Cinco Nathzinhas Andróginas.png"` com Pillow.
+
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 
 ## Observações
 
-- As referências com personagens ficam em `outros/arte/cameras/CAMxx/` e as artes individuais em `outros/arte/animatronics/`. As máscaras do palco ficam em `outros/arte/cameras/CAM03/`. Use `python scripts/compose_cam03.py` para recompor as seis variantes parciais do palco.
+- As referências com personagens ficam em `outros/arte/cameras/CAMxx/` e as artes individuais em `outros/arte/animatronics/`. As máscaras do palco e os recortes do salão ficam em `outros/arte/cameras/CAM03/`. Use `python scripts/compose_cam03.py` para recompor as seis variantes parciais do palco e `python scripts/compose_cam03.py --salao` para exportar as 19 cenas com personagens fora do palco.
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
 - Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.

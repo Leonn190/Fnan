@@ -1,0 +1,941 @@
+{
+  "base": "../open-lit.webp",
+  "characters": [
+    "original",
+    "platinada",
+    "yandere",
+    "gotica",
+    "maid"
+  ],
+  "layouts": [
+    [],
+    [
+      "back_center"
+    ],
+    [
+      "back_left",
+      "back_right"
+    ],
+    [
+      "back_left",
+      "back_center",
+      "back_right"
+    ],
+    [
+      "back_left",
+      "back_right",
+      "front_left",
+      "front_right"
+    ],
+    [
+      "back_left",
+      "back_center",
+      "back_right",
+      "front_left",
+      "front_right"
+    ]
+  ],
+  "states": [
+    {
+      "file": "leftdoor__original__corridor__vazio.webp",
+      "leftdoor": "original",
+      "corridor": []
+    },
+    {
+      "file": "leftdoor__platinada__corridor__vazio.webp",
+      "leftdoor": "platinada",
+      "corridor": []
+    },
+    {
+      "file": "leftdoor__yandere__corridor__vazio.webp",
+      "leftdoor": "yandere",
+      "corridor": []
+    },
+    {
+      "file": "leftdoor__gotica__corridor__vazio.webp",
+      "leftdoor": "gotica",
+      "corridor": []
+    },
+    {
+      "file": "leftdoor__maid__corridor__vazio.webp",
+      "leftdoor": "maid",
+      "corridor": []
+    },
+    {
+      "file": "corridor__original.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original"
+      ]
+    },
+    {
+      "file": "corridor__platinada.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__platinada.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__platinada.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__platinada.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "platinada"
+      ]
+    },
+    {
+      "file": "corridor__yandere.webp",
+      "leftdoor": null,
+      "corridor": [
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__yandere.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__yandere.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__yandere.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__yandere.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "yandere"
+      ]
+    },
+    {
+      "file": "corridor__gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__gotica.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__gotica.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__gotica.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-platinada.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-platinada.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "platinada"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-platinada.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "platinada"
+      ]
+    },
+    {
+      "file": "corridor__original-yandere.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-yandere.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-yandere.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-yandere.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "yandere"
+      ]
+    },
+    {
+      "file": "corridor__original-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-gotica.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-gotica.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__original-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__platinada-yandere.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-yandere.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__platinada-yandere.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__platinada-yandere.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "corridor__platinada-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-gotica.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__platinada-gotica.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__platinada-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__platinada-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__platinada-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__platinada-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__yandere-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__yandere-gotica.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__yandere-gotica.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__yandere-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__yandere-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__yandere-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__yandere-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__yandere-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__gotica-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__gotica-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__gotica-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-yandere.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-platinada-yandere.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-platinada-yandere.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-platinada-gotica.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-platinada-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "platinada",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-platinada-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-platinada-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "platinada",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-yandere-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-yandere-gotica.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-yandere-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__original-yandere-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-yandere-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-yandere-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-gotica-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-gotica-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__platinada-yandere-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-yandere-gotica.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__platinada-yandere-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "platinada",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__platinada-yandere-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-yandere-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__platinada-yandere-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "platinada",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__platinada-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-gotica-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__platinada-gotica-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "platinada",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__yandere-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__yandere-gotica-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__yandere-gotica-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-yandere-gotica.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "leftdoor__maid__corridor__original-platinada-yandere-gotica.webp",
+      "leftdoor": "maid",
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere",
+        "gotica"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-yandere-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__gotica__corridor__original-platinada-yandere-maid.webp",
+      "leftdoor": "gotica",
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__yandere__corridor__original-platinada-gotica-maid.webp",
+      "leftdoor": "yandere",
+      "corridor": [
+        "original",
+        "platinada",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-yandere-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__platinada__corridor__original-yandere-gotica-maid.webp",
+      "leftdoor": "platinada",
+      "corridor": [
+        "original",
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__platinada-yandere-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "platinada",
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "leftdoor__original__corridor__platinada-yandere-gotica-maid.webp",
+      "leftdoor": "original",
+      "corridor": [
+        "platinada",
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    },
+    {
+      "file": "corridor__original-platinada-yandere-gotica-maid.webp",
+      "leftdoor": null,
+      "corridor": [
+        "original",
+        "platinada",
+        "yandere",
+        "gotica",
+        "maid"
+      ]
+    }
+  ]
+}
