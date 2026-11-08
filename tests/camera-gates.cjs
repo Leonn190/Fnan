@@ -19,6 +19,7 @@ class Element {
   set src(value) { this.attrs.src = value; }
   setAttribute(key, value) { this.attrs[key] = String(value); }
   getAttribute(key) { return this.attrs[key] ?? null; }
+  removeAttribute(key) { delete this.attrs[key]; }
   append(...items) { this.children.push(...items); }
   focus() {}
   addEventListener(event, action) { (this.events[event] ??= []).push(action); }
@@ -31,12 +32,15 @@ for (const [, id, attributes] of html.matchAll(/<main [^>]*id="([^"]+)"([^>]*)>/
   nodes[id].hidden = /\bhidden\b/.test(attributes);
 }
 const music = nodes['menu-music'];
-music.paused = true;
-music.play = () => {
-  music.paused = false;
-  return Promise.resolve();
-};
-music.pause = () => { music.paused = true; };
+const scream = nodes['jumpscare-sound'];
+for (const audio of [music, scream]) {
+  audio.paused = true;
+  audio.play = () => {
+    audio.paused = false;
+    return Promise.resolve();
+  };
+  audio.pause = () => { audio.paused = true; };
+}
 const document = new Element();
 document.querySelector = selector => nodes[selector.slice(1)];
 document.createElement = () => new Element();
@@ -84,10 +88,10 @@ assert.equal(frame, undefined);
 music.fire('playing');
 music.currentTime = 28;
 step(1_000);
-assert(Math.abs(music.volume - .365) < .001);
+assert(Math.abs(music.volume - .33) < .001);
 music.currentTime = 29;
 step(2_000);
-assert.equal(music.volume, .65);
+assert.equal(music.volume, .58);
 now = 600_000;
 nodes['start-game'].fire('click');
 const nightStart = now;
@@ -363,3 +367,109 @@ nodes['office-monitor'].fire('click');
 camera('CAM08');
 assert.match(feed(), /CAM08\/states\/original-gotica\.webp$/);
 console.log('PASS: automatic office doorway, room, departure and return to the stockroom.');
+
+// The closet only exits through the slatted door. Turning resets the flashlight.
+nodes['restart-shift'].fire('click');
+nodes.game.clientWidth = 1280;
+nodes['office-scene'].offsetWidth = 2160;
+const closetStart = now;
+const closet = nodes['closet-view'];
+const closetExit = nodes['closet-exit'];
+const closetBeam = nodes['closet-beam'];
+const press = (key, details) => document.fire('keydown', { key, ...details });
+nodes['office-closet'].fire('click');
+assert.equal(nodes.game.dataset.closetTransition, 'enter');
+press('m');
+assert.equal(nodes.game.dataset.mode, 'office');
+step(closetStart + 1000);
+assert.equal(nodes.game.dataset.mode, 'closet');
+assert.equal(closet.dataset.view, 'door');
+assert.equal(nodes['monitor-handle'].hidden, true);
+step(closetStart + 1500);
+press('w');
+assert.equal(closetBeam.hidden, true);
+press('ArrowRight');
+step(closetStart + 2150);
+assert.equal(closet.dataset.view, 'back');
+assert.equal(closetExit.hidden, true);
+closetExit.fire('click');
+assert.equal(nodes.game.dataset.closetTransition, undefined);
+press('W');
+assert.equal(closetBeam.hidden, false);
+press('w', { repeat: true });
+assert.equal(closetBeam.hidden, false);
+press('a');
+step(closetStart + 2800);
+assert.equal(closet.dataset.view, 'door');
+assert.equal(closetBeam.hidden, true);
+closetExit.fire('click');
+step(closetStart + 3900);
+assert.equal(nodes.game.dataset.mode, 'office');
+assert.equal(closet.hidden, true);
+assert.equal(nodes['monitor-handle'].hidden, false);
+office('dark');
+console.log('PASS: closet entry, blocked monitor, both views, flashlight and slatted-door exit.');
+
+// A defeat holds a one-shot GIF and waits for the player to return to the menu.
+const [, screamSource] = html.match(/<audio id="jumpscare-sound" src="([^"]+)"/);
+assert(fs.existsSync(path.join(root, screamSource)));
+const scare = nodes['jumpscare-art'];
+scare.complete = true;
+scare.naturalWidth = 178;
+const phase = () => nodes.game.dataset.defeat;
+const pressJ = details => document.fire('keydown', { key: 'j', ...details });
+const seenScares = new Set();
+for (let attempt = 0; attempt < 6; attempt++) {
+  const scareStart = now;
+  randomValue = () => (attempt % 5) / 5;
+  pressJ({ repeat: true });
+  assert.equal(phase(), undefined);
+  pressJ({ key: 'J' });
+  assert.equal(phase(), 'blackout');
+  assert.equal(nodes.playfield.inert, true);
+  const chosen = scare.src;
+  const source = chosen.split('?')[0];
+  assert(!fs.readFileSync(path.join(root, source)).includes('NETSCAPE2.0'), source);
+  if (seenScares.has(source)) assert.notEqual(chosen, source);
+  seenScares.add(source);
+  assert.equal(scream.paused, false);
+  assert.equal(scream.currentTime, 0);
+  scream.currentTime = .1;
+  randomValue = () => .99;
+  pressJ();
+  assert.equal(scare.src, chosen);
+  assert.equal(scream.currentTime, .1);
+  step(scareStart + 110);
+  assert.equal(phase(), 'scare');
+  step(scareStart + 1070);
+  assert.equal(phase(), 'scare');
+  assert.equal(scare.src, chosen);
+  step(scareStart + 1320);
+  assert.equal(phase(), 'flash');
+  assert.equal(scare.getAttribute('src'), null);
+  step(scareStart + 1550);
+  assert.equal(phase(), 'over');
+  assert.equal(nodes['game-over'].hidden, false);
+  step(scareStart + 30_000);
+  assert.equal(phase(), 'over');
+  assert.equal(nodes['title-screen'].hidden, true);
+  assert.equal(nodes['game-over'].hidden, false);
+  nodes['return-to-menu'].fire('click');
+  assert.equal(nodes.game.hidden, true);
+  assert.equal(nodes['title-screen'].hidden, false);
+  assert.equal(nodes['game-over'].hidden, true);
+  assert.equal(scream.paused, true);
+  assert.equal(music.paused, false);
+  pressJ();
+  assert.equal(phase(), undefined);
+  nodes['start-game'].fire('click');
+  assert.equal(nodes.game.hidden, false);
+  assert.equal(nodes.playfield.inert, false);
+  assert.equal(nodes.game.dataset.mode, 'office');
+  assert.equal(nodes['clock-label'].innerHTML, '12 <small>AM</small>');
+  assert.equal(nodes['cam-number'].textContent, 'CAM 01');
+  assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
+  assert.deepEqual(visibleOfficeLayers(), []);
+}
+assert.equal(seenScares.size, 5);
+console.log('PASS: five one-shot jumpscares, sound, final-frame hold and manual return to the menu.');

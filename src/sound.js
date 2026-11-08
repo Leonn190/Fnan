@@ -26,11 +26,11 @@ class SoundEngine {
     osc.start();
     this.ambient = {osc,gain};
   }
-  tone({frequency=330, endingFrequency=120, duration=.12, volume=.06, wave='triangle'}={}) {
+  tone({frequency=330, endingFrequency=120, duration=.12, volume=.06, wave='triangle', delay=0}={}) {
     if (!this.enabled || !this.context || this.context.state!=='running') return;
     const osc=this.context.createOscillator();
     const gain=this.context.createGain();
-    const t=this.context.currentTime;
+    const t=this.context.currentTime+delay;
     osc.type=wave;
     osc.frequency.setValueAtTime(frequency,t);
     osc.frequency.exponentialRampToValueAtTime(Math.max(40,endingFrequency),t+duration);
@@ -44,6 +44,40 @@ class SoundEngine {
   monitor(){this.tone({frequency:160,endingFrequency:70,duration:.21,volume:.07,wave:'sawtooth'});}
   switch(){this.tone({frequency:520,endingFrequency:180,duration:.08,volume:.055,wave:'square'});}
   finish(){this.tone({frequency:440,endingFrequency:660,duration:.55,volume:.06});}
+  closetDoor(entering) {
+    const context = this.context;
+    if (!this.enabled || context?.state !== 'running') return;
+    const now = context.currentTime;
+    const noise = context.createBuffer(1, Math.ceil(context.sampleRate * .48), context.sampleRate);
+    const samples = noise.getChannelData(0);
+    for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+
+    const impact = (delay, duration, frequency, endFrequency, volume, resonance = 1) => {
+      const start = now + delay;
+      const source = context.createBufferSource();
+      const filter = context.createBiquadFilter();
+      const gain = context.createGain();
+      source.buffer = noise;
+      filter.type = 'bandpass';
+      filter.Q.value = resonance;
+      filter.frequency.setValueAtTime(frequency, start);
+      filter.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
+      gain.gain.setValueAtTime(.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + .012);
+      gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+      source.connect(filter).connect(gain).connect(context.destination);
+      source.start(start, 0, duration);
+    };
+    const steps = entering ? [.26, .44, .61] : [.46, .63, .8];
+    for (const delay of steps) {
+      this.tone({ frequency: 110, endingFrequency: 46, duration: .14, volume: .095, delay });
+      impact(delay, .13, 590, 190, .23);
+    }
+    const latch = entering ? .73 : .19;
+    impact(latch, .075, 2400, 1000, .26);
+    impact(latch + .04, .42, 720, 2200, .32, 8);
+    this.tone({ frequency: 330, endingFrequency: 180, duration: .28, volume: .045, wave: 'sawtooth', delay: latch + .06 });
+  }
 }
 
 window.NathGame.SoundEngine = SoundEngine;

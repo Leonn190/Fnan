@@ -23,8 +23,12 @@ const startGame = $('#start-game');
 const menuMusic = $('#menu-music');
 const dom = {
   game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'),
+  playfield: $('#playfield'), scareArt: $('#jumpscare-art'),
+  gameOver: $('#game-over'), returnToMenu: $('#return-to-menu'), scareSound: $('#jumpscare-sound'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
-  officeCharacters: $('#office-characters'),
+  officeCharacters: $('#office-characters'), officeCloset: $('#office-closet'),
+  closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
+  closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
   camNumber: $('#cam-number'), camRoom: $('#cam-room'), flash: $('#camera-switch-flash'),
@@ -40,7 +44,19 @@ const TOTAL_SHIFT_SECONDS = HOURS_PER_SHIFT * SECONDS_PER_HOUR;
 const MENU_MUSIC_START = 27;
 const MENU_MUSIC_FADE_SECONDS = 2;
 const MENU_MUSIC_INITIAL_VOLUME = .08;
-const MENU_MUSIC_VOLUME = .65;
+const MENU_MUSIC_VOLUME = .58;
+const JUMPSCARE_IMAGES = ['original', 'yandere', 'gotica', 'maid', 'platinada']
+  .map(character => `./public/images/jumpscares/${character}.gif`);
+const BLACKOUT_MS = 110;
+const GIF_CYCLE_MS = 960; // Os cinco GIFs têm 48 quadros de 20 ms.
+const FINAL_FRAME_HOLD_MS = 250;
+const DEATH_FLASH_MS = 230;
+const JUMPSCARE_VOLUME = .55;
+const CLOSET_TRANSITIONS = {
+  enter: { swap: 980, duration: 1450 },
+  turn: { swap: 320, duration: 640 },
+  exit: { swap: 650, duration: 1040 }
+};
 const sound = new SoundEngine();
 let audioReady;
 // Browsers unlock audio after the first interaction with the game.
@@ -48,9 +64,9 @@ for (const event of ['click', 'keydown']) {
   document.addEventListener(event, () => { audioReady ??= sound.enable(); }, { capture: true, once: true });
 }
 
-function playSound(effect) {
-  if (sound.enabled) sound[effect]();
-  else audioReady?.then(enabled => { if (enabled) sound[effect](); });
+function playSound(effect, ...args) {
+  if (sound.enabled) sound[effect](...args);
+  else audioReady?.then(enabled => { if (enabled) sound[effect](...args); });
 }
 
 function fadeMenuMusic() {
@@ -64,11 +80,15 @@ const state = {
   mode: 'office', cameraIndex: 0, characterPreviews: new Map(), elapsed: 0, movementTime: 0,
   officeRoom: new Set(),
   complete: false, flashlight: false, pan: 0, targetPan: 0,
-  dragging: false, pointerX: null, lastFrame: performance.now()
+  dragging: false, pointerX: null, lastFrame: performance.now(),
+  closetTransition: null, closetMouseAtEdge: true, closetTouchX: null
 };
 let toastTimeout;
 let flashTimeout;
 let nextHudUpdate = 0;
+let defeatDeadline = 0;
+let scareReplay = 0;
+const playedScares = new Set();
 const imageCache = new Map();
 const debugEnabled = window.location && new URLSearchParams(window.location.search).get('debug') === '1';
 dom.debug.hidden = !debugEnabled;
@@ -278,13 +298,16 @@ function changeCamera(id, withSound = false) {
   preloadCamera(CAMERAS[(index + 1) % CAMERAS.length]);
 }
 
-function setMode(mode) {
+function setMode(mode, withSound = true) {
   if (state.complete || state.mode === mode) return;
   const watching = mode === 'cameras';
+  const hiding = mode === 'closet';
   state.mode = mode;
   dom.game.dataset.mode = mode;
-  dom.office.hidden = watching;
+  dom.office.hidden = mode !== 'office';
   dom.cameras.hidden = !watching;
+  dom.closet.hidden = !hiding;
+  dom.handle.hidden = hiding;
   dom.handleLabel.textContent = watching ? 'ABAIXAR MONITOR' : 'ABRIR MONITOR';
   dom.handle.setAttribute('aria-label', watching ? 'Abaixar o monitor para voltar ao escritório' : 'Abrir câmeras de segurança');
   dom.hint.hidden = true;
@@ -292,7 +315,7 @@ function setMode(mode) {
   state.pointerX = null;
   state.flashlight = false;
   updateOfficeView();
-  playSound('monitor');
+  if (withSound) playSound('monitor');
   if (watching) {
     changeCamera(CAMERAS[state.cameraIndex].id);
     preloadCamera(CAMERAS[0]);
@@ -300,7 +323,76 @@ function setMode(mode) {
   updateMovementDebug();
 }
 
-function toggleMonitor() { setMode(state.mode === 'office' ? 'cameras' : 'office'); }
+function toggleMonitor() {
+  if (state.mode === 'closet' || state.closetTransition) return;
+  setMode(state.mode === 'office' ? 'cameras' : 'office');
+}
+
+function setClosetLight(on) {
+  dom.closetBeam.hidden = !on;
+  dom.closetLight.setAttribute('aria-pressed', String(on));
+}
+
+function setClosetView(view) {
+  dom.closet.dataset.view = view;
+  dom.closetExit.hidden = view !== 'door';
+  dom.closetLight.hidden = view !== 'back';
+  setClosetLight(false);
+  if (state.mode === 'closet') dom.closet.focus({ preventScroll: true });
+}
+
+function toggleClosetLight() {
+  if (state.complete || state.closetTransition || state.mode !== 'closet' || dom.closet.dataset.view !== 'back') return;
+  setClosetLight(dom.closetBeam.hidden);
+}
+
+function beginClosetTransition(kind) {
+  const expectedMode = kind === 'enter' ? 'office' : 'closet';
+  if (state.complete || state.closetTransition || state.mode !== expectedMode) return;
+  if (kind === 'exit' && dom.closet.dataset.view !== 'door') return;
+
+  const now = performance.now();
+  const { swap, duration } = CLOSET_TRANSITIONS[kind];
+  state.closetTransition = { kind, swapAt: now + swap, endAt: now + duration };
+  state.closetTouchX = null;
+  state.dragging = false;
+  state.targetPan = state.pan;
+  panKeys.clear();
+  dom.game.style.setProperty('--closet-duration', `${duration}ms`);
+  // Restart the CSS animation if a new action follows the previous one immediately.
+  void dom.closetBlackout.offsetWidth;
+  dom.game.dataset.closetTransition = kind;
+  if (kind !== 'turn') playSound('closetDoor', kind === 'enter');
+}
+
+function clearClosetTransition() {
+  state.closetTransition = null;
+  delete dom.game.dataset.closetTransition;
+}
+
+function advanceClosetTransition(now) {
+  const transition = state.closetTransition;
+  if (!transition) return;
+  if (now >= transition.swapAt) {
+    transition.swapAt = Infinity;
+    switch (transition.kind) {
+      case 'enter':
+        state.closetMouseAtEdge = true;
+        setMode('closet', false);
+        setClosetView('door');
+        break;
+      case 'turn':
+        setClosetView(dom.closet.dataset.view === 'door' ? 'back' : 'door');
+        break;
+      case 'exit':
+        setMode('office', false);
+        state.pan = state.targetPan = -maxPanShift() * .95;
+        dom.officeCloset.focus({ preventScroll: true });
+        break;
+    }
+  }
+  if (now >= transition.endAt) clearClosetTransition();
+}
 
 function cycleCamera(direction) {
   const next = (state.cameraIndex + direction + CAMERAS.length) % CAMERAS.length;
@@ -315,8 +407,52 @@ function updateClockUI() {
 
 function finishShift() {
   state.complete = true;
+  clearClosetTransition();
   dom.complete.hidden = false;
   playSound('finish');
+}
+
+function beginJumpscare() {
+  state.complete = true;
+  state.dragging = false;
+  panKeys.clear();
+  dom.playfield.inert = true;
+  const source = JUMPSCARE_IMAGES[Math.floor(Math.random() * JUMPSCARE_IMAGES.length)];
+  // A fresh image request restarts a one-shot GIF the browser has already finished.
+  dom.scareArt.src = playedScares.has(source) ? `${source}?replay=${++scareReplay}` : source;
+  playedScares.add(source);
+  setDefeatPhase('blackout', performance.now() + BLACKOUT_MS);
+  dom.scareSound.currentTime = 0;
+  dom.scareSound.volume = JUMPSCARE_VOLUME;
+  dom.scareSound.play().catch(() => {});
+}
+
+function setDefeatPhase(phase, deadline) {
+  dom.game.dataset.defeat = phase;
+  defeatDeadline = deadline;
+}
+
+function advanceDefeat(now) {
+  if (now < defeatDeadline) return;
+  switch (dom.game.dataset.defeat) {
+    case 'blackout':
+      // Give a cold load time to arrive, but always reach Game Over.
+      if (!dom.scareArt.complete && now < defeatDeadline + 2000) return;
+      if (dom.scareArt.naturalWidth > 0) {
+        setDefeatPhase('scare', now + GIF_CYCLE_MS + FINAL_FRAME_HOLD_MS);
+        break;
+      }
+      // Missing art still leads to the flash and the end of the night.
+    case 'scare':
+      setDefeatPhase('flash', now + DEATH_FLASH_MS);
+      dom.scareArt.removeAttribute('src');
+      break;
+    case 'flash':
+      dom.game.dataset.defeat = 'over';
+      dom.gameOver.hidden = false;
+      dom.returnToMenu.focus();
+      break;
+  }
 }
 
 function resetShift() {
@@ -327,12 +463,17 @@ function resetShift() {
   movement.reset();
   state.characterPreviews.clear();
   state.flashlight = false;
+  clearClosetTransition();
+  setClosetView('door');
+  panKeys.clear();
+  state.pan = state.targetPan = 0;
+  dom.officeScene.style.setProperty('--pan-shift', '0px');
   setOfficeCharacterState();
   map.resetGates();
   state.complete = false;
   state.mode = 'cameras'; // Force setMode to apply the initial office state.
   dom.complete.hidden = true;
-  setMode('office');
+  setMode('office', false);
   updateCameraFeed(CAMERAS[state.cameraIndex]);
   updateClockUI();
 }
@@ -378,16 +519,34 @@ function tick(now) {
       nextHudUpdate = now + 200;
     }
   }
-  moveCamera(delta);
-  requestAnimationFrame(tick);
+  if (dom.game.dataset.defeat) advanceDefeat(now);
+  else {
+    advanceClosetTransition(now);
+    if (state.mode !== 'closet') moveCamera(delta);
+  }
+  if (dom.game.dataset.defeat !== 'over') requestAnimationFrame(tick);
 }
 
 document.addEventListener('visibilitychange', () => { state.lastFrame = performance.now(); });
-dom.officeMonitor.addEventListener('click', () => setMode('cameras'));
+dom.officeMonitor.addEventListener('click', () => {
+  if (state.mode === 'office') toggleMonitor();
+});
+dom.officeCloset.addEventListener('click', () => beginClosetTransition('enter'));
+dom.closetExit.addEventListener('click', () => beginClosetTransition('exit'));
+dom.closetLight.addEventListener('click', toggleClosetLight);
 dom.handle.addEventListener('click', toggleMonitor);
 dom.restart.addEventListener('click', resetShift);
+dom.returnToMenu.addEventListener('click', () => {
+  dom.scareSound.pause();
+  dom.game.hidden = true;
+  dom.gameOver.hidden = true;
+  dom.playfield.inert = false;
+  delete dom.game.dataset.defeat;
+  showTitleScreen();
+});
 
 dom.office.addEventListener('pointermove', event => {
+  if (state.closetTransition) return;
   if (event.pointerType === 'touch') {
     if (!state.dragging) return;
     const change = event.clientX - state.pointerX;
@@ -395,25 +554,59 @@ dom.office.addEventListener('pointermove', event => {
     state.targetPan = Math.max(-maxPanShift(), Math.min(maxPanShift(), state.targetPan + change));
     return;
   }
-  if (!state.dragging) setEdgePan(event.clientX);
+  setEdgePan(event.clientX);
+  // Keep the door under the pointer when it moves off the edge to click.
+  if (event.target === dom.officeCloset) state.targetPan = Math.min(state.pan, state.targetPan);
 });
-dom.office.addEventListener('pointerleave', () => {
-  if (!state.dragging) state.targetPan = 0;
+dom.office.addEventListener('pointerleave', event => {
+  if (event.pointerType !== 'touch' && !state.closetTransition && !state.dragging) state.targetPan = 0;
 });
 dom.office.addEventListener('pointerdown', event => {
-  if (event.pointerType !== 'touch' || event.target.closest('button')) return;
+  if (state.closetTransition || event.pointerType !== 'touch' || event.target.closest('button')) return;
   state.dragging = true;
   state.pointerX = event.clientX;
   dom.office.setPointerCapture(event.pointerId);
 });
 for (const eventName of ['pointerup','pointercancel']) dom.office.addEventListener(eventName, () => { state.dragging = false; });
 
+dom.closet.addEventListener('pointermove', event => {
+  if (event.pointerType !== 'mouse' || state.closetTransition) return;
+  const bounds = dom.closet.getBoundingClientRect();
+  const ratio = (event.clientX - bounds.left) / bounds.width;
+  if (ratio > .25 && ratio < .75) state.closetMouseAtEdge = false;
+  if (state.closetMouseAtEdge || (ratio > .12 && ratio < .88)) return;
+  state.closetMouseAtEdge = true;
+  beginClosetTransition('turn');
+});
+dom.closet.addEventListener('pointerdown', event => {
+  if (event.pointerType === 'touch' && event.isPrimary && !state.closetTransition) state.closetTouchX = event.clientX;
+});
+dom.closet.addEventListener('pointerup', event => {
+  if (event.pointerType !== 'touch' || !event.isPrimary || state.closetTouchX === null) return;
+  const dx = event.clientX - state.closetTouchX;
+  state.closetTouchX = null;
+  if (Math.abs(dx) > 36) beginClosetTransition('turn');
+});
+dom.closet.addEventListener('pointercancel', () => { state.closetTouchX = null; });
+
 const panKeys = new Set();
 document.addEventListener('keydown', event => {
   if (dom.game.hidden || state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (state.closetTransition) return;
   const key = event.key.toLowerCase();
   const focusedButton = event.target instanceof Element && Boolean(event.target.closest('button, [role="button"]'));
-  if ((key === ' ' && !focusedButton) || key === 'm') {
+  if (key === 'j') {
+    event.preventDefault();
+    if (!event.repeat) beginJumpscare();
+  } else if (state.mode === 'closet') {
+    if (key === 'w') {
+      event.preventDefault();
+      if (!event.repeat) toggleClosetLight();
+    } else if (['a', 'd', 'arrowleft', 'arrowright'].includes(key)) {
+      event.preventDefault();
+      if (!event.repeat) beginClosetTransition('turn');
+    }
+  } else if ((key === ' ' && !focusedButton) || key === 'm') {
     event.preventDefault();
     if (!event.repeat) toggleMonitor();
   } else if (key === 'f' && state.mode === 'office') {
@@ -447,6 +640,8 @@ window.addEventListener('blur', () => {
   panKeys.clear();
   state.targetPan = 0;
   state.flashlight = false;
+  state.closetTouchX = null;
+  setClosetLight(false);
   updateOfficeView();
 });
 const resizeObserver = new ResizeObserver(() => {
@@ -469,28 +664,32 @@ window.NathGame.setCam11PickupState = key => setCameraCharacterState(pickupCamer
 window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorCamera, key);
 window.NathGame.setOfficeCharacterState = setOfficeCharacterState;
 
-$('#enter-game').addEventListener('click', () => {
-  $('#entry-screen').hidden = true;
+function showTitleScreen() {
   titleScreen.hidden = false;
   menuMusic.currentTime = MENU_MUSIC_START;
   menuMusic.volume = MENU_MUSIC_INITIAL_VOLUME;
   menuMusic.addEventListener('playing', fadeMenuMusic, { once: true });
   menuMusic.play().catch(() => {});
   startGame.focus();
+}
+
+$('#enter-game').addEventListener('click', () => {
+  $('#entry-screen').hidden = true;
+  showTitleScreen();
+  preloadImages(JUMPSCARE_IMAGES);
 }, { once: true });
 
 startGame.addEventListener('click', () => {
   titleScreen.hidden = true;
   menuMusic.pause();
   dom.game.hidden = false;
+  resetShift();
   changeCamera(CAMERAS[0].id);
-  updateOfficeView();
+  dom.hint.hidden = false;
   preloadImages(Object.values(OFFICE.images));
   // Load state variants before the player starts toggling their gates.
   for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
-  updateClockUI();
-  state.lastFrame = performance.now();
   requestAnimationFrame(tick);
-}, { once: true });
+});
 
 })();

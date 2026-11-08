@@ -16,8 +16,17 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .entry-button:hover{background:#333}
 /* Keep a shared field of view on ultrawide displays; body supplies the black bars. */
 .game{position:relative;height:100dvh;width:100vw;max-width:177.777778dvh;container-type:size;overflow:hidden;isolation:isolate;background:#08070d;user-select:none}
+.playfield{position:absolute;inset:0}
 .title-screen{background:#030203;color:#f5f1f2}
 .title-art{position:absolute;z-index:-1;inset:0;width:100%;height:100%;object-fit:cover;object-position:right center;filter:brightness(.8);pointer-events:none}
+.title-glitch{opacity:0;filter:brightness(.8) contrast(1.1) saturate(1.18);animation:title-glitch 31s step-end 5.2s infinite}
+.title-glitch--middle{animation-delay:14.1s}
+.title-glitch--back{animation-delay:23.8s}
+@keyframes title-glitch{
+  0%{opacity:1;transform:translateX(-.7%) scale(1.025);clip-path:inset(5% 0 0)}
+  .24%{opacity:1;transform:none;clip-path:inset(0)}
+  .65%,100%{opacity:0}
+}
 .title-screen::before,.title-screen::after{content:"";position:absolute;inset:0;pointer-events:none}
 .title-screen::before{background:linear-gradient(90deg,#030203c9,transparent 63%),linear-gradient(0deg,#030203a8,transparent 28%)}
 .title-screen::after{background:repeating-linear-gradient(180deg,#0004 0 1px,transparent 1px 4px)}
@@ -29,10 +38,13 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .title-start:hover,.title-start:focus-visible{color:#ffbfdc}
 @media(max-aspect-ratio:1/1){
   .title-art{height:75%;object-position:right top}
+  .title-glitch--middle{object-position:74% top}
+  .title-glitch--back{object-position:54% top}
   .title-screen::before{background:linear-gradient(0deg,#030203 27%,transparent 74%)}
   .title-content{justify-content:flex-end;gap:clamp(12px,3cqh,30px);padding-bottom:max(15cqh,env(safe-area-inset-bottom))}
   .title-content h1{font-size:clamp(34px,min(15.5cqw,13cqh),96px)}
 }
+@media(prefers-reduced-motion:reduce){.title-glitch{display:none}}
 .office-view,.cameras-view{position:absolute;inset:0;overflow:hidden}
 .office-view{z-index:1;background:#09050d;touch-action:pan-y}
 .office-scene{position:absolute;left:50%;top:0;width:max(100cqw,300cqh);height:100%;transform:translateX(calc(-50% + var(--pan-shift,0px)));will-change:transform}
@@ -49,11 +61,43 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .monitor-hotspot:focus-visible .hotspot-corner{opacity:.85}
 .hotspot-label{position:absolute;left:50%;bottom:-33px;transform:translateX(-50%);white-space:nowrap;background:rgba(15,9,23,.94);border:1px solid #edacd0;border-radius:4px;padding:7px 10px;font:700 10px var(--mono);letter-spacing:.11em;opacity:0;transition:opacity .2s;color:#ffd7eb;pointer-events:none;box-shadow:0 6px 24px #0008}
 .monitor-hotspot:focus-visible .hotspot-label{opacity:1}
-.office-shading{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(2,2,7,.46),transparent 20%,transparent 62%,rgba(4,3,9,.66) 100%)}
+.office-shading{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(2,2,7,.46),transparent 20%,transparent 62%,rgba(4,3,9,.66) 100%),rgba(4,2,9,.13)}
 .office-reticle{position:absolute;left:50%;top:47%;width:3px;height:3px;border-radius:50%;background:#ffe4f3;box-shadow:0 0 0 5px #fff1;opacity:.35;pointer-events:none}
 .office-location{position:absolute;right:30px;top:118px;font:700 10px var(--mono);letter-spacing:.15em;color:#fde6f5b8;text-shadow:0 1px 5px #000;white-space:nowrap}
 .location-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#bfe4c1;box-shadow:0 0 10px #a7efd4;margin-right:6px}
 .location-sub{color:#f3d7e680}
+.closet-hotspot{position:absolute;border:1px solid transparent;border-radius:4px;background:transparent}
+#office-closet{left:87.2%;top:9%;width:11%;height:77%}
+.closet-hotspot:hover,.closet-hotspot:focus-visible{border-color:#ffc0d54d;background:#ffc0d508}
+.closet-view,.closet-view img{position:absolute;inset:0;width:100%;height:100%}
+.closet-view{z-index:1;overflow:hidden;background:#000;touch-action:none}
+.closet-view:focus-visible{outline:none}
+.closet-view img{object-fit:cover;pointer-events:none}
+.closet-door-art{filter:brightness(.72)}
+.closet-beam{filter:brightness(3.1) saturate(.8);mask-image:radial-gradient(circle at 50% 55%,#000 15cqh,#000d 21cqh,#0005 30cqh,transparent 39cqh)}
+.closet-view[data-view="back"] .closet-door-art{display:none}
+.closet-exit{inset:17% 5% 11%}
+.closet-exit:hover{border-color:transparent;background:transparent}
+.closet-light-toggle{position:absolute;z-index:9;bottom:16px;right:16px;min-height:44px;padding:0 14px;background:#100e14bf;border:1px solid #d4bdd766;border-radius:4px;font:700 10px var(--mono);letter-spacing:.1em}
+.closet-light-toggle[aria-pressed="true"]{border-color:#ffdec0;color:#ffdec0}
+@media(hover:hover) and (pointer:fine){.closet-light-toggle:not(:focus-visible){opacity:0;pointer-events:none}}
+.game[data-mode="closet"] .hud-top{visibility:hidden}
+.game[data-mode="closet"]:has(.closet-view[data-view="back"]) :is(.screen-grain,.movement-debug,.toast){visibility:hidden}
+.closet-blackout{display:none;position:absolute;inset:0;z-index:31;background:#000}
+.game[data-closet-transition] .closet-blackout{display:block;animation:closet-blackout var(--closet-duration) both}
+.game[data-closet-transition="enter"] .office-view{animation:closet-duck var(--closet-duration) both}
+@keyframes closet-blackout{
+  0%,100%{opacity:0}
+  28%,74%{opacity:1}
+}
+@keyframes closet-duck{
+  0%{transform:none}
+  35%,100%{transform:translateY(7%) scale(1.1);filter:blur(2px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .game[data-closet-transition] .closet-blackout{animation:none;opacity:1}
+  .game[data-closet-transition="enter"] .office-view{animation:none}
+}
 .cameras-view{z-index:2;background:#050712}
 .camera-feed{position:absolute;inset:0;overflow:hidden;background:#070b18}
 .feed-art{width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.77) contrast(1.13) saturate(.70);transform:scale(1.015);pointer-events:none;transition:filter .3s}
@@ -136,6 +180,89 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .shift-complete h2{font-size:27px;margin:4px 0}
 .shift-complete p{font-size:13px;line-height:1.5;color:#e9d6e1;max-width:350px}
 .shift-complete button{width:auto;margin-top:22px}
+
+.jumpscare,.death-flash,.game-over{position:absolute;inset:0;z-index:50}
+.jumpscare,.death-flash{display:none;pointer-events:none}
+.game[data-defeat] :is(.hud-top,.office-location,.office-reticle,.monitor-handle,.movement-debug,.initial-hint,.toast,.feed-heading,.map-panel){
+  visibility:hidden;
+}
+.game[data-defeat] :is(.office-view,.cameras-view){
+  filter:brightness(.42) saturate(.46) blur(3px);
+  transform:scale(1.06);
+}
+.game:is([data-defeat="blackout"],[data-defeat="scare"]) .jumpscare{
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:
+    linear-gradient(90deg,#000 0%,#030106e8 15%,transparent 42% 58%,#030106e8 85%,#000 100%),
+    radial-gradient(ellipse at 50% 48%,#14071226 12%,#060307b5 61%,#000 100%);
+}
+.game[data-defeat="scare"] :is(.office-view,.cameras-view){animation:scare-distortion .29s steps(3,end) infinite}
+@keyframes scare-distortion{
+  0%,100%{transform:scale(1.06) skewX(-1.2deg)}
+  40%{transform:translateX(.6%) scale(1.07) skewX(1.2deg)}
+  72%{transform:translateX(-.8%) scale(1.065,.985) skewX(-.5deg)}
+}
+.jumpscare-art{
+  visibility:hidden;
+  position:absolute;
+  width:min(112cqh,114cqw);
+  height:auto;
+  filter:brightness(.91) contrast(1.15) drop-shadow(0 0 28px #000d);
+  mask-image:linear-gradient(90deg,transparent,#000 7% 93%,transparent);
+}
+.game[data-defeat="scare"] .jumpscare-art{visibility:visible;animation:scare-impact .96s both}
+@keyframes scare-impact{
+  0%{transform:scale(.91) translateY(3%)}
+  24%{transform:scale(1)}
+  68%{transform:scale(1.025)}
+  84%{transform:scale(1.045) translate(-.65%,.5%) rotate(-.6deg)}
+  100%{transform:scale(1.06) translate(.5%,-.3%) rotate(.35deg)}
+}
+.jumpscare::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(180deg,transparent 0 3px,#0003 3px 4px);
+}
+.game[data-defeat="flash"] .death-flash{
+  display:block;
+  background:radial-gradient(ellipse at center,#ef203c,#640012 62%,#190007 100%);
+  animation:death-flash .23s cubic-bezier(.19,1,.32,1) both;
+}
+@keyframes death-flash{0%{opacity:.97}100%{opacity:.24}}
+.game-over{
+  display:grid;place-items:center;text-align:center;
+  background:radial-gradient(ellipse at 50% 48%,#3b0915,#17040c 50%,#050306 80%);
+  isolation:isolate;
+}
+.game-over::before{
+  content:"";position:absolute;inset:clamp(13px,4cqw,42px);
+  border:1px solid #b14c5b38;
+  background:repeating-linear-gradient(180deg,transparent 0 4px,#0002 4px 5px);
+  pointer-events:none;
+}
+.game-over .feed-noise{opacity:.16}
+.game-over-content{position:relative;padding:1.5rem;animation:game-over-reveal .32s ease-out both}
+.game-over-status{
+  margin:0;color:#ef919d;font:700 clamp(9px,1.3cqw,14px)/1.5 var(--mono);letter-spacing:.3em;
+}
+.game-over-status::before{
+  content:"";display:inline-block;width:6px;height:6px;margin:0 .8em .12em 0;
+  background:#fa435d;box-shadow:0 0 13px #fa435dbb;
+}
+.game-over h2{
+  margin:.15em 0 .35em;color:#ffdde1;
+  font:800 clamp(28px,min(12cqw,21cqh),142px)/1 var(--mono);letter-spacing:-.075em;
+  text-shadow:2px 2px #9e1f37,-2px -1px #411b36,0 0 36px #ff284d66;
+}
+.game-over-return{
+  min-height:44px;padding:0 1.4rem;border:1px solid #b05161;border-radius:3px;
+  background:#260a12;color:#ffdde1;font:700 clamp(10px,1.4cqw,14px)/1 var(--mono);
+  letter-spacing:.15em;transition:background .15s,border-color .15s;
+}
+.game-over-return:hover,.game-over-return:focus-visible{background:#49111e;border-color:#ff8c9e}
+@keyframes game-over-reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
 @container(max-width:760px){
   .hud-top{padding:calc(15px + env(safe-area-inset-top)) 15px 0}
   .night-clock{gap:2px}.clock-time{font-size:25px}.clock-time small{font-size:12px}.night-clock>span{font-size:9px}
@@ -156,4 +283,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
  .monitor-handle{min-width:208px}
 }
 @container(max-height:630px) and (min-width:761px){.monitor-handle{min-height:49px}.feed-heading{top:76px}}
+@media(prefers-reduced-motion:reduce){
+  .game[data-defeat="scare"] :is(.office-view,.cameras-view,.jumpscare-art){animation:none}
+  .game[data-defeat="flash"] .death-flash{animation:none;opacity:.38}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
