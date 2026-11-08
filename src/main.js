@@ -18,6 +18,9 @@ const corridorCamera = CAMERAS.find(cam => cam.id === 'CAM12');
 
 // A primeira versão funciona como site estático: sem build, sem servidor de jogo e sem backend.
 const $ = selector => document.querySelector(selector);
+const titleScreen = $('#title-screen');
+const startGame = $('#start-game');
+const menuMusic = $('#menu-music');
 const dom = {
   game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
@@ -34,6 +37,10 @@ const dom = {
 const HOURS_PER_SHIFT = 6;
 const SECONDS_PER_HOUR = 90;
 const TOTAL_SHIFT_SECONDS = HOURS_PER_SHIFT * SECONDS_PER_HOUR;
+const MENU_MUSIC_START = 27;
+const MENU_MUSIC_FADE_SECONDS = 2;
+const MENU_MUSIC_INITIAL_VOLUME = .08;
+const MENU_MUSIC_VOLUME = .65;
 const sound = new SoundEngine();
 let audioReady;
 // Browsers unlock audio after the first interaction with the game.
@@ -45,6 +52,14 @@ function playSound(effect) {
   if (sound.enabled) sound[effect]();
   else audioReady?.then(enabled => { if (enabled) sound[effect](); });
 }
+
+function fadeMenuMusic() {
+  if (titleScreen.hidden) return;
+  const progress = Math.min(1, Math.max(0, (menuMusic.currentTime - MENU_MUSIC_START) / MENU_MUSIC_FADE_SECONDS));
+  menuMusic.volume = MENU_MUSIC_INITIAL_VOLUME + (MENU_MUSIC_VOLUME - MENU_MUSIC_INITIAL_VOLUME) * progress;
+  if (progress < 1) requestAnimationFrame(fadeMenuMusic);
+}
+
 const state = {
   mode: 'office', cameraIndex: 0, characterPreviews: new Map(), elapsed: 0, movementTime: 0,
   officeRoom: new Set(),
@@ -395,7 +410,7 @@ for (const eventName of ['pointerup','pointercancel']) dom.office.addEventListen
 
 const panKeys = new Set();
 document.addEventListener('keydown', event => {
-  if (state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (dom.game.hidden || state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
   const key = event.key.toLowerCase();
   const focusedButton = event.target instanceof Element && Boolean(event.target.closest('button, [role="button"]'));
   if ((key === ' ' && !focusedButton) || key === 'm') {
@@ -441,7 +456,6 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(dom.game);
 
-// The site opens directly inside the office: no menu or splash screen.
 window.NathGame.setCam01ShopState = key => setCameraCharacterState(shopCamera, key);
 window.NathGame.setCam02ReceptionState = key => setCameraCharacterState(receptionCamera, key);
 window.NathGame.setCam03StageState = key => setCameraCharacterState(stageCamera, key);
@@ -454,13 +468,29 @@ window.NathGame.setCam10KitchenState = key => setCameraCharacterState(kitchenCam
 window.NathGame.setCam11PickupState = key => setCameraCharacterState(pickupCamera, key);
 window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorCamera, key);
 window.NathGame.setOfficeCharacterState = setOfficeCharacterState;
-changeCamera(CAMERAS[0].id);
-updateOfficeView();
-preloadImages(Object.values(OFFICE.images));
-// Load state variants before the player starts toggling their gates.
-for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
-updateClockUI();
-state.lastFrame = performance.now();
-requestAnimationFrame(tick);
+
+$('#enter-game').addEventListener('click', () => {
+  $('#entry-screen').hidden = true;
+  titleScreen.hidden = false;
+  menuMusic.currentTime = MENU_MUSIC_START;
+  menuMusic.volume = MENU_MUSIC_INITIAL_VOLUME;
+  menuMusic.addEventListener('playing', fadeMenuMusic, { once: true });
+  menuMusic.play().catch(() => {});
+  startGame.focus();
+}, { once: true });
+
+startGame.addEventListener('click', () => {
+  titleScreen.hidden = true;
+  menuMusic.pause();
+  dom.game.hidden = false;
+  changeCamera(CAMERAS[0].id);
+  updateOfficeView();
+  preloadImages(Object.values(OFFICE.images));
+  // Load state variants before the player starts toggling their gates.
+  for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
+  updateClockUI();
+  state.lastFrame = performance.now();
+  requestAnimationFrame(tick);
+}, { once: true });
 
 })();

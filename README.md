@@ -1,6 +1,6 @@
-# Restaurante da Nathzinha — Web V1 🌸
+# Nine Nights at Nath's — Web V1 🌸
 
-Primeira versão navegável do fangame de terror **Restaurante da Nathzinha**. O jogo abre diretamente no escritório de segurança: explore a imagem panorâmica, clique no monitor da mesa e alterne entre as doze câmeras pela planta interativa do restaurante.
+Primeira versão navegável do fangame de terror **Nine Nights at Nath's**. Clique em **Jogar Nine Nights at Nath's** para abrir o menu com a trilha. Selecione **New Game** para entrar no escritório de segurança e acessar as doze câmeras do restaurante.
 
 **Projeto estático puro:** HTML + CSS + JavaScript com scripts locais. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
 
@@ -8,7 +8,7 @@ Primeira versão navegável do fangame de terror **Restaurante da Nathzinha**. O
 
 ```text
 Restaurante_da_Nathzinha_Web_V1/
-├── index.html                       # Entrada do site: já abre no escritório
+├── index.html                       # Menu inicial e tela da noite
 ├── .nojekyll                        # Não processar pastas pelo Jekyll
 ├── .github/workflows/pages.yml      # Publicação automática, sem build
 ├── src/                             # Código do jogo/site
@@ -58,7 +58,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 
 ## Como jogar
 
-- **Ao entrar:** você já está no escritório, olhando a imagem panorâmica.
+- **No menu inicial:** selecione **New Game** para iniciar a noite no escritório.
 - **Mouse nas bordas esquerda/direita** ou **A/D e ←/→** no escritório: olhar para os lados.
 - **Toque e arraste** no escritório em telas touch: deslocar o panorama.
 - **Clique no monitor da mesa**, clique na aba inferior ou pressione **Espaço/M**: abrir/fechar as câmeras.

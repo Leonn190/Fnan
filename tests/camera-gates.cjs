@@ -20,12 +20,23 @@ class Element {
   setAttribute(key, value) { this.attrs[key] = String(value); }
   getAttribute(key) { return this.attrs[key] ?? null; }
   append(...items) { this.children.push(...items); }
+  focus() {}
   addEventListener(event, action) { (this.events[event] ??= []).push(action); }
   closest() { return this.attrs.role === 'button' ? this : null; }
   fire(event, details) { for (const action of this.events[event] ?? []) action({ target: this, preventDefault() {}, ...details }); }
 }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const nodes = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, new Element()]));
+for (const [, id, attributes] of html.matchAll(/<main [^>]*id="([^"]+)"([^>]*)>/g)) {
+  nodes[id].hidden = /\bhidden\b/.test(attributes);
+}
+const music = nodes['menu-music'];
+music.paused = true;
+music.play = () => {
+  music.paused = false;
+  return Promise.resolve();
+};
+music.pause = () => { music.paused = true; };
 const document = new Element();
 document.querySelector = selector => nodes[selector.slice(1)];
 document.createElement = () => new Element();
@@ -55,6 +66,37 @@ const step = time => { now = time; frame(now); };
 for (const [, src] of html.matchAll(/<script defer src="([^"]+)"/g)) {
   vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
 }
+assert.equal(nodes['entry-screen'].hidden, false);
+assert.equal(nodes['title-screen'].hidden, true);
+assert.equal(nodes.game.hidden, true);
+document.fire('keydown', { key: 'm' });
+assert.equal(music.paused, true);
+nodes['enter-game'].fire('click');
+assert.equal(nodes['entry-screen'].hidden, true);
+assert.equal(nodes['title-screen'].hidden, false);
+assert.equal(nodes.game.hidden, true);
+assert.equal(music.paused, false);
+assert.equal(music.currentTime, 27);
+assert.equal(music.volume, .08);
+document.fire('keydown', { key: 'm' });
+assert.equal(nodes.game.dataset.mode, undefined);
+assert.equal(frame, undefined);
+music.fire('playing');
+music.currentTime = 28;
+step(1_000);
+assert(Math.abs(music.volume - .365) < .001);
+music.currentTime = 29;
+step(2_000);
+assert.equal(music.volume, .65);
+now = 600_000;
+nodes['start-game'].fire('click');
+const nightStart = now;
+assert.equal(nodes['title-screen'].hidden, true);
+assert.equal(nodes.game.hidden, false);
+assert.equal(music.paused, true);
+step(nightStart + 100);
+assert.match(nodes['clock-label'].innerHTML, /^12 /);
+assert.match(nodes['movement-debug'].textContent, /Padrão.*9\.9 s/);
 const svg = nodes['map-canvas'].children[0];
 const cameras = svg.children.filter(node => node.attrs['data-cam']);
 const gates = svg.children.find(node => node.attrs['aria-label'] === 'Portões').children;
@@ -112,7 +154,7 @@ camera('CAM05'); check('closed-open');
 nodes['monitor-handle'].fire('click');
 nodes['office-monitor'].fire('click'); check('closed-open');
 // Resetting the night restores both the map and the default open-open image.
-for (let time = 100; time <= 540100; time += 100) step(time);
+for (let time = nightStart + 200; time <= nightStart + 540_100; time += 100) step(time);
 assert.equal(nodes['shift-complete'].hidden, false);
 nodes['restart-shift'].fire('click');
 assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));

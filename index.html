@@ -4,10 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#120e19">
-  <meta name="description" content="Restaurante da Nathzinha — uma experiência de vigilância noturna inspirada nos clássicos de terror. Explore o escritório e as 12 câmeras do restaurante.">
-  <title>Restaurante da Nathzinha | Noite 01</title>
+  <meta name="description" content="Nine Nights at Nath's — uma experiência de vigilância noturna inspirada nos clássicos de terror. Explore o escritório e as 12 câmeras do restaurante.">
+  <title>Nine Nights at Nath's</title>
   <link rel="icon" type="image/svg+xml" href="./public/images/branding/favicon.svg">
-  <link rel="preload" as="image" type="image/webp" href="./public/images/office/states/open-dark.webp" fetchpriority="high">
   <link rel="stylesheet" href="./src/styles/main.css">
   <script defer src="./src/data/game-data.js"></script>
   <script defer src="./src/movement.js"></script>
@@ -16,7 +15,21 @@
   <script defer src="./src/main.js"></script>
 </head>
 <body>
-  <main class="game" id="game" data-mode="office">
+  <main class="entry-screen" id="entry-screen" aria-label="Entrada do jogo">
+    <button class="entry-button" id="enter-game" type="button">Jogar Nine Nights at Nath's</button>
+  </main>
+
+  <main class="game title-screen" id="title-screen" aria-labelledby="game-title" hidden>
+    <img class="title-art" src="./public/images/Trio de Bonecas Animatrônicas Sombrias.png" alt="" fetchpriority="high" draggable="false">
+    <audio id="menu-music" src="./public/FNAF Sister Location OST - Trailer Music (Extended) (HD).mp3" preload="metadata" loop></audio>
+    <div class="feed-noise" aria-hidden="true"></div>
+    <div class="title-content" lang="en">
+      <h1 id="game-title">Nine<br>Nights<br>at Nath's</h1>
+      <button class="title-start" id="start-game" type="button"><span aria-hidden="true">&gt;&gt;</span> New Game</button>
+    </div>
+  </main>
+
+  <main class="game" id="game" data-mode="office" hidden>
     <section class="office-view" id="office-view" aria-label="Escritório de segurança do restaurante">
       <div class="office-scene" id="office-scene">
         <img class="office-art" id="office-art" src="./public/images/office/states/open-dark.webp" alt="Escritório de segurança, portão principal aberto e corredor escuro" draggable="false">
