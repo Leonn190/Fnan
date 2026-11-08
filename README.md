@@ -63,7 +63,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - **Clique no monitor da mesa**, clique na aba inferior ou pressione **Espaço/M**: abrir/fechar as câmeras.
 - **Na tela de câmeras:** clique em uma das 12 câmeras na planta ou use as setas **←/→**.
 - **Portões no mapa:** clique para alternar entre aberto (amarelo) e fechado (vermelho). Ao fechar um quarto portão, o último que havia sido fechado abre automaticamente. Os portões voltam a abrir ao reiniciar o turno.
-- **F no escritório:** alterna a luz circular no corredor. Ao abrir o monitor ou trocar de janela, a luz desliga. Com o G01 fechado, a luz não revela o corredor.
+- **F no escritório:** alterna a luz circular no corredor quando o G01 está aberto e a sala está vazia. Uma personagem na porta lateral permite usar a luz. Ao abrir o monitor ou trocar de janela, a luz desliga.
 - **G01 no mapa:** abre/fecha o portão principal do escritório. O estado acompanha também a reabertura automática pelo limite de três fechados.
 - **Esc:** abaixa o monitor.
 - O contador de horas vai de 12 AM a 6 AM; ao terminar, é possível reiniciar. Sem animatrônicos, dano, ataques ou mortes nesta versão.
@@ -111,7 +111,7 @@ O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
-O escritório aceita até três animatrônicas na sala e uma diferente na porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto e 101 com ele fechado. Use `NathGame.setOfficeCharacterState(['original', 'platinada'], 'yandere')` para experimentar e chame a função sem argumentos para esvaziar a cena. A lanterna fica indisponível enquanto houver personagens selecionadas. Para exportar os 202 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow.
+O escritório aceita até três animatrônicas na sala e uma diferente na porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto no escuro, 101 com ele fechado e seis com o corredor iluminado e a sala vazia. Use `NathGame.setOfficeCharacterState([], 'yandere')` e pressione **F** para ver a Yandere na porta lateral com o corredor iluminado. Chame a função sem argumentos para esvaziar a cena. Para exportar os 208 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow. Acrescente `--lit-only` para exportar apenas os seis iluminados.
 
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 

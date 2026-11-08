@@ -13,6 +13,8 @@ regions = [(0, 0, 2172, 197), (0, 547, 2172, 724),
            (0, 197, 864, 547), (1310, 197, 2172, 547)]
 for name, image in views.items():
     assert image.size == original.size, name
+for name in ['open-dark', 'closed']:
+    image = views[name]
     for region in regions:
         assert ImageChops.difference(original.crop(region), image.crop(region)).getbbox() is None, (name, region)
     # The left monitor, the radio antenna and right mug stay in the foreground.
@@ -20,6 +22,9 @@ for name, image in views.items():
         assert image.getpixel(point) == original.getpixel(point), (name, point)
 
 assert ImageChops.difference(views['open-dark'], original).getbbox() is None
+with Image.open(ROOT / 'outros/arte/office/open-lit.png') as lit_source:
+    assert lit_source.size == original.size
+    assert ImageChops.difference(views['open-lit'], lit_source.convert('RGB')).getbbox() is None
 assert not (OFFICE / 'office.webp').exists()
 corridor = (890, 210, 1280, 530)
 mean = lambda image, box: sum(ImageStat.Stat(image.crop(box)).mean) / 3
@@ -28,4 +33,4 @@ assert mean(views['open-lit'], (1030, 390, 1140, 460)) > 10 * mean(views['open-d
 # The flashlight reveals the center while leaving the outer recess dark.
 assert mean(views['open-lit'], (890, 210, 920, 250)) < 4
 assert mean(views['closed'], corridor) > 10 * mean(views['open-dark'], corridor)
-print('PASS: 3 office panoramas, lossless unchanged exterior/foreground, near-black corridor, round beam center and closed gate.')
+print('PASS: office backgrounds, preserved dark and closed foreground, and lossless new lit panorama.')

@@ -17,7 +17,7 @@ def load(path):
         return image.convert("RGBA")
 
 
-def export(output):
+def export(output, lit_only=False):
     layers = {
         location: {
             character: load(OFFICE / "characters" / location / f"{character}.webp")
@@ -25,12 +25,16 @@ def export(output):
         }
         for location in ("room", "doorway")
     }
+    views = [("open-lit", "open-lit", 0)]
+    if not lit_only:
+        views.extend([("open", "open-dark", 3), ("closed", "closed", 3)])
+
     count = 0
-    for gate, source in (("open", "open-dark"), ("closed", "closed")):
+    for gate, source, max_room in views:
         base = load(OFFICE / "states" / f"{source}.webp")
         folder = output / gate
         folder.mkdir(parents=True, exist_ok=True)
-        for size in range(4):
+        for size in range(max_room + 1):
             for room in combinations(CHARACTERS, size):
                 room_key = "-".join(room) or "vazia"
                 for doorway in (None, *CHARACTERS):
@@ -50,5 +54,6 @@ def export(output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="Pasta de destino das imagens")
+    parser.add_argument("--lit-only", action="store_true", help="Exporta apenas os seis estados iluminados")
     args = parser.parse_args()
-    print(f"{export(args.output)} imagens exportadas para {args.output}")
+    print(f"{export(args.output, args.lit_only)} imagens exportadas para {args.output}")

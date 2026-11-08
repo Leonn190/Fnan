@@ -197,4 +197,17 @@ assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'maid'), officeL
 assert(setOfficeCharacterState());
 assert.deepEqual(visibleOfficeLayers(), []);
 pressF(); office('lit');
-console.log('PASS: 12 camera folders, all gate states, and 202 office combinations.');
+for (const doorway of officeCharacters) {
+  assert(setOfficeCharacterState([], doorway));
+  office('lit');
+  assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', doorway)]);
+  pressF(); office('dark');
+  pressF(); office('lit');
+}
+assert(setOfficeCharacterState(['original'], 'maid'));
+office('dark');
+pressF(); office('dark');
+assert(setOfficeCharacterState([], 'maid'));
+office('dark');
+pressF(); office('lit');
+console.log('PASS: 12 camera folders, all gate states, and 208 office combinations.');

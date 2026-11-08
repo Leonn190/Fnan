@@ -43,7 +43,7 @@ function playSound(effect) {
 }
 const state = {
   mode: 'office', cameraIndex: 0, characterStates: new Map(), elapsed: 0,
-  officeRoom: new Set(), officeDoorway: null,
+  officeRoom: new Set(),
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now()
 };
@@ -101,7 +101,7 @@ const map = makeCameraMap({
 
 function updateOfficeView() {
   const closed = map.isGateClosed(OFFICE.gate);
-  if (closed || state.officeRoom.size || state.officeDoorway) state.flashlight = false;
+  if (closed || state.officeRoom.size) state.flashlight = false;
   const view = closed ? 'closed' : state.flashlight ? 'lit' : 'dark';
   dom.office.dataset.gate = closed ? 'closed' : 'open';
   dom.office.dataset.flashlight = String(state.flashlight);
@@ -124,7 +124,6 @@ function setOfficeCharacterState(room = [], doorway = null) {
     return false;
   }
   state.officeRoom = selected;
-  state.officeDoorway = doorway;
   for (const { location, character, image } of officeLayers) {
     const visible = location === 'room' ? selected.has(character) : doorway === character;
     if (visible && !image.getAttribute('src')) {
@@ -333,7 +332,7 @@ document.addEventListener('keydown', event => {
     if (!event.repeat) toggleMonitor();
   } else if (key === 'f' && state.mode === 'office') {
     event.preventDefault();
-    if (!event.repeat && !map.isGateClosed(OFFICE.gate)) {
+    if (!event.repeat && !state.officeRoom.size && !map.isGateClosed(OFFICE.gate)) {
       state.flashlight = !state.flashlight;
       updateOfficeView();
     }
