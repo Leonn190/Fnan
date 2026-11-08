@@ -2,7 +2,14 @@
 'use strict';
 const { CAMERAS, OFFICE, makeCameraMap, SoundEngine } = window.NathGame;
 const shopCamera = CAMERAS.find(cam => cam.id === 'CAM01');
+const receptionCamera = CAMERAS.find(cam => cam.id === 'CAM02');
 const stageCamera = CAMERAS.find(cam => cam.id === 'CAM03');
+const vip1Camera = CAMERAS.find(cam => cam.id === 'CAM05');
+const vip2Camera = CAMERAS.find(cam => cam.id === 'CAM06');
+const arcadeCamera = CAMERAS.find(cam => cam.id === 'CAM07');
+const kitchenCamera = CAMERAS.find(cam => cam.id === 'CAM10');
+const pickupCamera = CAMERAS.find(cam => cam.id === 'CAM11');
+const corridorCamera = CAMERAS.find(cam => cam.id === 'CAM12');
 
 // A primeira versão funciona como site estático: sem build, sem servidor de jogo e sem backend.
 const $ = selector => document.querySelector(selector);
@@ -106,9 +113,10 @@ function characterStateImages(cam) {
 
 function cameraImage(cam) {
   const views = cam.gateStateImages;
-  if (!views) return characterStateImages(cam)?.[state.characterStates.get(cam.id)] ?? cam.image;
+  const characters = characterStateImages(cam)?.[state.characterStates.get(cam.id)];
+  if (!views) return characters ?? cam.image;
   const key = views.gates.map(id => map.isGateClosed(id) ? 'closed' : 'open').join('-');
-  return views.images[key] ?? cam.image;
+  return characters?.[key] ?? views.images[key] ?? cam.image;
 }
 
 // Seleção explícita para o código do jogo. Use "vazia" para restaurar a imagem padrão.
@@ -328,7 +336,14 @@ resizeObserver.observe(dom.game);
 
 // The site opens directly inside the office: no menu or splash screen.
 window.NathGame.setCam01ShopState = key => setCameraCharacterState(shopCamera, key);
+window.NathGame.setCam02ReceptionState = key => setCameraCharacterState(receptionCamera, key);
 window.NathGame.setCam03StageState = key => setCameraCharacterState(stageCamera, key);
+window.NathGame.setCam05VipState = key => setCameraCharacterState(vip1Camera, key);
+window.NathGame.setCam06VipState = key => setCameraCharacterState(vip2Camera, key);
+window.NathGame.setCam07ArcadeState = key => setCameraCharacterState(arcadeCamera, key);
+window.NathGame.setCam10KitchenState = key => setCameraCharacterState(kitchenCamera, key);
+window.NathGame.setCam11PickupState = key => setCameraCharacterState(pickupCamera, key);
+window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorCamera, key);
 changeCamera(CAMERAS[0].id);
 updateOfficeView();
 preloadImages(Object.values(OFFICE.images));

@@ -72,27 +72,37 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | ID | Sala da planta | Recurso exibido |
 |---|---|---|
 | CAM01 | Lojinha | Loja vazia e quinze variantes com as Nathzinhas |
-| CAM02 | Recepção | Cena 3D final |
+| CAM02 | Recepção | Recepção vazia e quinze variantes com as Nathzinhas |
 | CAM03 | Salão principal, virada para o palco | Palco vazio e sete variantes com as Nathzinhas |
 | CAM04 | Salão principal, parede oposta | Portão sul G08 aberto ou fechado |
-| CAM05 | VIP 1 rosa | Quatro estados visuais dos portões G04/G05 |
-| CAM06 | VIP 2 lavanda | Cena 3D final |
-| CAM07 | Fliperama | Cena 3D final |
+| CAM05 | VIP 1 rosa | 64 combinações de personagens e portões G04/G05 |
+| CAM06 | VIP 2 lavanda | Sala vazia e 31 variantes com as Nathzinhas |
+| CAM07 | Fliperama | Sala vazia e quinze variantes com as Nathzinhas |
 | CAM08 | Estoque | Cena 3D 4K |
 | CAM09 | Área de serviço | Nova arte da sala de manutenção técnica |
-| CAM10 | Cozinha | Cena 3D final |
-| CAM11 | Área de retirada | Balcão de retirada de pedidos |
-| CAM12 | Corredor de serviço, leste | Portão G06 aberto com cortinas vermelhas à vista ou fechado |
+| CAM10 | Cozinha | Cozinha vazia sem HUD na arte e quinze variantes com as Nathzinhas |
+| CAM11 | Área de retirada | Balcão vazio e quinze variantes com as Nathzinhas |
+| CAM12 | Corredor de serviço, leste | 16 combinações de personagens e portão G06 |
 
 As 12 câmeras têm cenas próprias, com `CAM01.webp` a `CAM12.webp` na pasta `public/images/cameras/` e os PNG mestres numerados em `originals/`. As plantas técnicas continuam disponíveis como fallback. O manifesto V8 é um registro histórico, anterior à substituição da arte do palco e à inclusão da CAM04 e CAM09.
 
-As combinações da CAM01 ficam em `public/images/cameras/states/`. O jogo pode selecionar uma delas com `NathGame.setCam01ShopState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a loja vazia.
+As combinações da CAM01 e da CAM02 ficam em `public/images/cameras/states/`. O jogo pode selecionar a variante da loja com `NathGame.setCam01ShopState('original-platinada')` e a da recepção com `NathGame.setCam02ReceptionState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a sala vazia.
 
 Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. A imagem padrão mostra o portão aberto com breu atrás; fechar o G08 mostra o portão baixado. Detalhes e prompt: `outros/prompts/CAM04_ESTADOS_PORTAO.md`.
 
-A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. Os portões G04/G05 no mapa controlam as quatro imagens da sala, inclusive quando um deles é reaberto automaticamente pelo limite de três fechados. A sala usa a mesma base de pixels em todos os estados. Detalhes e prompts: `outros/prompts/CAM05_ESTADOS_PORTOES.md`. G04 controla a esquerda e G05 a direita na imagem.
+A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. G04 controla o portão esquerdo e G05, o direito. Cada configuração dos portões tem 16 combinações de personagens. Selecione uma com `NathGame.setCam05VipState('original-maid')`, `todas` ou `vazia`. A troca de portões mantém as personagens selecionadas, inclusive em reaberturas automáticas. Os recortes da Padrão e da Yandere incluem ajustes nas cadeiras conforme a referência ocupada. Os quatro fundos vazios estão documentados em `outros/prompts/CAM05_ESTADOS_PORTOES.md`.
+
+A CAM06 usa o mesmo fundo para as 32 combinações de personagens. Selecione uma com `NathGame.setCam06VipState('original-platinada-maid')`, `todas` ou `vazia`. A cadeira da Padrão acompanha a posição em que ela aparece sentada na referência.
+
+A CAM07 tem 16 combinações com a Padrão, a Yandere, a Gótica e a Platinada. Selecione uma com `NathGame.setCam07ArcadeState('gotica-platinada')`, `todas` ou `vazia`.
+
+A CAM10 usa a nova arte da cozinha sem HUD como base para as 16 combinações da Padrão, da Yandere, da Gótica e da Maid preto e branco. Selecione uma com `NathGame.setCam10KitchenState('yandere-maid')`, `todas` ou `vazia`.
+
+A CAM11 tem 16 combinações com a Padrão, a Yandere, a Gótica e a Maid preto e branco. O cabelo vermelho na borda esquerda identifica a Yandere. Selecione uma combinação com `NathGame.setCam11PickupState('yandere-maid')`, `todas` ou `vazia`.
 
 Na CAM12, o portão hidráulico G06 começa aberto e revela as cortinas vermelhas dos bastidores do palco da CAM03. Clique no G06 ao norte do salão para baixar ou levantar o portão.
+
+Cada estado do G06 tem oito combinações com a Padrão, a Yandere ao fundo e a Gótica. Selecione uma com `NathGame.setCam12CorridorState('original-gotica')`, `todas` ou `vazia`. A seleção permanece ao alternar o portão.
 
 O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório e a ligação dos portões com as câmeras. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 

@@ -2,6 +2,20 @@
 'use strict';
 // Base do projeto V8: outros/planta/nathzinha_v7_planta_medidas.json
 // Coordenadas: origem sudoeste, x=leste, y=norte, em metros.
+const VIP1_GATE_IMAGES = {
+  'open-open': './public/images/cameras/states/CAM05-open-open.png',
+  'open-closed': './public/images/cameras/states/CAM05-open-closed.png',
+  'closed-open': './public/images/cameras/states/CAM05-closed-open.png',
+  'closed-closed': './public/images/cameras/originals/CAM05.png'
+};
+const VIP1_CHARACTER_STATES = [
+  'original', 'yandere', 'gotica', 'maid',
+  'original-yandere', 'original-gotica', 'original-maid',
+  'yandere-gotica', 'yandere-maid', 'gotica-maid',
+  'original-yandere-gotica', 'original-yandere-maid',
+  'original-gotica-maid', 'yandere-gotica-maid', 'todas'
+];
+
 const CAMERAS = [
   {
     "id": "CAM01",
@@ -43,6 +57,23 @@ const CAMERAS = [
     "angle": 270,
     "fov": 95,
     "image": "./public/images/cameras/CAM02.webp",
+    "characterStateImages": {
+      "original": "./public/images/cameras/states/CAM02-original.webp",
+      "yandere": "./public/images/cameras/states/CAM02-yandere.webp",
+      "gotica": "./public/images/cameras/states/CAM02-gotica.webp",
+      "platinada": "./public/images/cameras/states/CAM02-platinada.webp",
+      "original-yandere": "./public/images/cameras/states/CAM02-original-yandere.webp",
+      "original-gotica": "./public/images/cameras/states/CAM02-original-gotica.webp",
+      "original-platinada": "./public/images/cameras/states/CAM02-original-platinada.webp",
+      "yandere-gotica": "./public/images/cameras/states/CAM02-yandere-gotica.webp",
+      "yandere-platinada": "./public/images/cameras/states/CAM02-yandere-platinada.webp",
+      "gotica-platinada": "./public/images/cameras/states/CAM02-gotica-platinada.webp",
+      "original-yandere-gotica": "./public/images/cameras/states/CAM02-original-yandere-gotica.webp",
+      "original-yandere-platinada": "./public/images/cameras/states/CAM02-original-yandere-platinada.webp",
+      "original-gotica-platinada": "./public/images/cameras/states/CAM02-original-gotica-platinada.webp",
+      "yandere-gotica-platinada": "./public/images/cameras/states/CAM02-yandere-gotica-platinada.webp",
+      "todas": "./public/images/cameras/states/CAM02-todas.webp"
+    },
     "technical": "./public/reference/cameras/CAM02_visao.png",
     "renderAvailable": true
   },
@@ -100,13 +131,14 @@ const CAMERAS = [
     "image": "./public/images/cameras/CAM05.webp",
     "gateStateImages": {
       "gates": ["G04", "G05"],
-      "images": {
-        "open-open": "./public/images/cameras/states/CAM05-open-open.png",
-        "open-closed": "./public/images/cameras/states/CAM05-open-closed.png",
-        "closed-open": "./public/images/cameras/states/CAM05-closed-open.png",
-        "closed-closed": "./public/images/cameras/originals/CAM05.png"
-      }
+      "images": VIP1_GATE_IMAGES
     },
+    "characterStateImages": Object.fromEntries(VIP1_CHARACTER_STATES.map(characters => [
+      characters,
+      Object.fromEntries(Object.keys(VIP1_GATE_IMAGES).map(gates => [
+        gates, `./public/images/cameras/states/CAM05-${gates}-${characters}.webp`
+      ]))
+    ])),
     "technical": "./public/reference/cameras/CAM05_visao.png",
     "renderAvailable": true
   },
@@ -120,6 +152,39 @@ const CAMERAS = [
     "angle": 38,
     "fov": 82,
     "image": "./public/images/cameras/CAM06.webp",
+    "characterStateImages": Object.fromEntries([
+      'original',
+      'yandere',
+      'gotica',
+      'platinada',
+      'maid',
+      'original-yandere',
+      'original-gotica',
+      'yandere-gotica',
+      'original-platinada',
+      'yandere-platinada',
+      'gotica-platinada',
+      'original-maid',
+      'yandere-maid',
+      'gotica-maid',
+      'platinada-maid',
+      'original-yandere-gotica',
+      'original-yandere-platinada',
+      'original-gotica-platinada',
+      'yandere-gotica-platinada',
+      'original-yandere-maid',
+      'original-gotica-maid',
+      'yandere-gotica-maid',
+      'original-platinada-maid',
+      'yandere-platinada-maid',
+      'gotica-platinada-maid',
+      'original-yandere-gotica-platinada',
+      'original-yandere-gotica-maid',
+      'original-yandere-platinada-maid',
+      'original-gotica-platinada-maid',
+      'yandere-gotica-platinada-maid',
+      'todas'
+    ].map(characters => [characters, `./public/images/cameras/states/CAM06-${characters}.webp`])),
     "technical": "./public/reference/cameras/CAM06_visao.png",
     "renderAvailable": true
   },
@@ -133,6 +198,13 @@ const CAMERAS = [
     "angle": 138,
     "fov": 88,
     "image": "./public/images/cameras/CAM07.webp",
+    "characterStateImages": Object.fromEntries([
+      'original', 'yandere', 'gotica', 'platinada',
+      'original-yandere', 'original-gotica', 'original-platinada',
+      'yandere-gotica', 'yandere-platinada', 'gotica-platinada',
+      'original-yandere-gotica', 'original-yandere-platinada',
+      'original-gotica-platinada', 'yandere-gotica-platinada', 'todas'
+    ].map(characters => [characters, `./public/images/cameras/states/CAM07-${characters}.webp`])),
     "technical": "./public/reference/cameras/CAM07_visao.png",
     "renderAvailable": true
   },
@@ -172,6 +244,13 @@ const CAMERAS = [
     "angle": 334,
     "fov": 84,
     "image": "./public/images/cameras/CAM10.webp",
+    "characterStateImages": Object.fromEntries([
+      'original', 'yandere', 'gotica', 'maid',
+      'original-yandere', 'original-gotica', 'original-maid',
+      'yandere-gotica', 'yandere-maid', 'gotica-maid',
+      'original-yandere-gotica', 'original-yandere-maid',
+      'original-gotica-maid', 'yandere-gotica-maid', 'todas'
+    ].map(characters => [characters, `./public/images/cameras/states/CAM10-${characters}.webp`])),
     "technical": "./public/reference/cameras/CAM10_visao.png",
     "renderAvailable": true
   },
@@ -185,6 +264,13 @@ const CAMERAS = [
     "angle": 68,
     "fov": 88,
     "image": "./public/images/cameras/CAM11.webp",
+    "characterStateImages": Object.fromEntries([
+      'original', 'yandere', 'gotica', 'maid',
+      'original-yandere', 'original-gotica', 'original-maid',
+      'yandere-gotica', 'yandere-maid', 'gotica-maid',
+      'original-yandere-gotica', 'original-yandere-maid',
+      'original-gotica-maid', 'yandere-gotica-maid', 'todas'
+    ].map(characters => [characters, `./public/images/cameras/states/CAM11-${characters}.webp`])),
     "technical": "./public/reference/cameras/CAM11_visao.png",
     "renderAvailable": true
   },
@@ -205,6 +291,16 @@ const CAMERAS = [
         "closed": "./public/images/cameras/CAM12.webp"
       }
     },
+    "characterStateImages": Object.fromEntries([
+      'original', 'yandere', 'gotica', 'original-yandere', 'original-gotica',
+      'yandere-gotica', 'todas'
+    ].map(characters => [
+      characters,
+      {
+        open: `./public/images/cameras/states/CAM12-open-${characters}.webp`,
+        closed: `./public/images/cameras/states/CAM12-closed-${characters}.webp`
+      }
+    ])),
     "technical": "./public/reference/cameras/CAM12_visao.png",
     "renderAvailable": true
   }
