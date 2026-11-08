@@ -229,6 +229,13 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   background:radial-gradient(ellipse at center,#ef203c,#640012 62%,#190007 100%);
   animation:death-flash .23s cubic-bezier(.19,1,.32,1) both;
 }
+.game[data-scare="clown-bottom"] .jumpscare{background:#000}
+.game[data-scare="clown-bottom"] .jumpscare::after{content:none}
+.game[data-scare="clown-bottom"][data-defeat="scare"] .jumpscare-art{
+  inset:0;width:100%;height:100%;object-fit:cover;object-position:center bottom;
+  filter:none;mask-image:none;animation:none;
+}
+.game[data-scare="clown-bottom"][data-defeat="flash"] .death-flash{background:#000;animation:none}
 @keyframes death-flash{0%{opacity:.97}100%{opacity:.24}}
 .game-over{
   display:grid;place-items:center;text-align:center;
@@ -285,6 +292,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 @container(max-height:630px) and (min-width:761px){.monitor-handle{min-height:49px}.feed-heading{top:76px}}
 @media(prefers-reduced-motion:reduce){
   .game[data-defeat="scare"] :is(.office-view,.cameras-view,.jumpscare-art){animation:none}
-  .game[data-defeat="flash"] .death-flash{animation:none;opacity:.38}
+  .game[data-defeat="flash"]:not([data-scare="clown-bottom"]) .death-flash{animation:none;opacity:.38}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}

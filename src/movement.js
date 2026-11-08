@@ -119,6 +119,7 @@ function createMovement({ isGateClosed, imageStatus, random = Math.random, log =
     const officeAccess = edge.to === OFFICE.room || actor.room === OFFICE.room;
     if (officeAccess && edge.id !== OFFICE.doorwayPassage) return `ausência de imagem (porta ${edge.id})`;
     if (edge.to === OFFICE.room) {
+      if (!OFFICE.doorwayCharacters.includes(actor.id)) return `passagem indisponível (${edge.id})`;
       return checkImages(['doorway', 'room'].map(phase => officeCharacterImage(phase, actor.id)), 'escritório');
     }
     return cameraIssue(edge.to, [...occupants(edge.to), actor.id]);

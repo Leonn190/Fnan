@@ -1185,6 +1185,7 @@ const OFFICE = {
   gate: 'G01',
   room: 'controle',
   doorwayPassage: 'P02',
+  doorwayCharacters: ['original', 'gotica', 'yandere', 'platinada'],
   // Ordem das camadas da sala, da mais distante para a mais próxima.
   characters: ['original', 'maid', 'gotica', 'yandere', 'platinada'],
   images: {

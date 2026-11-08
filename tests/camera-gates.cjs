@@ -236,6 +236,14 @@ assert.equal(window.NathGame.setCam03StageState('palco-original--salao-original'
 
 // Each legal office arrangement must preserve the lateral doorway occupant across G01.
 const { OFFICE, setOfficeCharacterState } = window.NathGame;
+const closetArt = nodes['closet-door-art'];
+const closetRoot = './public/images/office/closet/states';
+const closetFrames = { open: new Set(), closed: new Set() };
+const closetFrame = (gateState, room = [], doorway = null) => {
+  const name = `sala-${room.join('-') || 'vazia'}--porta-${doorway || 'vazia'}.webp`;
+  assert.equal(closetArt.src, `${closetRoot}/${gateState}/${name}`);
+  closetFrames[gateState].add(name);
+};
 const visibleOfficeLayers = () => nodes['office-characters'].children
   .filter(image => !image.hidden).map(image => image.src);
 const officeLayer = (location, character) => `./public/images/office/characters/${location}/${character}.webp`;
@@ -255,14 +263,20 @@ for (let mask = 0; mask < (1 << officeCharacters.length); mask++) {
     for (const src of expected) assert(fs.existsSync(path.join(root, src)), src);
     assert.deepEqual(visibleOfficeLayers(), expected);
     office('dark');
+    closetFrame('open', room, doorway === 'maid' ? null : doorway);
     gate('G01');
     office('closed');
+    closetFrame('closed', room, doorway === 'maid' ? null : doorway);
     assert.deepEqual(visibleOfficeLayers(), expected);
     gate('G01');
     officeCases += 2;
   }
 }
 assert.equal(officeCases, 202);
+for (const [gateState, names] of Object.entries(closetFrames)) {
+  assert.equal(names.size, 86);
+  assert.deepEqual(new Set(fs.readdirSync(path.join(root, closetRoot, gateState))), names);
+}
 assert(!setOfficeCharacterState(OFFICE.characters.slice(0, 4)));
 assert(!setOfficeCharacterState(['maid', 'maid']));
 assert(!setOfficeCharacterState(['original'], 'original'));
@@ -277,6 +291,7 @@ pressF(); office('lit');
 for (const doorway of officeCharacters) {
   assert(setOfficeCharacterState([], doorway));
   office('lit');
+  closetFrame('open', [], doorway === 'maid' ? null : doorway);
   assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', doorway)]);
   pressF(); office('dark');
   pressF(); office('lit');
@@ -287,7 +302,7 @@ pressF(); office('dark');
 assert(setOfficeCharacterState([], 'maid'));
 office('dark');
 pressF(); office('lit');
-console.log('PASS: 12 camera folders, all gate states, and 208 office combinations.');
+console.log('PASS: 12 camera folders, all gate states, 208 office combinations and 172 closet frames.');
 
 // Real game entry points: the map, monitor, frame loop and shift restart.
 const random = [0, .25, .5, .75, 0];
@@ -384,6 +399,8 @@ assert.equal(nodes.game.dataset.mode, 'office');
 step(closetStart + 1000);
 assert.equal(nodes.game.dataset.mode, 'closet');
 assert.equal(closet.dataset.view, 'door');
+assert(setOfficeCharacterState(['gotica', 'original'], 'yandere'));
+closetFrame('open', ['original', 'gotica'], 'yandere');
 assert.equal(nodes['monitor-handle'].hidden, true);
 step(closetStart + 1500);
 press('w');
@@ -419,9 +436,10 @@ scare.naturalWidth = 178;
 const phase = () => nodes.game.dataset.defeat;
 const pressJ = details => document.fire('keydown', { key: 'j', ...details });
 const seenScares = new Set();
-for (let attempt = 0; attempt < 6; attempt++) {
+for (let attempt = 0; attempt < 7; attempt++) {
   const scareStart = now;
-  randomValue = () => (attempt % 5) / 5;
+  randomValue = () => (attempt % 6) / 6;
+  if (attempt === 5) nodes['office-monitor'].fire('click');
   pressJ({ repeat: true });
   assert.equal(phase(), undefined);
   pressJ({ key: 'J' });
@@ -429,6 +447,11 @@ for (let attempt = 0; attempt < 6; attempt++) {
   assert.equal(nodes.playfield.inert, true);
   const chosen = scare.src;
   const source = chosen.split('?')[0];
+  if (attempt === 5) {
+    assert.match(source, /palhaca-direita\.gif$/);
+    assert.equal(nodes.game.dataset.mode, 'office');
+    assert.equal(nodes['office-view'].hidden, false);
+  }
   assert(!fs.readFileSync(path.join(root, source)).includes('NETSCAPE2.0'), source);
   if (seenScares.has(source)) assert.notEqual(chosen, source);
   seenScares.add(source);
@@ -471,5 +494,41 @@ for (let attempt = 0; attempt < 6; attempt++) {
   assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
   assert.deepEqual(visibleOfficeLayers(), []);
 }
-assert.equal(seenScares.size, 5);
-console.log('PASS: five one-shot jumpscares, sound, final-frame hold and manual return to the menu.');
+assert.equal(seenScares.size, 6);
+console.log('PASS: six one-shot jumpscares, including the clown from the right in the office.');
+
+const bottomGif = './public/images/jumpscares/palhaca-baixo.gif';
+assert(!fs.readFileSync(path.join(root, bottomGif)).includes('NETSCAPE2.0'));
+for (const closetState of ['door', 'lit', 'turning']) {
+  const entry = now;
+  nodes['office-closet'].fire('click');
+  step(entry + 1450);
+  if (closetState !== 'door') press('d');
+  if (closetState === 'lit') {
+    step(entry + 2090);
+    press('w');
+    assert.equal(closetBeam.hidden, false);
+  }
+  const scareStart = now;
+  randomValue = () => { throw new Error('The closet scare must not use randomness'); };
+  pressJ();
+  assert.equal(phase(), 'blackout');
+  assert.equal(nodes.game.dataset.scare, 'clown-bottom');
+  assert.equal(nodes.game.dataset.closetTransition, undefined);
+  assert.equal(closetBeam.hidden, true);
+  assert.equal(scare.src.split('?')[0], bottomGif);
+  if (closetState !== 'door') assert.notEqual(scare.src, bottomGif);
+  step(scareStart + 110);
+  assert.equal(phase(), 'scare');
+  step(scareStart + 1639);
+  assert.equal(phase(), 'scare');
+  step(scareStart + 1640);
+  assert.equal(phase(), 'flash');
+  step(scareStart + 1870);
+  assert.equal(phase(), 'over');
+  nodes['return-to-menu'].fire('click');
+  assert.equal(nodes.game.dataset.scare, undefined);
+  randomValue = () => 0;
+  nodes['start-game'].fire('click');
+}
+console.log('PASS: J always picks the bottom clown inside the closet, including with the light on or while turning.');

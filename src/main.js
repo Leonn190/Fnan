@@ -28,7 +28,7 @@ const dom = {
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
   officeCharacters: $('#office-characters'), officeCloset: $('#office-closet'),
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
-  closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
+  closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
   camNumber: $('#cam-number'), camRoom: $('#cam-room'), flash: $('#camera-switch-flash'),
@@ -45,10 +45,14 @@ const MENU_MUSIC_START = 27;
 const MENU_MUSIC_FADE_SECONDS = 2;
 const MENU_MUSIC_INITIAL_VOLUME = .08;
 const MENU_MUSIC_VOLUME = .58;
+const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
+const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
 const JUMPSCARE_IMAGES = ['original', 'yandere', 'gotica', 'maid', 'platinada']
-  .map(character => `./public/images/jumpscares/${character}.gif`);
+  .map(character => `./public/images/jumpscares/${character}.gif`)
+  .concat(CLOWN_RIGHT_IMAGE);
 const BLACKOUT_MS = 110;
-const GIF_CYCLE_MS = 960; // Os cinco GIFs têm 48 quadros de 20 ms.
+const GIF_CYCLE_MS = 960; // 48 quadros de 20 ms.
+const CLOWN_BOTTOM_CYCLE_MS = 1280; // 16 quadros de 80 ms.
 const FINAL_FRAME_HOLD_MS = 250;
 const DEATH_FLASH_MS = 230;
 const JUMPSCARE_VOLUME = .55;
@@ -78,7 +82,7 @@ function fadeMenuMusic() {
 
 const state = {
   mode: 'office', cameraIndex: 0, characterPreviews: new Map(), elapsed: 0, movementTime: 0,
-  officeRoom: new Set(),
+  officeRoom: new Set(), officeDoorway: null,
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now(),
   closetTransition: null, closetMouseAtEdge: true, closetTouchX: null
@@ -171,6 +175,12 @@ function updateOfficeView() {
     : state.flashlight
       ? 'Escritório de segurança, portão aberto e corredor iluminado por luz circular'
       : 'Escritório de segurança, portão principal aberto e corredor escuro';
+
+  const room = OFFICE.characters.filter(character => state.officeRoom.has(character)).join('-') || 'vazia';
+  const doorway = OFFICE.doorwayCharacters.includes(state.officeDoorway) ? state.officeDoorway : 'vazia';
+  const gate = closed ? 'closed' : 'open';
+  const closetSource = `./public/images/office/closet/states/${gate}/sala-${room}--porta-${doorway}.webp`;
+  if (dom.closetDoorArt.getAttribute('src') !== closetSource) dom.closetDoorArt.src = closetSource;
 }
 
 function setOfficeCharacterState(room = [], doorway = null) {
@@ -183,6 +193,7 @@ function setOfficeCharacterState(room = [], doorway = null) {
     return false;
   }
   state.officeRoom = selected;
+  state.officeDoorway = doorway;
   for (const { location, character, image } of officeLayers) {
     const visible = location === 'room' ? selected.has(character) : doorway === character;
     if (visible && !image.getAttribute('src')) {
@@ -413,11 +424,21 @@ function finishShift() {
 }
 
 function beginJumpscare() {
+  const insideCloset = state.mode === 'closet';
+  const source = insideCloset
+    ? CLOWN_BOTTOM_IMAGE
+    : JUMPSCARE_IMAGES[Math.floor(Math.random() * JUMPSCARE_IMAGES.length)];
+  if (insideCloset) {
+    dom.game.dataset.scare = 'clown-bottom';
+    setClosetLight(false);
+  } else if (source === CLOWN_RIGHT_IMAGE) {
+    setMode('office', false);
+  }
   state.complete = true;
   state.dragging = false;
   panKeys.clear();
+  clearClosetTransition();
   dom.playfield.inert = true;
-  const source = JUMPSCARE_IMAGES[Math.floor(Math.random() * JUMPSCARE_IMAGES.length)];
   // A fresh image request restarts a one-shot GIF the browser has already finished.
   dom.scareArt.src = playedScares.has(source) ? `${source}?replay=${++scareReplay}` : source;
   playedScares.add(source);
@@ -439,7 +460,8 @@ function advanceDefeat(now) {
       // Give a cold load time to arrive, but always reach Game Over.
       if (!dom.scareArt.complete && now < defeatDeadline + 2000) return;
       if (dom.scareArt.naturalWidth > 0) {
-        setDefeatPhase('scare', now + GIF_CYCLE_MS + FINAL_FRAME_HOLD_MS);
+        const cycle = dom.game.dataset.scare === 'clown-bottom' ? CLOWN_BOTTOM_CYCLE_MS : GIF_CYCLE_MS;
+        setDefeatPhase('scare', now + cycle + FINAL_FRAME_HOLD_MS);
         break;
       }
       // Missing art still leads to the flash and the end of the night.
@@ -542,6 +564,7 @@ dom.returnToMenu.addEventListener('click', () => {
   dom.gameOver.hidden = true;
   dom.playfield.inert = false;
   delete dom.game.dataset.defeat;
+  delete dom.game.dataset.scare;
   showTitleScreen();
 });
 
@@ -592,13 +615,15 @@ dom.closet.addEventListener('pointercancel', () => { state.closetTouchX = null; 
 const panKeys = new Set();
 document.addEventListener('keydown', event => {
   if (dom.game.hidden || state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
-  if (state.closetTransition) return;
   const key = event.key.toLowerCase();
-  const focusedButton = event.target instanceof Element && Boolean(event.target.closest('button, [role="button"]'));
-  if (key === 'j') {
+  if (key === 'j' && (!state.closetTransition || state.mode === 'closet')) {
     event.preventDefault();
     if (!event.repeat) beginJumpscare();
-  } else if (state.mode === 'closet') {
+    return;
+  }
+  if (state.closetTransition) return;
+  const focusedButton = event.target instanceof Element && Boolean(event.target.closest('button, [role="button"]'));
+  if (state.mode === 'closet') {
     if (key === 'w') {
       event.preventDefault();
       if (!event.repeat) toggleClosetLight();
@@ -676,7 +701,7 @@ function showTitleScreen() {
 $('#enter-game').addEventListener('click', () => {
   $('#entry-screen').hidden = true;
   showTitleScreen();
-  preloadImages(JUMPSCARE_IMAGES);
+  preloadImages([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE]);
 }, { once: true });
 
 startGame.addEventListener('click', () => {

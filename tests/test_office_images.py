@@ -94,3 +94,34 @@ for name, (door, group) in expected.items():
         assert ImageChops.difference(frame.convert('RGB'), composed.convert('RGB')).getbbox() is None, name
 
 print('PASS: 31 corridor states and 80 left-door states, with exact pixels outside the allowed areas.')
+
+# Compare the visible portraits to the reference art, allowing for WebP compression.
+closet_states = OFFICE / 'closet/states'
+door_sources = {
+    'original': 'Boneca animatrônica sob persianas neon.png',
+    'yandere': 'yandere porta do escritorio.png',
+    'gotica': 'Nathzinha Gótica no Escritório.png',
+    'platinada': 'Animatrônica Gatinha no Portal Neon.png',
+}
+door_box = (555, 312, 693, 410)
+portraits = {}
+for character, source in door_sources.items():
+    with Image.open(OFFICE.parent / source) as image:
+        portraits[f'sala-vazia--porta-{character}.webp'] = (door_box, image.convert('RGB').crop(door_box))
+
+with Image.open(OFFICE.parent / 'Cinco Nathzinhas no Escritório Neon.png') as image:
+    master = image.convert('RGB')
+for character, (x, y) in {
+    'original': (525, 320), 'yandere': (707, 326), 'maid': (847, 326),
+    'gotica': (1030, 322), 'platinada': (1195, 330),
+}.items():
+    box = (x - 22, y - 20, x + 22, y + 20)
+    portraits[f'sala-{character}--porta-vazia.webp'] = (box, master.crop(box))
+
+for gate in ('open', 'closed'):
+    for name, (box, portrait) in portraits.items():
+        with Image.open(closet_states / gate / name) as frame:
+            difference = ImageChops.difference(frame.convert('RGB').crop(box), portrait)
+        assert max(ImageStat.Stat(difference).mean) < 8, (gate, name)
+
+print('PASS: all closet room and doorway portraits match their character references for both gate states.')

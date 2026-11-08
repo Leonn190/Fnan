@@ -23,7 +23,7 @@ Restaurante_da_Nathzinha_Web_V1/
 │   │   ├── office/                  # Mestre, fundos e camadas de personagens
 │   │   │   └── closet/              # Visão pelas frestas e fundo do armário
 │   │   ├── menu/                    # Arte da tela de título e variações de glitch
-│   │   ├── jumpscares/              # Um GIF por personagem
+│   │   ├── jumpscares/              # GIFs de susto por personagem e variação
 │   │   ├── cameras/
 │   │   │   └── CAM01/ … CAM12/      # Uma pasta por câmera
 │   │   │       ├── base.webp        # Fundo usado pelo jogo
@@ -70,6 +70,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - **Portões no mapa:** clique para alternar entre aberto (amarelo) e fechado (vermelho). Ao fechar um quarto portão, o último que havia sido fechado abre automaticamente. Os portões voltam a abrir ao reiniciar o turno.
 - **F no escritório:** alterna a luz circular no corredor quando o G01 está aberto e a sala está vazia. Uma personagem na porta lateral permite usar a luz. Ao abrir o monitor ou trocar de janela, a luz desliga.
 - **Armário técnico:** vire para a direita no escritório e clique na porta. Lá dentro, use as bordas da tela, **A/D**, **←/→** ou um gesto horizontal para alternar entre a porta e o fundo escuro. Pressione **W** (ou toque em **Lanterna**) para iluminar o fundo. Para sair, vire para as frestas e clique na porta.
+- Pressione **J** para testar um susto aleatório fora do armário, incluindo o ataque da palhaça pela direita no escritório. Dentro do armário, **J** dispara o ataque dela por baixo, no breu.
 - **G01 no mapa:** abre/fecha o portão principal do escritório. O estado acompanha também a reabertura automática pelo limite de três fechados.
 - **Esc:** abaixa o monitor.
 - O contador de horas vai de 12 AM a 6 AM; ao terminar, é possível reiniciar. As cinco animatrônicas têm posições e temporizadores próprios para o teste visual.
@@ -169,6 +170,8 @@ Os três estados da nova sala de controle estão em `public/images/office/states
 O escritório aceita até três animatrônicas na sala e uma diferente na porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto no escuro, 101 com ele fechado e seis com o corredor iluminado e a sala vazia. Use `NathGame.setOfficeCharacterState([], 'yandere')` e pressione **F** para ver a Yandere na porta lateral com o corredor iluminado. Chame a função sem argumentos para esvaziar a cena. Para exportar os 208 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow. Acrescente `--lit-only` para exportar apenas os seis iluminados.
 
 Os 111 panoramas com as poses do corredor ficam em `public/images/office/states/corridor/`. O `manifest.json` lista os arquivos, os ocupantes da porta e do corredor e a ordem dos slots para cada quantidade. Para exportá-los novamente, rode `python scripts/export_office_corridor.py outros/arte/office/corridor-lineup.png` com Pillow.
+
+Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. As 172 imagens em `public/images/office/closet/states/` cobrem de zero a três Nathzinhas na sala e até uma diferente na porta lateral. A Maid só aparece na sala e a Palhaça fica fora dessas combinações. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta. Para recriar as imagens a partir das artes de referência, rode `python -B scripts/export_closet_states.py` com Pillow.
 
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 

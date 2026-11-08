@@ -131,6 +131,7 @@ for (let now = 0; now <= 1_000_000; now += 250) {
   }
   const office = moving.officeState();
   assert(office.room.length <= 3);
+  assert.notEqual(office.doorway, 'maid');
   assert(after.filter(actor => actor.phase === 'doorway').length <= 1);
   assert(!office.room.includes(office.doorway));
   for (const cam of CAMERAS) assert.notEqual(cameraStateKey(cam, moving.occupants(cam.room)), null);
