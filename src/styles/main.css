@@ -92,6 +92,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .screen-grain{position:absolute;inset:0;z-index:8;opacity:.045;pointer-events:none;background:repeating-linear-gradient(90deg,#fff3 0 1px,transparent 2px 3px)}
 .hud-top{position:absolute;z-index:20;left:0;right:0;top:0;padding:calc(20px + env(safe-area-inset-top)) 27px 0;display:flex;align-items:flex-start;justify-content:flex-end;pointer-events:none;text-shadow:0 3px 12px #000}
 .night-clock{text-align:right;display:flex;flex-direction:column;gap:3px;font-family:var(--mono)}
+.movement-debug{position:absolute;left:12px;bottom:76px;z-index:22;max-width:min(440px,52%);padding:8px 10px;border:1px solid #d4bdd766;border-radius:4px;background:#0c0c18e8;color:#fff3fa;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.3 var(--mono);pointer-events:none}
 .clock-time{font-size:34px;font-weight:700;letter-spacing:-.06em;line-height:1;color:#fff5fb}
 .clock-time small{font-size:17px;letter-spacing:.05em}
 .night-clock>span{font-size:12px;letter-spacing:.18em;color:#f7d7e6}
@@ -125,6 +126,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   .feed-heading{top:84px;left:16px}.feed-heading-first{font-size:10px;gap:6px}.feed-heading-first strong{font-size:17px}.feed-room{font-size:10px;margin-left:18px}
   .feed-corners{inset:76px 13px 82px}
   .map-panel{right:12px;bottom:69px;width:min(390px,calc(100cqw - 24px),59cqh)}
+  .movement-debug{left:8px;bottom:69px;max-width:min(420px,calc(100% - 16px));font-size:9px}
   .technical-feed{padding:110px 15px 140px}.technical-frame{width:92cqw}
 }
 @container(max-width:480px){

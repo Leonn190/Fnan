@@ -31,12 +31,27 @@ document.querySelector = selector => nodes[selector.slice(1)];
 document.createElement = () => new Element();
 document.createElementNS = () => new Element();
 const window = new Element();
+window.location = { search: '?debug=1' };
 let frame;
+let now = 0;
+const math = Object.create(Math);
+let randomValue = () => 0;
+math.random = () => randomValue();
+const warnings = [];
 const context = vm.createContext({
-  window, document, Element, Image: class {}, performance: { now: () => 0 },
+  window, document, Element, URLSearchParams, Math: math, performance: { now: () => now },
+  Image: class {
+    complete = true;
+    set src(value) {
+      assert(fs.existsSync(path.join(root, value)), value);
+      this.naturalWidth = 1;
+    }
+  },
+  console: { warn: message => warnings.push(message), info() {} },
   setTimeout: () => 1, clearTimeout() {}, requestAnimationFrame: fn => { frame = fn; },
   ResizeObserver: class { observe() {} }
 });
+const step = time => { now = time; frame(now); };
 for (const [, src] of html.matchAll(/<script defer src="([^"]+)"/g)) {
   vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
 }
@@ -97,7 +112,8 @@ camera('CAM05'); check('closed-open');
 nodes['monitor-handle'].fire('click');
 nodes['office-monitor'].fire('click'); check('closed-open');
 // Resetting the night restores both the map and the default open-open image.
-for (let now = 100; now <= 540100; now += 100) frame(now);
+for (let time = 100; time <= 540100; time += 100) step(time);
+assert.equal(nodes['shift-complete'].hidden, false);
 nodes['restart-shift'].fire('click');
 assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
 nodes['office-monitor'].fire('click'); check('open-open'); office('dark');
@@ -113,14 +129,13 @@ nodes['monitor-handle'].fire('click');
 pressF(); office('lit');
 nodes['office-monitor'].fire('click'); office('dark');
 // The southern hall gate controls only the large left shutter in CAM04.
-const checkHall = open => assert.equal(nodes['feed-art'].src, open
-  ? './public/images/cameras/CAM04/states/open/vazia.webp'
-  : './public/images/cameras/CAM04/base.webp');
+const checkHall = open => assert.equal(nodes['feed-art'].src,
+  `./public/images/cameras/CAM04/states/${open ? 'open' : 'closed'}/original-yandere-gotica.webp`);
 camera('CAM04'); checkHall(true);
 gate('G08'); checkHall(false);
 gate('G08'); checkHall(true);
 camera('CAM09');
-assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09/base.webp');
+assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09/states/01-maid-sentada.webp');
 assert.equal(nodes['technical-feed'].hidden, true);
 gate('G08');
 camera('CAM04'); checkHall(false);
@@ -211,3 +226,82 @@ assert(setOfficeCharacterState([], 'maid'));
 office('dark');
 pressF(); office('lit');
 console.log('PASS: 12 camera folders, all gate states, and 208 office combinations.');
+
+// Real game entry points: the map, monitor, frame loop and shift restart.
+const random = [0, .25, .5, .75, 0];
+randomValue = () => random.shift() ?? 0;
+nodes['restart-shift'].fire('click');
+const startedAt = now;
+const debug = nodes['movement-debug'];
+const feed = () => nodes['feed-art'].src;
+assert.equal(debug.hidden, false);
+assert.match(debug.textContent, /Gatinha · Sala da Nathzinha · sem câmera/);
+assert.match(debug.textContent, /ausência de imagem/);
+assert.match(debug.textContent, /Padrão.*10\.0 s[\s\S]*Yandere.*11\.0 s/);
+nodes['office-monitor'].fire('click');
+camera('CAM03');
+assert.match(feed(), /CAM03\/states\/todas\.webp$/);
+assert.match(debug.textContent, /observação/);
+camera('CAM04');
+checkHall(true);
+step(startedAt + 9_999);
+checkHall(true);
+step(startedAt + 13_100);
+checkHall(true); // Both hall angles freeze the same physical occupants.
+camera('CAM10');
+assert.match(feed(), /CAM10\/states\/maid\.webp$/);
+camera('CAM09');
+assert.match(feed(), /CAM09\/base\.webp$/);
+gate('G03');
+step(startedAt + 13_400);
+camera('CAM05');
+assert.match(feed(), /CAM05\/states\/open-open\/original-yandere-gotica\.webp$/);
+gate('G04');
+assert.match(feed(), /CAM05\/states\/closed-open\/original-yandere-gotica\.webp$/);
+camera('CAM03');
+assert.match(feed(), /CAM03\/base\.webp$/);
+
+// Hidden time cannot advance the night or queue multiple movements.
+document.hidden = true;
+document.fire('visibilitychange');
+step(startedAt + 55_000);
+document.hidden = false;
+document.fire('visibilitychange');
+step(startedAt + 55_100);
+camera('CAM05');
+assert.match(feed(), /CAM05\/states\/closed-open\/original-yandere-gotica\.webp$/);
+nodes['restart-shift'].fire('click');
+assert.deepEqual(visibleOfficeLayers(), []);
+assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
+nodes['office-monitor'].fire('click');
+camera('CAM03');
+assert.match(feed(), /CAM03\/states\/todas\.webp$/);
+assert(warnings.some(message => message.includes('Gatinha') && message.includes('CAM12')));
+console.log('PASS: live camera occupancy, gate composition, observation, hidden tab, diagnostics and reset.');
+
+// Reach the office along G06, P03 and P02 with the real map and layer renderer.
+nodes['restart-shift'].fire('click');
+const officeStart = now;
+nodes['office-monitor'].fire('click');
+camera('CAM01');
+gate('G03'); gate('G05'); gate('G08');
+nodes['monitor-handle'].fire('click');
+step(officeStart + 10_000);
+assert.deepEqual(visibleOfficeLayers(), []);
+randomValue = () => .5;
+step(officeStart + 20_000);
+step(officeStart + 32_000);
+assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'original')]);
+assert.match(debug.textContent, /Yandere · Estoque[\s\S]*fila da porta lateral/);
+step(officeStart + 41_999);
+assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'original')]);
+randomValue = () => 0;
+step(officeStart + 44_000);
+assert(visibleOfficeLayers().includes(officeLayer('room', 'original')));
+step(officeStart + 54_000);
+assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'yandere')]);
+assert.equal(nodes['shift-complete'].hidden, true);
+nodes['office-monitor'].fire('click');
+camera('CAM08');
+assert.match(feed(), /CAM08\/states\/original-gotica\.webp$/);
+console.log('PASS: automatic office doorway, room, departure and return to the stockroom.');

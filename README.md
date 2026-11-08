@@ -13,6 +13,7 @@ Restaurante_da_Nathzinha_Web_V1/
 ├── .github/workflows/pages.yml      # Publicação automática, sem build
 ├── src/                             # Código do jogo/site
 │   ├── main.js                      # Escritório, monitor, noite, HUD, entradas
+│   ├── movement.js                  # Grafo, movimentação e estados visuais da IA
 │   ├── map.js                       # Mapa clicável da planta real
 │   ├── sound.js                     # Efeitos sonoros gerados no navegador
 │   ├── data/game-data.js            # Dados da planta usados no jogo
@@ -66,7 +67,54 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - **F no escritório:** alterna a luz circular no corredor quando o G01 está aberto e a sala está vazia. Uma personagem na porta lateral permite usar a luz. Ao abrir o monitor ou trocar de janela, a luz desliga.
 - **G01 no mapa:** abre/fecha o portão principal do escritório. O estado acompanha também a reabertura automática pelo limite de três fechados.
 - **Esc:** abaixa o monitor.
-- O contador de horas vai de 12 AM a 6 AM; ao terminar, é possível reiniciar. Sem animatrônicos, dano, ataques ou mortes nesta versão.
+- O contador de horas vai de 12 AM a 6 AM; ao terminar, é possível reiniciar. As cinco animatrônicas têm posições e temporizadores próprios para o teste visual.
+
+## Teste visual de movimentação
+
+Abra `index.html?debug=1` para ver a posição, a câmera, a contagem até a próxima tentativa, a última sala, o destino e os bloqueios de cada Nathzinha. O painel também mostra o estado selecionado da câmera. As transições e os bloqueios de arte aparecem no console.
+
+Padrão, Yandere e Gótica começam no salão, no estado `todas` da CAM03 e no estado `original-yandere-gotica` da CAM04. A Maid começa na CAM09 com `01-maid-sentada.webp`. A segunda arte da CAM09 retrata a Maid junto a uma porta e fica reservada para uma eventual fase de saída. A Gatinha usa o identificador `platinada` e começa em `nathzinha`, a sala própria sem câmera.
+
+Cada personagem espera de 10 a 14 segundos de aba visível entre movimentos. Observar uma câmera congela as saídas da sala que ela mostra. CAM03 e CAM04 compartilham a mesma sala. Ao voltar de uma aba oculta, o jogo retoma os temporizadores de onde pararam. O fim da noite para a simulação e o reinício restaura as posições, os portões e as contagens.
+
+O escritório recebe personagens pela P02, a partir do estoque. A fila espera no estoque e libera uma personagem por vez para a porta lateral. Ela espera pelo intervalo de movimento antes de ocupar uma das três vagas da sala e, após outro intervalo, pode sair pela mesma passagem. A G01 e a P05 fazem parte da planta, mas as imagens da porta lateral representam somente a P02.
+
+As funções públicas `NathGame.setCam…State` e `NathGame.setOfficeCharacterState` continuam disponíveis para prévias de arte. A próxima mudança de ocupação da sala afetada ou o reinício restaura a representação automática.
+
+### Conexões físicas
+
+O jogo encontra as salas dos dois lados do ponto médio de cada abertura usando os polígonos de `VENUE.rooms` e as coordenadas de `VENUE.openings`. As ligações são bidirecionais. O grafo contém 25 passagens internas. Os portões `G` dependem do estado do mapa e as passagens `P` são livres. As três saídas externas ficam fora do grafo.
+
+| Portão | Salas | Passagem livre | Salas |
+|---|---|---|---|
+| G01 | Controle ↔ corredor de serviço | P01 | Loja ↔ recepção |
+| G02 | Corredor de serviço ↔ VIP 2 | P02 | Estoque ↔ controle |
+| G03 | VIP 2 ↔ salão | P03 | Estoque ↔ corredor de serviço |
+| G04 | Corredor de serviço ↔ VIP 1 | P04 | Serviço ↔ corredor de serviço |
+| G05 | VIP 1 ↔ salão | P05 | Controle ↔ armário |
+| G06 | Salão ↔ corredor de serviço | P06 | Serviço ↔ cozinha |
+| G07 | Salão ↔ circulação dos banheiros | P07, P08 | Cozinha ↔ corredor de serviço |
+| G08 | Recepção ↔ salão | P09 | Cozinha ↔ retirada |
+| G09 | Loja ↔ estoque | P10 | Corredor de serviço ↔ retirada |
+| | | P11 | Corredor de serviço ↔ sala da Nathzinha |
+| | | P12 | Corredor de serviço ↔ elétrica |
+| | | P13 | Corredor de serviço ↔ WC funcionários |
+| | | P14 | Fliperama ↔ circulação dos banheiros |
+| | | P15, P16 | Circulação ↔ WC masculino e feminino, respectivamente |
+
+### Compatibilidade e alcance
+
+| Nathzinha | Câmeras com arte cadastrada | Câmeras alcançáveis a partir da posição inicial |
+|---|---|---|
+| Padrão, Yandere e Gótica | CAM01–CAM08, CAM10–CAM12 | CAM01–CAM06, CAM08, CAM10–CAM12 |
+| Maid | CAM05, CAM06, CAM09, CAM10, CAM11 | CAM09, CAM10, CAM11 |
+| Gatinha (`platinada`) | CAM01, CAM02, CAM04, CAM06, CAM07, CAM08 | Nenhuma |
+
+- A CAM09 tem arte para a Maid sozinha. Faltam estados das demais personagens e combinações com elas.
+- A CAM12 tem arte apenas para Padrão, Yandere e Gótica. Sem estados de Maid, ela fica no circuito entre serviço, cozinha e retirada. Sem estados de Gatinha, a P11 não oferece um destino representável para ela.
+- A CAM03 não tem a Gatinha. A arte dela na CAM04 por si só não cobre os dois ângulos do salão.
+- O acesso ao fliperama passa pela circulação dos banheiros, que não tem representação visual. A CAM07 tem arte, mas fica fora das rotas atuais.
+- Para autorizar um movimento, o jogo exige a combinação exata em cada câmera do destino, a combinação restante na origem e todas as variantes de portão que podem ser selecionadas. O navegador verifica o carregamento dos arquivos antes de permitir a transição.
 
 ## Câmeras e imagens disponíveis
 
@@ -80,7 +128,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | CAM06 | VIP 2 lavanda | Sala vazia e 31 variantes com as Nathzinhas |
 | CAM07 | Fliperama | Sala vazia e quinze variantes com as Nathzinhas |
 | CAM08 | Estoque | Novo estoque vazio e quinze variantes com as Nathzinhas |
-| CAM09 | Área de serviço | Nova arte da sala de manutenção técnica |
+| CAM09 | Área de serviço | Área de manutenção vazia e Maid sentada |
 | CAM10 | Cozinha | Cozinha vazia sem HUD na arte e quinze variantes com as Nathzinhas |
 | CAM11 | Área de retirada | Balcão vazio e quinze variantes com as Nathzinhas |
 | CAM12 | Corredor de serviço, leste | 16 combinações de personagens e portão G06 |
@@ -107,7 +155,7 @@ Na CAM12, o portão hidráulico G06 começa aberto e revela as cortinas vermelha
 
 Cada estado do G06 tem oito combinações com a Padrão, a Yandere ao fundo e a Gótica. Selecione uma com `NathGame.setCam12CorridorState('original-gotica')`, `todas` ou `vazia`. A seleção permanece ao alternar o portão.
 
-O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório, a ligação dos portões com as câmeras e os caminhos de todos os estados. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
+O comando `node tests/camera-gates.cjs` testa a integração do movimento, dos portões, da luz e das camadas do escritório. O comando `node tests/movement.cjs` confere o grafo, os temporizadores, as combinações e os arquivos de imagem. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
@@ -121,4 +169,4 @@ O mapa da interface usa os **polígonos das salas, aberturas, posições e azimu
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
 - Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.
-- A V1 é uma **base de exploração e vigilância**, não um FNAF completo: ataques, IA, jumpscares e missões podem vir em versões futuras.
+- A IA desta versão circula pelo restaurante para testar a representação visual das posições.

@@ -10,6 +10,7 @@
   <link rel="preload" as="image" type="image/webp" href="./public/images/office/states/open-dark.webp" fetchpriority="high">
   <link rel="stylesheet" href="./src/styles/main.css">
   <script defer src="./src/data/game-data.js"></script>
+  <script defer src="./src/movement.js"></script>
   <script defer src="./src/map.js"></script>
   <script defer src="./src/sound.js"></script>
   <script defer src="./src/main.js"></script>
@@ -65,9 +66,10 @@
     <button class="monitor-handle" id="monitor-handle" type="button" aria-label="Abrir as câmeras de segurança"><span class="handle-edge">⌃</span><span class="handle-icon">▣</span><span id="handle-label">ABRIR MONITOR</span><small id="handle-shortcut">ESPAÇO</small></button>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR DA MESA OU USE A BARRA INFERIOR</div>
+    <div class="movement-debug" id="movement-debug" hidden></div>
 
     <div class="shift-complete" id="shift-complete" hidden role="dialog" aria-modal="true" aria-label="Turno encerrado">
-      <div class="shift-light">✿</div><div class="shift-time">6:00 <small>AM</small></div><h2>O turno terminou.</h2><p>Primeira noite concluída. Ainda não há animatrônicos nesta versão exploratória.</p><button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
+      <div class="shift-light">✿</div><div class="shift-time">6:00 <small>AM</small></div><h2>O turno terminou.</h2><p>Primeira noite concluída.</p><button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
     </div>
   </main>
 </body>

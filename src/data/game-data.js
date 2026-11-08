@@ -16,6 +16,10 @@ const VIP1_CHARACTER_STATES = [
   'original-gotica-maid', 'yandere-gotica-maid', 'todas'
 ];
 
+// Elenco retratado em "todas" por câmera. Este arquivo não é um estado genérico.
+const TRIO = ['original', 'yandere', 'gotica'];
+const WITH_CAT = [...TRIO, 'platinada'];
+const WITH_MAID = [...TRIO, 'maid'];
 const CAMERAS = [
   {
     "id": "CAM01",
@@ -27,6 +31,7 @@ const CAMERAS = [
     "angle": 225,
     "fov": 88,
     "image": "./public/images/cameras/CAM01/base.webp",
+    "allCharacters": WITH_CAT,
     "characterStateImages": {
       "original": "./public/images/cameras/CAM01/states/original.webp",
       "yandere": "./public/images/cameras/CAM01/states/yandere.webp",
@@ -57,6 +62,7 @@ const CAMERAS = [
     "angle": 270,
     "fov": 95,
     "image": "./public/images/cameras/CAM02/base.webp",
+    "allCharacters": WITH_CAT,
     "characterStateImages": {
       "original": "./public/images/cameras/CAM02/states/original.webp",
       "yandere": "./public/images/cameras/CAM02/states/yandere.webp",
@@ -87,6 +93,7 @@ const CAMERAS = [
     "angle": 24,
     "fov": 92,
     "image": "./public/images/cameras/CAM03/base.webp",
+    "allCharacters": TRIO,
     "stageStateImages": {
       "original": "./public/images/cameras/CAM03/states/original.webp",
       "yandere": "./public/images/cameras/CAM03/states/yandere.webp",
@@ -109,6 +116,7 @@ const CAMERAS = [
     "angle": 208,
     "fov": 88,
     "image": "./public/images/cameras/CAM04/base.webp",
+    "allCharacters": WITH_CAT,
     "gateStateImages": {
       "gates": ["G08"],
       "images": {
@@ -142,6 +150,7 @@ const CAMERAS = [
     "angle": 322,
     "fov": 82,
     "image": "./public/images/cameras/CAM05/base.webp",
+    "allCharacters": WITH_MAID,
     "gateStateImages": {
       "gates": ["G04", "G05"],
       "images": VIP1_GATE_IMAGES
@@ -165,6 +174,7 @@ const CAMERAS = [
     "angle": 38,
     "fov": 82,
     "image": "./public/images/cameras/CAM06/base.webp",
+    "allCharacters": [...WITH_CAT, 'maid'],
     "characterStateImages": Object.fromEntries([
       'original',
       'yandere',
@@ -211,6 +221,7 @@ const CAMERAS = [
     "angle": 138,
     "fov": 88,
     "image": "./public/images/cameras/CAM07/base.webp",
+    "allCharacters": WITH_CAT,
     "characterStateImages": Object.fromEntries([
       'original', 'yandere', 'gotica', 'platinada',
       'original-yandere', 'original-gotica', 'original-platinada',
@@ -231,6 +242,7 @@ const CAMERAS = [
     "angle": 22,
     "fov": 82,
     "image": "./public/images/cameras/CAM08/base.webp",
+    "allCharacters": WITH_CAT,
     "characterStateImages": Object.fromEntries([
       'original', 'yandere', 'gotica', 'platinada',
       'original-yandere', 'original-gotica', 'original-platinada',
@@ -251,6 +263,9 @@ const CAMERAS = [
     "angle": 332,
     "fov": 82,
     "image": "./public/images/cameras/CAM09/base.webp",
+    "characterStateImages": {
+      "maid": "./public/images/cameras/CAM09/states/01-maid-sentada.webp"
+    },
     "technical": "./public/images/cameras/CAM09/technical.png",
     "renderAvailable": true
   },
@@ -264,6 +279,7 @@ const CAMERAS = [
     "angle": 334,
     "fov": 84,
     "image": "./public/images/cameras/CAM10/base.webp",
+    "allCharacters": WITH_MAID,
     "characterStateImages": Object.fromEntries([
       'original', 'yandere', 'gotica', 'maid',
       'original-yandere', 'original-gotica', 'original-maid',
@@ -284,6 +300,7 @@ const CAMERAS = [
     "angle": 68,
     "fov": 88,
     "image": "./public/images/cameras/CAM11/base.webp",
+    "allCharacters": WITH_MAID,
     "characterStateImages": Object.fromEntries([
       'original', 'yandere', 'gotica', 'maid',
       'original-yandere', 'original-gotica', 'original-maid',
@@ -304,6 +321,7 @@ const CAMERAS = [
     "angle": 180,
     "fov": 82,
     "image": "./public/images/cameras/CAM12/base.webp",
+    "allCharacters": TRIO,
     "gateStateImages": {
       "gates": ["G06"],
       "images": {
@@ -1143,6 +1161,8 @@ const VENUE = {
 
 const OFFICE = {
   gate: 'G01',
+  room: 'controle',
+  doorwayPassage: 'P02',
   // Ordem das camadas da sala, da mais distante para a mais próxima.
   characters: ['original', 'maid', 'gotica', 'yandere', 'platinada'],
   images: {
