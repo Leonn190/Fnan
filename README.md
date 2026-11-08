@@ -19,7 +19,7 @@ Restaurante_da_Nathzinha_Web_V1/
 │   └── styles/main.css              # Interface e animações
 ├── public/                          # Recursos consumidos pelo navegador
 │   ├── images/
-│   │   ├── office/                  # master.png e estados do escritório
+│   │   ├── office/                  # Mestre, fundos e camadas de personagens
 │   │   ├── cameras/
 │   │   │   └── CAM01/ … CAM12/      # Uma pasta por câmera
 │   │   │       ├── base.webp        # Fundo usado pelo jogo
@@ -110,6 +110,8 @@ Cada estado do G06 tem oito combinações com a Padrão, a Yandere ao fundo e a 
 O comando `node tests/camera-gates.cjs` testa a luz F, os estados do escritório, a ligação dos portões com as câmeras e os caminhos de todos os estados. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
+
+O escritório aceita até três animatrônicas na sala e uma diferente na porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto e 101 com ele fechado. Use `NathGame.setOfficeCharacterState(['original', 'platinada'], 'yandere')` para experimentar e chame a função sem argumentos para esvaziar a cena. A lanterna fica indisponível enquanto houver personagens selecionadas. Para exportar os 202 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow.
 
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 

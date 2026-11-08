@@ -28,6 +28,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const nodes = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, new Element()]));
 const document = new Element();
 document.querySelector = selector => nodes[selector.slice(1)];
+document.createElement = () => new Element();
 document.createElementNS = () => new Element();
 const window = new Element();
 let frame;
@@ -156,4 +157,44 @@ for (const cam of window.NathGame.CAMERAS) {
     assert(fs.existsSync(path.join(root, src)), src);
   }
 }
-console.log('PASS: 12 camera folders and all states, CAM04/G08, CAM05/G04/G05, CAM12/G06, office and shift reset.');
+// Each legal office arrangement must preserve the lateral doorway occupant across G01.
+const { OFFICE, setOfficeCharacterState } = window.NathGame;
+const visibleOfficeLayers = () => nodes['office-characters'].children
+  .filter(image => !image.hidden).map(image => image.src);
+const officeLayer = (location, character) => `./public/images/office/characters/${location}/${character}.webp`;
+for (const id of ['G01', 'G02', 'G03', 'G04', 'G05', 'G06', 'G07', 'G08', 'G09']) {
+  if (isClosed(id)) gate(id);
+}
+const officeCharacters = [...OFFICE.characters];
+let officeCases = 0;
+for (let mask = 0; mask < (1 << officeCharacters.length); mask++) {
+  const room = officeCharacters.filter((_, index) => mask & (1 << index));
+  if (room.length > 3) continue;
+  for (const doorway of [null, ...officeCharacters]) {
+    if (room.includes(doorway)) continue;
+    assert(setOfficeCharacterState(room, doorway));
+    const expected = room.map(character => officeLayer('room', character));
+    if (doorway) expected.unshift(officeLayer('doorway', doorway));
+    for (const src of expected) assert(fs.existsSync(path.join(root, src)), src);
+    assert.deepEqual(visibleOfficeLayers(), expected);
+    office('dark');
+    gate('G01');
+    office('closed');
+    assert.deepEqual(visibleOfficeLayers(), expected);
+    gate('G01');
+    officeCases += 2;
+  }
+}
+assert.equal(officeCases, 202);
+assert(!setOfficeCharacterState(OFFICE.characters.slice(0, 4)));
+assert(!setOfficeCharacterState(['maid', 'maid']));
+assert(!setOfficeCharacterState(['original'], 'original'));
+assert(!setOfficeCharacterState([], 'desconhecida'));
+assert(setOfficeCharacterState(['original'], 'maid'));
+nodes['monitor-handle'].fire('click');
+pressF(); office('dark');
+assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'maid'), officeLayer('room', 'original')]);
+assert(setOfficeCharacterState());
+assert.deepEqual(visibleOfficeLayers(), []);
+pressF(); office('lit');
+console.log('PASS: 12 camera folders, all gate states, and 202 office combinations.');

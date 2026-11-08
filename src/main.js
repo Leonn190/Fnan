@@ -18,6 +18,7 @@ const $ = selector => document.querySelector(selector);
 const dom = {
   game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
+  officeCharacters: $('#office-characters'),
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
   camNumber: $('#cam-number'), camRoom: $('#cam-room'), flash: $('#camera-switch-flash'),
@@ -42,6 +43,7 @@ function playSound(effect) {
 }
 const state = {
   mode: 'office', cameraIndex: 0, characterStates: new Map(), elapsed: 0,
+  officeRoom: new Set(), officeDoorway: null,
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now()
 };
@@ -49,6 +51,16 @@ let toastTimeout;
 let flashTimeout;
 let nextHudUpdate = 0;
 const imageCache = new Map();
+
+const officeLayers = ['doorway', 'room'].flatMap(location => OFFICE.characters.map(character => {
+  const image = document.createElement('img');
+  image.className = 'office-character';
+  image.alt = '';
+  image.draggable = false;
+  image.hidden = true;
+  dom.officeCharacters.append(image);
+  return { location, character, image };
+}));
 
 function announce(message) {
   clearTimeout(toastTimeout);
@@ -89,7 +101,7 @@ const map = makeCameraMap({
 
 function updateOfficeView() {
   const closed = map.isGateClosed(OFFICE.gate);
-  if (closed) state.flashlight = false;
+  if (closed || state.officeRoom.size || state.officeDoorway) state.flashlight = false;
   const view = closed ? 'closed' : state.flashlight ? 'lit' : 'dark';
   dom.office.dataset.gate = closed ? 'closed' : 'open';
   dom.office.dataset.flashlight = String(state.flashlight);
@@ -100,6 +112,28 @@ function updateOfficeView() {
     : state.flashlight
       ? 'Escritório de segurança, portão aberto e corredor iluminado por luz circular'
       : 'Escritório de segurança, portão principal aberto e corredor escuro';
+}
+
+function setOfficeCharacterState(room = [], doorway = null) {
+  if (!Array.isArray(room) || room.length > 3) return false;
+  const selected = new Set(room);
+  if (selected.size !== room.length || [...selected].some(character => !OFFICE.characters.includes(character))) {
+    return false;
+  }
+  if (doorway !== null && (!OFFICE.characters.includes(doorway) || selected.has(doorway))) {
+    return false;
+  }
+  state.officeRoom = selected;
+  state.officeDoorway = doorway;
+  for (const { location, character, image } of officeLayers) {
+    const visible = location === 'room' ? selected.has(character) : doorway === character;
+    if (visible && !image.getAttribute('src')) {
+      image.src = `./public/images/office/characters/${location}/${character}.webp`;
+    }
+    image.hidden = !visible;
+  }
+  updateOfficeView();
+  return true;
 }
 
 function showTechnical(cam) {
@@ -216,6 +250,7 @@ function finishShift() {
 function resetShift() {
   state.elapsed = 0;
   state.flashlight = false;
+  setOfficeCharacterState();
   map.resetGates();
   state.complete = false;
   state.mode = 'cameras'; // Force setMode to apply the initial office state.
@@ -348,6 +383,7 @@ window.NathGame.setCam08StockroomState = key => setCameraCharacterState(stockroo
 window.NathGame.setCam10KitchenState = key => setCameraCharacterState(kitchenCamera, key);
 window.NathGame.setCam11PickupState = key => setCameraCharacterState(pickupCamera, key);
 window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorCamera, key);
+window.NathGame.setOfficeCharacterState = setOfficeCharacterState;
 changeCamera(CAMERAS[0].id);
 updateOfficeView();
 preloadImages(Object.values(OFFICE.images));

@@ -8,7 +8,15 @@ A arte fornecida em `NOVA.png` é o PNG mestre `public/images/office/master.png`
 
 Os dois estados editados foram criados com o ImageGen integrado. Na finalização, somente a passagem recebeu os recortes gerados; a moldura e os objetos em primeiro plano foram preservados na nova arte. A sala mantém o panorama 3:1.
 
-**F** alterna a luz circular quando o portão está aberto. **G01** no mapa controla o portão, inclusive em reaberturas automáticas. A área clicável foi movida para o monitor grande no lado esquerdo da mesa e acompanha o panorama.
+**F** alterna a luz circular quando o portão está aberto e o escritório está vazio. **G01** no mapa controla o portão, inclusive em reaberturas automáticas. A área clicável fica sobre o monitor grande e acompanha o panorama.
+
+## Enxame e porta lateral
+
+As referências estão em `outros/arte/office/`. As cinco camadas da sala partem de `swarm.png`. Os contornos preservam a mesa, o monitor e os objetos em primeiro plano. A mão da Maid foi alinhada à borda do monitor do jogo.
+
+Os prompts do ImageGen integrado usaram o enxame como referência de pose e as artes individuais como referência de corpo e figurino. Para a Padrão, o recorte pedido completava os braços relaxados e as laterais da saia. Para a Gótica, completava o antebraço e o vestido atrás da Platinada e do ventilador. Para a Maid, completava o ombro e a lateral do tronco, preservando a inclinação e a mão no monitor. As imagens em `reconstructions/` forneceram pixels para essas áreas ocultas. Para a quinta pose na porta lateral, o prompt pedia a Maid no mesmo enquadramento, escala e sombra da pose da Gótica.
+
+Cada personagem pode estar em apenas um lugar. A sala aceita até três delas e a porta lateral aceita uma. Isso produz 101 arranjos para cada posição do G01. As dez camadas WebP são compartilhadas pelo jogo e pelo exportador `scripts/export_office_states.py`.
 
 ## Prompts do ImageGen
 

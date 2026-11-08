@@ -1143,6 +1143,8 @@ const VENUE = {
 
 const OFFICE = {
   gate: 'G01',
+  // Ordem das camadas da sala, da mais distante para a mais próxima.
+  characters: ['original', 'maid', 'gotica', 'yandere', 'platinada'],
   images: {
     dark: './public/images/office/states/open-dark.webp',
     lit: './public/images/office/states/open-lit.webp',

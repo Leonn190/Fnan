@@ -17,6 +17,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .office-view{z-index:1;background:#09050d;touch-action:pan-y}
 .office-scene{position:absolute;left:50%;top:0;width:max(100cqw,300cqh);height:100%;transform:translateX(calc(-50% + var(--pan-shift,0px)));will-change:transform}
 .office-art{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.office-characters,.office-character{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .monitor-hotspot{position:absolute;left:22.3%;top:51.5%;width:16.1%;height:30.7%;border:1px solid transparent;background:transparent;opacity:.85;outline:none;border-radius:5px}
 .monitor-hotspot::before{content:"";position:absolute;inset:9%;background:rgba(251,169,230,.08);opacity:0;transition:opacity .2s}
 .monitor-hotspot:focus-visible::before{opacity:1}
