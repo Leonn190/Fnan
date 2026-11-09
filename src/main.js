@@ -21,12 +21,14 @@ const $ = selector => document.querySelector(selector);
 const titleScreen = $('#title-screen');
 const startGame = $('#start-game');
 const menuMusic = $('#menu-music');
+const radioMusic = $('#radio-music');
 const dom = {
   game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'),
   playfield: $('#playfield'), scareArt: $('#jumpscare-art'),
   gameOver: $('#game-over'), returnToMenu: $('#return-to-menu'), scareSound: $('#jumpscare-sound'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
-  officeCharacters: $('#office-characters'), officeCloset: $('#office-closet'),
+  officeCharacters: $('#office-characters'), officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
+  clownPeek: $('#clown-peek'),
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
   closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
@@ -47,6 +49,17 @@ const MENU_MUSIC_INITIAL_VOLUME = .08;
 const MENU_MUSIC_VOLUME = .58;
 const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
 const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
+const CLOWN_PHASES = [
+  { duration: 60_000, art: 'office/closet/seated-clown.png', alt: 'Palhaça dormindo no fundo do armário' },
+  { duration: 25_000, art: 'office/closet/seated-clown-alternate.png', alt: 'Palhaça sentada com os olhos acesos' },
+  { duration: 20_000, art: 'Boneca Animatrônica Jester na Cela Sombria (1).png', alt: 'Palhaça em pé no fundo do armário' },
+  { duration: 12_000, art: 'Arlequina animatrônica no corredor sombrio.png', alt: 'Palhaça de perto com os olhos pretos' }
+];
+const RADIO_TRACKS = [
+  'caramelldansen.mp3',
+  'shikairo-days.mp3',
+  'kawaikute-gomen.mp3'
+];
 const JUMPSCARE_IMAGES = ['original', 'yandere', 'gotica', 'maid', 'platinada']
   .map(character => `./public/images/jumpscares/${character}.gif`)
   .concat(CLOWN_RIGHT_IMAGE);
@@ -85,13 +98,15 @@ const state = {
   officeRoom: new Set(), officeDoorway: null,
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now(),
-  closetTransition: null, closetMouseAtEdge: true, closetTouchX: null
+  closetTransition: null, closetMouseAtEdge: true, closetTouchX: null,
+  clownPhase: 0, clownTimeLeft: 0, radioPlaying: false
 };
 let toastTimeout;
 let flashTimeout;
 let nextHudUpdate = 0;
 let defeatDeadline = 0;
 let scareReplay = 0;
+let radioPlayback = null;
 const playedScares = new Set();
 const imageCache = new Map();
 const debugEnabled = window.location && new URLSearchParams(window.location.search).get('debug') === '1';
@@ -326,6 +341,7 @@ function setMode(mode, withSound = true) {
   state.pointerX = null;
   state.flashlight = false;
   updateOfficeView();
+  updateRadioMix();
   if (withSound) playSound('monitor');
   if (watching) {
     changeCamera(CAMERAS[state.cameraIndex].id);
@@ -339,6 +355,60 @@ function toggleMonitor() {
   setMode(state.mode === 'office' ? 'cameras' : 'office');
 }
 
+function updateRadioMix() {
+  if (!radioPlayback) return;
+  const hiding = state.mode === 'closet';
+  // The radio knob is at 70.3% of the panorama. Pan relative to the visible viewport.
+  const offset = .203 * dom.officeScene.offsetWidth + state.pan;
+  const relative = Math.max(-1, Math.min(1, 2 * offset / (dom.game.clientWidth || 1)));
+  const pan = hiding ? (dom.closet.dataset.view === 'door' ? -.55 : .55) : Math.round(relative * 100) / 100;
+  sound.mixRadio(radioMusic, pan, hiding);
+}
+
+function stopRadio() {
+  radioPlayback = null;
+  state.radioPlaying = false;
+  radioMusic.pause();
+  dom.officeRadio.setAttribute('aria-pressed', 'false');
+}
+
+function toggleRadio() {
+  if (state.complete || state.closetTransition || state.mode !== 'office') return;
+  if (radioPlayback) {
+    stopRadio();
+    return;
+  }
+  sound.connectRadio(radioMusic);
+  const track = RADIO_TRACKS[Math.floor(Math.random() * RADIO_TRACKS.length)];
+  radioMusic.src = `./public/audio/radio/${track}`;
+  const playback = radioMusic.play();
+  radioPlayback = playback;
+  dom.officeRadio.setAttribute('aria-pressed', 'true');
+  updateRadioMix();
+  playback.catch(() => {
+    if (radioPlayback === playback) stopRadio();
+  });
+}
+
+function setClownPhase(index) {
+  const { duration, art, alt } = CLOWN_PHASES[index];
+  state.clownPhase = index;
+  state.clownTimeLeft = duration;
+  const source = `./public/images/${art}`;
+  if (dom.closetBeam.getAttribute('src') !== source) dom.closetBeam.src = source;
+  dom.closetBeam.alt = alt;
+  dom.clownPeek.hidden = index !== CLOWN_PHASES.length - 1;
+}
+
+function advanceClown(delta) {
+  if (state.radioPlaying) return;
+  state.clownTimeLeft -= delta;
+  if (state.clownTimeLeft > 0) return;
+  const next = state.clownPhase + 1;
+  if (next < CLOWN_PHASES.length) setClownPhase(next);
+  else beginJumpscare(state.mode === 'closet' ? CLOWN_BOTTOM_IMAGE : CLOWN_RIGHT_IMAGE);
+}
+
 function setClosetLight(on) {
   dom.closetBeam.hidden = !on;
   dom.closetLight.setAttribute('aria-pressed', String(on));
@@ -349,6 +419,7 @@ function setClosetView(view) {
   dom.closetExit.hidden = view !== 'door';
   dom.closetLight.hidden = view !== 'back';
   setClosetLight(false);
+  updateRadioMix();
   if (state.mode === 'closet') dom.closet.focus({ preventScroll: true });
 }
 
@@ -419,22 +490,20 @@ function updateClockUI() {
 function finishShift() {
   state.complete = true;
   clearClosetTransition();
+  stopRadio();
   dom.complete.hidden = false;
   playSound('finish');
 }
 
-function beginJumpscare() {
-  const insideCloset = state.mode === 'closet';
-  const source = insideCloset
-    ? CLOWN_BOTTOM_IMAGE
-    : JUMPSCARE_IMAGES[Math.floor(Math.random() * JUMPSCARE_IMAGES.length)];
-  if (insideCloset) {
+function beginJumpscare(source) {
+  if (source === CLOWN_BOTTOM_IMAGE) {
     dom.game.dataset.scare = 'clown-bottom';
     setClosetLight(false);
   } else if (source === CLOWN_RIGHT_IMAGE) {
     setMode('office', false);
   }
   state.complete = true;
+  stopRadio();
   state.dragging = false;
   panKeys.clear();
   clearClosetTransition();
@@ -485,6 +554,8 @@ function resetShift() {
   movement.reset();
   state.characterPreviews.clear();
   state.flashlight = false;
+  stopRadio();
+  setClownPhase(0);
   clearClosetTransition();
   setClosetView('door');
   panKeys.clear();
@@ -544,7 +615,9 @@ function tick(now) {
   if (dom.game.dataset.defeat) advanceDefeat(now);
   else {
     advanceClosetTransition(now);
+    if (!state.complete && !document.hidden) advanceClown(delta);
     if (state.mode !== 'closet') moveCamera(delta);
+    updateRadioMix();
   }
   if (dom.game.dataset.defeat !== 'over') requestAnimationFrame(tick);
 }
@@ -554,6 +627,11 @@ dom.officeMonitor.addEventListener('click', () => {
   if (state.mode === 'office') toggleMonitor();
 });
 dom.officeCloset.addEventListener('click', () => beginClosetTransition('enter'));
+dom.officeRadio.addEventListener('click', toggleRadio);
+radioMusic.addEventListener('playing', () => { state.radioPlaying = Boolean(radioPlayback); });
+radioMusic.addEventListener('waiting', () => { state.radioPlaying = false; });
+radioMusic.addEventListener('pause', () => { if (radioMusic.paused) state.radioPlaying = false; });
+radioMusic.addEventListener('error', stopRadio);
 dom.closetExit.addEventListener('click', () => beginClosetTransition('exit'));
 dom.closetLight.addEventListener('click', toggleClosetLight);
 dom.handle.addEventListener('click', toggleMonitor);
@@ -575,6 +653,10 @@ dom.office.addEventListener('pointermove', event => {
     const change = event.clientX - state.pointerX;
     state.pointerX = event.clientX;
     state.targetPan = Math.max(-maxPanShift(), Math.min(maxPanShift(), state.targetPan + change));
+    return;
+  }
+  if (event.target === dom.officeRadio) {
+    state.targetPan = state.pan;
     return;
   }
   setEdgePan(event.clientX);
@@ -618,7 +700,11 @@ document.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
   if (key === 'j' && (!state.closetTransition || state.mode === 'closet')) {
     event.preventDefault();
-    if (!event.repeat) beginJumpscare();
+    if (!event.repeat) {
+      const source = state.mode === 'closet' ? CLOWN_BOTTOM_IMAGE
+        : JUMPSCARE_IMAGES[Math.floor(Math.random() * JUMPSCARE_IMAGES.length)];
+      beginJumpscare(source);
+    }
     return;
   }
   if (state.closetTransition) return;
@@ -712,6 +798,7 @@ startGame.addEventListener('click', () => {
   changeCamera(CAMERAS[0].id);
   dom.hint.hidden = false;
   preloadImages(Object.values(OFFICE.images));
+  preloadImages(CLOWN_PHASES.map(({ art }) => `./public/images/${art}`));
   // Load state variants before the player starts toggling their gates.
   for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
   requestAnimationFrame(tick);

@@ -37,12 +37,14 @@
       <section class="office-view" id="office-view" aria-label="Escritório de segurança do restaurante">
         <div class="office-scene" id="office-scene">
           <img class="office-art" id="office-art" src="./public/images/office/states/open-dark.webp" alt="Escritório de segurança, portão principal aberto e corredor escuro" draggable="false">
+          <img class="clown-peek" id="clown-peek" src="./public/images/Palhaça Espiando no Armário Técnico.png" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
           <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Clicar no monitor da mesa para abrir as câmeras">
             <span class="hotspot-corner top-left"></span><span class="hotspot-corner top-right"></span>
             <span class="hotspot-corner bottom-left"></span><span class="hotspot-corner bottom-right"></span>
             <span class="hotspot-label">ABRIR MONITOR <span aria-hidden="true">↗</span></span>
           </button>
+          <button class="radio-hotspot" id="office-radio" type="button" aria-label="Rádio da mesa" aria-pressed="false"></button>
           <button class="closet-hotspot" id="office-closet" type="button" aria-label="Entrar no armário técnico"></button>
         </div>
         <div class="office-shading" aria-hidden="true"></div>
@@ -52,7 +54,7 @@
 
       <section class="closet-view" id="closet-view" data-view="door" aria-label="Interior do armário técnico" aria-description="Olhe para os lados com o mouse, A e D ou as setas. Use W para a lanterna no fundo." tabindex="-1" hidden>
         <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
-        <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/seated-clown.png" alt="Palhaça sentada no fundo do armário" fetchpriority="low" draggable="false" hidden>
+        <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/seated-clown.png" alt="Palhaça dormindo no fundo do armário" fetchpriority="low" draggable="false" hidden>
         <button class="closet-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
         <button class="closet-light-toggle" id="closet-light" type="button" aria-label="Lanterna do armário" aria-keyshortcuts="W" aria-pressed="false" hidden>LANTERNA</button>
       </section>
@@ -103,6 +105,7 @@
       <img class="jumpscare-art" id="jumpscare-art" alt="" draggable="false">
     </div>
     <audio id="jumpscare-sound" src="./public/audio/jumpscares/scream.wav" preload="auto"></audio>
+    <audio id="radio-music" preload="none" loop></audio>
     <div class="death-flash" aria-hidden="true"></div>
     <section class="game-over" id="game-over" aria-labelledby="game-over-title" hidden>
       <div class="feed-noise" aria-hidden="true"></div>

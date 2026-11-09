@@ -33,7 +33,9 @@ for (const [, id, attributes] of html.matchAll(/<main [^>]*id="([^"]+)"([^>]*)>/
 }
 const music = nodes['menu-music'];
 const scream = nodes['jumpscare-sound'];
-for (const audio of [music, scream]) {
+const radio = nodes['radio-music'];
+const radioButton = nodes['office-radio'];
+for (const audio of [music, scream, radio]) {
   audio.paused = true;
   audio.play = () => {
     audio.paused = false;
@@ -156,10 +158,13 @@ gate('G04'); assert.equal(nodes['feed-art'].src, otherSrc);
 assert(!isClosed('G05'));
 camera('CAM05'); check('closed-open');
 nodes['monitor-handle'].fire('click');
+radioButton.fire('click');
+radio.fire('playing');
 nodes['office-monitor'].fire('click'); check('closed-open');
 // Resetting the night restores both the map and the default open-open image.
 for (let time = nightStart + 200; time <= nightStart + 540_100; time += 100) step(time);
 assert.equal(nodes['shift-complete'].hidden, false);
+assert.equal(radio.paused, true);
 nodes['restart-shift'].fire('click');
 assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
 nodes['office-monitor'].fire('click'); check('open-open'); office('dark');
@@ -532,3 +537,73 @@ for (const closetState of ['door', 'lit', 'turning']) {
   nodes['start-game'].fire('click');
 }
 console.log('PASS: J always picks the bottom clown inside the closet, including with the light on or while turning.');
+
+function advanceBy(duration) {
+  const end = now + duration;
+  while (now < end) step(Math.min(end, now + 100));
+}
+
+const peek = nodes['clown-peek'];
+const [, peekSource] = html.match(/id="clown-peek" src="([^"]+)"/);
+assert(fs.existsSync(path.join(root, peekSource)));
+assert.match(closetBeam.src, /seated-clown\.png$/);
+assert.equal(peek.hidden, true);
+advanceBy(59_900);
+const tracks = new Set();
+for (const draw of [0, .5, .99]) {
+  randomValue = () => draw;
+  radioButton.fire('click');
+  assert.equal(radioButton.getAttribute('aria-pressed'), 'true');
+  const track = radio.src;
+  assert(fs.existsSync(path.join(root, track)));
+  tracks.add(track);
+  if (draw < .99) radioButton.fire('click');
+}
+assert.equal(tracks.size, 3);
+assert(radio.volume < .2);
+radio.fire('playing');
+advanceBy(30_000);
+assert.match(closetBeam.src, /seated-clown\.png$/);
+const officeRadioVolume = radio.volume;
+nodes['office-closet'].fire('click');
+advanceBy(1450);
+assert.equal(nodes.game.dataset.mode, 'closet');
+assert.equal(radio.paused, false);
+assert(radio.volume < officeRadioVolume);
+closetExit.fire('click');
+advanceBy(1040);
+assert.equal(nodes.game.dataset.mode, 'office');
+radioButton.fire('click');
+assert.equal(radioButton.getAttribute('aria-pressed'), 'false');
+assert.equal(radio.paused, true);
+advanceBy(100);
+assert.match(closetBeam.src, /seated-clown-alternate\.png$/);
+nodes['office-closet'].fire('click');
+advanceBy(1450);
+press('d');
+advanceBy(640);
+press('w');
+assert.equal(closetBeam.hidden, false);
+advanceBy(25_000 - 2090);
+assert.match(closetBeam.src, /Boneca Animatrônica Jester/);
+advanceBy(20_000);
+assert.match(closetBeam.src, /Arlequina animatrônica/);
+assert.equal(peek.hidden, false);
+advanceBy(12_000);
+assert.equal(phase(), 'blackout');
+assert.equal(closetBeam.hidden, true);
+assert.equal(scare.src.split('?')[0], bottomGif);
+step(now + 110);
+step(now + 1530);
+step(now + 230);
+assert.equal(phase(), 'over');
+nodes['return-to-menu'].fire('click');
+nodes['start-game'].fire('click');
+assert.match(closetBeam.src, /seated-clown\.png$/);
+assert.equal(peek.hidden, true);
+advanceBy(105_000);
+assert.equal(peek.hidden, false);
+advanceBy(12_000);
+assert.equal(phase(), 'blackout');
+assert.match(scare.src.split('?')[0], /palhaca-direita\.gif$/);
+console.log('PASS: three radio tracks, paused clown timer, four poses, peek and automatic attacks in both locations.');

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-// Sons eletrônicos originais gerados no navegador. Nenhum arquivo de áudio ou serviço externo.
+// Efeitos sintetizados e mixagem do rádio da mesa.
 class SoundEngine {
   constructor() { this.enabled = false; this.context = null; this.ambient = null; }
   async enable() {
@@ -44,6 +44,37 @@ class SoundEngine {
   monitor(){this.tone({frequency:160,endingFrequency:70,duration:.21,volume:.07,wave:'sawtooth'});}
   switch(){this.tone({frequency:520,endingFrequency:180,duration:.08,volume:.055,wave:'square'});}
   finish(){this.tone({frequency:440,endingFrequency:660,duration:.55,volume:.06});}
+  connectRadio(media) {
+    const context = this.context;
+    // Local files play directly. Chromium silences file:// sources routed through Web Audio.
+    if (window.location?.protocol === 'file:' || this.radio || !context?.createStereoPanner) return;
+    const lowpass = context.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    const panner = context.createStereoPanner();
+    const gain = context.createGain();
+    gain.gain.value = 0;
+    context.createMediaElementSource(media).connect(lowpass).connect(panner)
+      .connect(gain).connect(context.destination);
+    this.radio = { lowpass, panner, gain };
+    media.volume = 1;
+  }
+
+  mixRadio(media, pan, behindDoor) {
+    const volume = behindDoor ? .045 : .15 * (1 - .35 * Math.abs(pan));
+    if (!this.radio) {
+      media.volume = volume;
+      return;
+    }
+    const { lowpass, panner, gain } = this.radio;
+    if (this.radio.pan === pan && this.radio.behindDoor === behindDoor) return;
+    this.radio.pan = pan;
+    this.radio.behindDoor = behindDoor;
+    const now = this.context.currentTime;
+    lowpass.frequency.setTargetAtTime(behindDoor ? 1250 : 14_000, now, .045);
+    panner.pan.setTargetAtTime(pan * .85, now, .045);
+    gain.gain.setTargetAtTime(volume, now, .045);
+  }
+
   closetDoor(entering) {
     const context = this.context;
     if (!this.enabled || context?.state !== 'running') return;
