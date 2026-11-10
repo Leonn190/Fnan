@@ -6,7 +6,6 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCALE = 10.5;
 const PAD_X = 18;
 const PAD_Y = 18;
-const MAX_CLOSED_GATES = 3;
 const X = value => PAD_X + value * SCALE;
 const Y = value => PAD_Y + (VENUE.height - value) * SCALE;
 
@@ -36,7 +35,7 @@ function roomCenter(room) {
   return [sumX / room.points.length, sumY / room.points.length];
 }
 
-function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => {} }) {
+function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGatesChange = () => {} }) {
   const svg = makeSvg('svg', {
     viewBox: '0 0 380 332',
     role: 'group',
@@ -82,13 +81,14 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
         if (index !== -1) {
           closedGates.splice(index, 1);
           setGateClosed(gate, false);
-          onGatesChange();
+          onGatesChange(id, false);
           return;
         }
-        if (closedGates.length === MAX_CLOSED_GATES) setGateClosed(closedGates.pop(), false);
+        if (maxClosedGates <= 0) return;
+        if (closedGates.length === maxClosedGates) setGateClosed(closedGates.pop(), false);
         closedGates.push(gate);
         setGateClosed(gate, true);
-        onGatesChange();
+        onGatesChange(id, true);
       });
       gateLayer.append(gate);
       continue;
@@ -137,10 +137,14 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
     isGateClosed(id) {
       return closedGates.some(gate => gate.getAttribute('data-gate') === id);
     },
+    openGate(id) {
+      const index = closedGates.findIndex(gate => gate.getAttribute('data-gate') === id);
+      if (index !== -1) setGateClosed(closedGates.splice(index, 1)[0], false);
+    },
+    closedGateIds: () => closedGates.map(gate => gate.getAttribute('data-gate')),
     resetGates() {
       for (const gate of closedGates) setGateClosed(gate, false);
       closedGates.length = 0;
-      onGatesChange();
     },
     setActive(camera) {
       for (const [id,node] of cameraNodes) {

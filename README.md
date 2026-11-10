@@ -1,6 +1,6 @@
-# Nine Nights at Nath's — Web V1 🌸
+# Nine Nights at Nath's — Sistema de jogo v1.1.2 🌸
 
-Primeira versão navegável do fangame de terror **Nine Nights at Nath's**. Clique em **Jogar Nine Nights at Nath's** para abrir o menu com a trilha. Selecione **New Game** para entrar no escritório de segurança e acessar as doze câmeras do restaurante.
+Fangame de terror com um turno de 12 AM a 6 AM. **New Game** inicia todas as Nathzinhas no nível 0. **Custom Night** permite escolher o nível de cada uma das seis, inclusive a Palhaça, de 0 a 9. Cada hora dura 60 segundos reais e a vitória ocorre aos 360 segundos. A mesma noite pode ser repetida após vitória ou derrota.
 
 **Projeto estático puro:** HTML + CSS + JavaScript com scripts locais. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
 
@@ -11,9 +11,14 @@ Restaurante_da_Nathzinha_Web_V1/
 ├── index.html                       # Menu inicial e tela da noite
 ├── .nojekyll                        # Não processar pastas pelo Jekyll
 ├── .github/workflows/pages.yml      # Publicação automática, sem build
+├── config/                          # Regras carregadas pelo jogo em tempo de execução
 ├── src/                             # Código do jogo/site
 │   ├── main.js                      # Escritório, monitor, noite, HUD, entradas
-│   ├── movement.js                  # Grafo, movimentação e estados visuais da IA
+│   ├── config.js                    # Leitura dos JSONs por HTTP(S)
+│   ├── movement.js                  # Relógio, tentativas, ocupação e transições
+│   ├── gameplay/                    # Grafo, pesos, ataques, Palhaça e sabotagem
+│   ├── night-menu.js                # Menu e seletores do Custom Night
+│   ├── scene-art.js                 # Seleção das variantes e dos slots visuais
 │   ├── map.js                       # Mapa clicável da planta real
 │   ├── sound.js                     # Efeitos sonoros gerados no navegador
 │   ├── data/game-data.js            # Dados da planta usados no jogo
@@ -56,72 +61,50 @@ Também funciona com a opção clássica **Deploy from a branch → main → /(r
 
 ## Testar localmente e enquadramento
 
-Abra `index.html` diretamente no navegador, inclusive por `file://`. Os scripts locais carregam em ordem, sem módulos ES ou requisições de dados que exijam servidor. Também funciona por HTTP e no GitHub Pages.
+Abra `index.html` diretamente para jogar com a configuração padrão incluída. Para testar alterações locais nos JSONs, use **Carregar pasta config** na tela de entrada e selecione a pasta `config/` antes de clicar em **Jogar**.
+
+Em HTTP(S), inclusive no GitHub Pages, o jogo carrega `config/` diretamente. Para testar assim no computador, execute `python -m http.server 8000` na raiz e abra [localhost:8000](http://localhost:8000/). Recarregue a página após editar um JSON.
+
+Ao alterar os padrões que serão distribuídos para abertura direta, atualize a cópia local com `node scripts/sync-local-config.cjs`. Confira a sincronização com `node scripts/sync-local-config.cjs --check`. Abrir o jogo e publicar no Pages dispensam essa etapa.
 
 A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Monitores ultrawide, incluindo modelos curvos, recebem bordas pretas nas laterais: escritório, câmeras, mapa e HUD usam a mesma área útil. A curvatura física não é detectável pelo navegador; a proporção da tela define as bordas. O movimento do panorama usa as bordas da área do jogo.
 
 ## Como jogar
 
-- **No menu inicial:** selecione **New Game** para iniciar a noite no escritório.
-- **Mouse nas bordas esquerda/direita** ou **A/D e ←/→** no escritório: olhar para os lados.
-- **Toque e arraste** no escritório em telas touch: deslocar o panorama.
-- **Clique no monitor da mesa**, clique na aba inferior ou pressione **Espaço/M**: abrir/fechar as câmeras.
-- **Na tela de câmeras:** clique em uma das 12 câmeras na planta ou use as setas **←/→**.
-- **Portões no mapa:** clique para alternar entre aberto (amarelo) e fechado (vermelho). Ao fechar um quarto portão, o último que havia sido fechado abre automaticamente. Os portões voltam a abrir ao reiniciar o turno.
-- **F no escritório:** alterna a luz circular no corredor quando o G01 está aberto e a sala está vazia. Uma personagem na porta lateral permite usar a luz. Ao abrir o monitor ou trocar de janela, a luz desliga.
-- **Armário técnico:** vire para a direita no escritório e clique na porta. Lá dentro, use as bordas da tela, **A/D**, **←/→** ou um gesto horizontal para alternar entre a porta e o fundo escuro. Pressione **W** (ou toque em **Lanterna**) para iluminar o fundo. Para sair, vire para as frestas e clique na porta.
-- **Palhaça e rádio:** com o rádio desligado, a Palhaça dorme por 60 s, fica acordada por 25 s, fica em pé por 20 s e dá 12 s de aviso antes de atacar. A lanterna revela a pose no fundo do armário. No último estágio, ela espia pela porta quando você está no escritório. Clique no botão redondo do rádio rosa para tocar uma das três músicas. Enquanto a música toca, a fase atual fica pausada. Clique de novo para desligar e retomar a contagem.
-- Pressione **J** para testar um susto aleatório fora do armário, incluindo o ataque da palhaça pela direita no escritório. Dentro do armário, **J** dispara o ataque dela por baixo, no breu.
-- **G01 no mapa:** abre/fecha o portão principal do escritório. O estado acompanha também a reabertura automática pelo limite de três fechados.
-- **Esc:** abaixa o monitor.
-- O contador de horas vai de 12 AM a 6 AM; ao terminar, é possível reiniciar. As cinco animatrônicas têm posições e temporizadores próprios para o teste visual.
+- Clique no monitor para abrir o computador. Abra **Câmeras** para selecionar uma das doze na planta ou com **←/→**. **Esc** fecha a janela ativa e volta do computador ao escritório.
+- No escritório, use as bordas do panorama, **A/D**, **←/→** ou arraste no touch. Olhar para a porta esquerda impede travessias na aproximação. **Q** ou **Porta esquerda** fecha e abre o acesso lateral.
+- **F** ou **Lanterna** ilumina o corredor quando o G01 está aberto e a sala está vazia. A luz impede movimentos pelo corredor enquanto apontada para ele e afeta os pesos de Gótica, Yandere e Gatinha. A planta controla o G01, G02 e G06. O limite de três portões fechados no mapa preserva a reabertura automática do último a ter sido fechado.
+- Use o botão **Reproduzir som nesta câmera** para atrair ou repelir personagens. O som dura 7 s na câmera de origem, inclusive depois de mudar de câmera, com recarga de 12 s desde o acionamento.
+- Se houver uma invasão, vire para a direita e clique na porta do armário técnico dentro do prazo. A proteção começa no clique. Espere as invasoras saírem antes de voltar ao escritório. Dentro do armário, vire para o fundo com as bordas, **A/D**, **←/→** ou gesto horizontal. **W** ou **Lanterna** ilumina a Palhaça e congela seu contador. Vire para as frestas para sair.
+- O botão redondo do rádio toca uma das três faixas e reduz o contador da Palhaça. Cada entrada no armário registra um possível piso. O piso passa a valer se o contador cruzar o limiar para cima após o registro. O rádio, o computador, o movimento da visão, a porta lateral e as viagens ao armário contribuem para o barulho.
+- Abra `?debug=1` para acompanhar posições, dificuldades, bloqueios, contadores e o estado da câmera. Nesse modo, **J** testa os sustos.
 
-## Teste visual de movimentação
+## Configuração
 
-Abra `index.html?debug=1` para ver a posição, a câmera, a contagem até a próxima tentativa, a última sala, o destino e os bloqueios de cada Nathzinha. O painel também mostra o estado selecionado da câmera. As transições e os bloqueios de arte aparecem no console.
+| Arquivo | Regras e dados |
+|---|---|
+| `night.json` | Horário inicial, duração, vitória e faixa de dificuldade |
+| `map.json` | 25 posições, 36 ligações, câmeras, capacidade e arestas de portões |
+| `characters.json` | Posições permitidas, partida, IA, rastreamento, reação e habilidades individuais |
+| `movement.json` | Sorteio, variação dos intervalos, efeitos dos níveis, bloqueios e recuo |
+| `effects.json` | Alcance e recarga do áudio, estática, lanterna, fontes e dissipação do barulho |
+| `threats.json` | Permanência, contador e estágios da Palhaça, distribuição e prazo de sabotagem |
+| `controls.json` | Integração com os controles, transições, localização e recursos audiovisuais |
 
-Padrão, Yandere e Gótica começam no salão, no estado `todas` da CAM03 e no estado `original-yandere-gotica` da CAM04. A Maid começa na CAM09 com `01-maid-sentada.webp`. A segunda arte da CAM09 retrata a Maid junto a uma porta e fica reservada para uma eventual fase de saída. A Gatinha usa o identificador `platinada` e começa em `nathzinha`, a sala própria sem câmera.
+O grafo lógico funciona independentemente da planta desenhada e da disponibilidade de arte. Um destino atrás de portão fechado entra no sorteio. Ao ser bloqueada, a tentativa mantém o destino por até 3 s. Se o impedimento continuar, o próximo intervalo usa metade do tempo normal sorteado. A Gótica pode causar estática compartilhada. A Padrão pode abrir portões físicos e é a única que percorre as saídas externas. A Maid avança os estágios iniciais usando seu próprio relógio e sai de Serviço uma única vez. A Gatinha usa três esconderijos fora das câmeras.
 
-Cada personagem espera de 10 a 14 segundos de aba visível entre movimentos. Observar uma câmera congela as saídas da sala que ela mostra. CAM03 e CAM04 compartilham a mesma sala. Ao voltar de uma aba oculta, o jogo retoma os temporizadores de onde pararam. O fim da noite para a simulação e o reinício restaura as posições, os portões e as contagens.
+O G06 controla 2↔19. O G02 controla 7↔14 e 25↔14. O G01 existente controla 14↔13. O controle lateral **Q** opera 12↔13 e representa a porta da oficina para o evento de barulho. O retorno especial desloca diretamente para o destino sorteado. Quando já há uma invasora no escritório, a próxima que chegaria à porta esquerda pode entrar diretamente, sujeita aos bloqueios aplicáveis.
 
-O escritório recebe personagens pela P02, a partir do estoque. A fila espera no estoque e libera uma personagem por vez para a porta lateral. Ela espera pelo intervalo de movimento antes de ocupar uma das três vagas da sala e, após outro intervalo, pode sair pela mesma passagem. A G01 e a P05 fazem parte da planta, mas as imagens da porta lateral representam somente a P02.
+O temporizador de permanência de cada invasora conta desde a entrada dela no controle. O clique no armário decide se a permanência usa o tempo normal ou tardio. Em caso de eventos simultâneos, as ações registradas do jogador precedem a resolução das tentativas e dos ataques. O relógio usa tempo real transcorrido, inclusive com a aba oculta.
 
-As funções públicas `NathGame.setCam…State` e `NathGame.setOfficeCharacterState` continuam disponíveis para prévias de arte. A próxima mudança de ocupação da sala afetada ou o reinício restaura a representação automática.
+### Pendências da especificação e da arte
 
-### Conexões físicas
-
-O jogo encontra as salas dos dois lados do ponto médio de cada abertura usando os polígonos de `VENUE.rooms` e as coordenadas de `VENUE.openings`. As ligações são bidirecionais. O grafo contém 25 passagens internas. Os portões `G` dependem do estado do mapa e as passagens `P` são livres. As três saídas externas ficam fora do grafo.
-
-| Portão | Salas | Passagem livre | Salas |
-|---|---|---|---|
-| G01 | Controle ↔ corredor de serviço | P01 | Loja ↔ recepção |
-| G02 | Corredor de serviço ↔ VIP 2 | P02 | Estoque ↔ controle |
-| G03 | VIP 2 ↔ salão | P03 | Estoque ↔ corredor de serviço |
-| G04 | Corredor de serviço ↔ VIP 1 | P04 | Serviço ↔ corredor de serviço |
-| G05 | VIP 1 ↔ salão | P05 | Controle ↔ armário |
-| G06 | Salão ↔ corredor de serviço | P06 | Serviço ↔ cozinha |
-| G07 | Salão ↔ circulação dos banheiros | P07, P08 | Cozinha ↔ corredor de serviço |
-| G08 | Recepção ↔ salão | P09 | Cozinha ↔ retirada |
-| G09 | Loja ↔ estoque | P10 | Corredor de serviço ↔ retirada |
-| | | P11 | Corredor de serviço ↔ sala da Nathzinha |
-| | | P12 | Corredor de serviço ↔ elétrica |
-| | | P13 | Corredor de serviço ↔ WC funcionários |
-| | | P14 | Fliperama ↔ circulação dos banheiros |
-| | | P15, P16 | Circulação ↔ WC masculino e feminino, respectivamente |
-
-### Compatibilidade e alcance
-
-| Nathzinha | Câmeras com arte cadastrada | Câmeras alcançáveis a partir da posição inicial |
-|---|---|---|
-| Padrão, Yandere e Gótica | CAM01–CAM08, CAM10–CAM12 | CAM01–CAM06, CAM08, CAM10–CAM12 |
-| Maid | CAM05, CAM06, CAM09, CAM10, CAM11 | CAM09, CAM10, CAM11 |
-| Gatinha (`platinada`) | CAM01, CAM02, CAM04, CAM06, CAM07, CAM08 | Nenhuma |
-
-- A CAM09 tem arte para a Maid sozinha. Faltam estados das demais personagens e combinações com elas.
-- A CAM12 tem arte apenas para Padrão, Yandere e Gótica. Sem estados de Maid, ela fica no circuito entre serviço, cozinha e retirada. Sem estados de Gatinha, a P11 não oferece um destino representável para ela.
-- A CAM03 não tem a Gatinha. A arte dela na CAM04 por si só não cobre os dois ângulos do salão.
-- O acesso ao fliperama passa pela circulação dos banheiros, que não tem representação visual. A CAM07 tem arte, mas fica fora das rotas atuais.
-- Para autorizar um movimento, o jogo exige a combinação exata em cada câmera do destino, a combinação restante na origem e todas as variantes de portão que podem ser selecionadas. O navegador verifica o carregamento dos arquivos antes de permitir a transição.
+- **Sanidade** tem configuração `null`. A especificação não define medidor, taxas ou efeito.
+- **P04** deixa o teto do barulho em `null`. O acúmulo segue as taxas confirmadas e o peso não fica negativo.
+- **P06** define a roleta de sabotagens e a morte após 25 s de ventilação sabotada. Faltam o procedimento de conserto, as durações e os efeitos técnicos de câmeras, portas e áudio. O Painel Geral sinaliza as falhas sorteadas. Os reinícios manuais já existentes no painel continuam separados da sabotagem.
+- **P08** deixa os demais vínculos entre portões e arestas pendentes. Os controles e as variantes visuais existentes desses portões continuam disponíveis.
+- **P11** mantém em aberto limites gerais de acúmulo e um piso quantitativo para os pesos. O teto de magnitude da lanterna e os empates seguem as regras confirmadas.
+- As posições 8 e 11 ainda aguardam retratos próprios. As demais posições sem câmera continuam fora dos feeds.
 
 ## Câmeras e imagens disponíveis
 
@@ -135,7 +118,7 @@ O jogo encontra as salas dos dois lados do ponto médio de cada abertura usando 
 | CAM06 | VIP 2 lavanda | Sala vazia e 31 variantes com as Nathzinhas |
 | CAM07 | Fliperama | Sala vazia e quinze variantes com as Nathzinhas |
 | CAM08 | Estoque | Novo estoque vazio e quinze variantes com as Nathzinhas |
-| CAM09 | Área de serviço | Área de manutenção vazia e Maid sentada |
+| CAM09 | Área de serviço | Área de manutenção vazia, Maid sentada e Maid junto à saída |
 | CAM10 | Cozinha | Cozinha vazia sem HUD na arte e quinze variantes com as Nathzinhas |
 | CAM11 | Área de retirada | Balcão vazio e quinze variantes com as Nathzinhas |
 | CAM12 | Corredor de serviço, leste | 16 combinações de personagens e portão G06 |
@@ -164,15 +147,15 @@ Na CAM12, o portão hidráulico G06 começa aberto e revela as cortinas vermelha
 
 Cada estado do G06 tem oito combinações com a Padrão, a Yandere ao fundo e a Gótica. Selecione uma com `NathGame.setCam12CorridorState('original-gotica')`, `todas` ou `vazia`. A seleção permanece ao alternar o portão.
 
-O comando `node tests/camera-gates.cjs` testa a integração do movimento, dos portões, da luz e das camadas do escritório. O comando `node tests/movement.cjs` confere o grafo, os temporizadores, as combinações e os arquivos de imagem. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
+O comando `node tests/camera-gates.cjs` testa os controles, a interface, os portões, a luz e as camadas do escritório. O comando `node tests/movement.cjs` testa as regras, o relógio e os efeitos usando os JSONs reais. Os comandos `python tests/test_cam05_images.py` e `python tests/test_office_images.py` (Pillow) conferem a consistência dos cenários.
 
 Os três estados da nova sala de controle estão em `public/images/office/states/`. O PNG mestre é a arte nova, e a área clicável acompanha o monitor à esquerda da mesa. Prompts e composição: `outros/prompts/ESCRITORIO_ESTADOS_PORTAO.md`.
 
-O escritório aceita até três animatrônicas na sala e uma diferente na porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto no escuro, 101 com ele fechado e seis com o corredor iluminado e a sala vazia. Use `NathGame.setOfficeCharacterState([], 'yandere')` e pressione **F** para ver a Yandere na porta lateral com o corredor iluminado. Chame a função sem argumentos para esvaziar a cena. Para exportar os 208 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow. Acrescente `--lit-only` para exportar apenas os seis iluminados.
+O escritório compõe as camadas das invasoras e da ocupante da porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto no escuro, 101 com ele fechado e seis com o corredor iluminado e a sala vazia. Use `NathGame.setOfficeCharacterState([], 'yandere')` e pressione **F** para ver a Yandere na porta lateral com o corredor iluminado. Chame a função sem argumentos para esvaziar a cena. Para exportar os 208 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow. Acrescente `--lit-only` para exportar apenas os seis iluminados.
 
-Os 111 panoramas com as poses do corredor ficam em `public/images/office/states/corridor/`. O `manifest.json` lista os arquivos, os ocupantes da porta e do corredor e a ordem dos slots para cada quantidade. Para exportá-los novamente, rode `python scripts/export_office_corridor.py outros/arte/office/corridor-lineup.png` com Pillow.
+As poses iluminadas do corredor usam `public/images/office/states/corridor-atlas.webp`, composto a partir dos recortes originais. Para reproduzir o atlas, rode `python -B scripts/export_office_corridor.py outros/arte/office/corridor-lineup.png --atlas public/images/office/states/corridor-atlas.webp` com Pillow.
 
-Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. As 172 imagens em `public/images/office/closet/states/` cobrem de zero a três Nathzinhas na sala e até uma diferente na porta lateral. A Maid só aparece na sala e a Palhaça fica fora dessas combinações. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta. Para recriar as imagens a partir das artes de referência, rode `python -B scripts/export_closet_states.py` com Pillow.
+Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. As 172 imagens em `public/images/office/closet/states/` cobrem de zero a três Nathzinhas na sala e até uma diferente na porta lateral. Camadas derivadas da arte original completam as frestas quando há quatro ou cinco invasoras. A Maid só aparece na sala e a Palhaça fica fora dessas combinações. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta. Para recriar as imagens a partir das artes de referência, rode `python -B scripts/export_closet_states.py` com Pillow. Para gerar as duas camadas adicionais, use `python -B scripts/export_closet_states.py public/images/office/closet/layers --overflow-layers`.
 
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 
@@ -182,4 +165,3 @@ O mapa da interface usa os **polígonos das salas, aberturas, posições e azimu
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
 - Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.
-- A IA desta versão circula pelo restaurante para testar a representação visual das posições.

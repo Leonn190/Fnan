@@ -1,0 +1,37 @@
+{
+  "restarts": {
+    "system": 5,
+    "allSystems": 9,
+    "locator": 4,
+    "allLocators": 7
+  },
+  "closetTransitionsMs": {
+    "enter": { "swap": 980, "duration": 1450 },
+    "turn": { "swap": 320, "duration": 640 },
+    "exit": { "swap": 650, "duration": 1040 }
+  },
+  "jumpscare": {
+    "blackoutMs": 110,
+    "cycleMs": 960,
+    "clownBottomCycleMs": 1280,
+    "finalHoldMs": 250,
+    "flashMs": 230,
+    "imageLoadWaitMs": 2000,
+    "volume": 0.55
+  },
+  "radioTracks": ["caramelldansen.mp3", "shikairo-days.mp3", "kawaikute-gomen.mp3"],
+  "menuMusic": { "startSeconds": 27, "fadeSeconds": 2, "initialVolume": 0.08, "volume": 0.58 },
+  "observation": {
+    "leftPanFraction": 0.55,
+    "corridorPanFraction": 0.5
+  },
+  "unillustratedCameraPositions": [8, 11],
+  "trackingRooms": {
+    "12": "controle",
+    "13": "controle",
+    "14": "corredor_servico",
+    "15": "corredor_servico",
+    "20": "nathzinha",
+    "21": "eletrica"
+  }
+}

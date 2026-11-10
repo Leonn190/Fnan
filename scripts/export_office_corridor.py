@@ -38,6 +38,7 @@ LAYOUTS = (
     ("back_left", "back_right", "front_left", "front_right"),
     tuple(SLOTS),
 )
+ATLAS_BOX = (956, 234, 1220, 498)
 
 # Mesmo centro e raio do feixe no estado aberto iluminado.
 BEAM_CENTER = (1088, 366)
@@ -203,10 +204,28 @@ def export(sheet, output):
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return len(states)
 
+def export_atlas(sheet, path):
+    sprites = load_sprites(sheet)
+    left, top, right, bottom = ATLAS_BOX
+    width, height = right - left, bottom - top
+    base_size = load(BASE).size
+    atlas = Image.new("RGBA", (width * len(CHARACTERS), height * len(SLOTS)))
+    for row, slot in enumerate(SLOTS):
+        for column, character in enumerate(CHARACTERS):
+            tile = Image.new("RGBA", base_size)
+            for layer, point in (ground_shadow(sprites[character], slot), light_sprite(sprites[character], slot)):
+                tile.alpha_composite(layer, point)
+            atlas.paste(tile.crop(ATLAS_BOX), (column * width, row * height))
+    atlas.save(path, "WEBP", lossless=True, method=6)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sprites", type=Path, help="Folha PNG com as cinco Nathzinhas em ordem canônica")
     parser.add_argument("--output", type=Path, default=OUTPUT, help="Pasta de destino das imagens e do manifesto")
+    parser.add_argument("--atlas", type=Path, help="Exporta as camadas reutilizáveis do corredor em um único WebP")
     args = parser.parse_args()
-    print(f"{export(args.sprites, args.output)} imagens exportadas para {args.output}")
+    if args.atlas:
+        export_atlas(args.sprites, args.atlas)
+    else:
+        print(f"{export(args.sprites, args.output)} imagens exportadas para {args.output}")

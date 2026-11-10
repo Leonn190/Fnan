@@ -1,0 +1,334 @@
+{
+  "positions": [
+    {
+      "id": 1,
+      "name": "Palco",
+      "cameras": [
+        "CAM03"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Meio do salão",
+      "cameras": [
+        "CAM03"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Fundo do salão (CAM 04)",
+      "cameras": [
+        "CAM04"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Fliperama",
+      "cameras": [
+        "CAM07"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Recepção",
+      "cameras": [
+        "CAM02"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "VIP 1",
+      "cameras": [
+        "CAM05"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "VIP 2",
+      "cameras": [
+        "CAM06"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Saída da recepção",
+      "cameras": [
+        "CAM02"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Lojinha",
+      "cameras": [
+        "CAM01"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Estoque",
+      "cameras": [
+        "CAM08"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Saída do estoque",
+      "cameras": [
+        "CAM08"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Porta esquerda da sala de controle",
+      "cameras": []
+    },
+    {
+      "id": 13,
+      "name": "Sala de controle (ataque)",
+      "cameras": []
+    },
+    {
+      "id": 14,
+      "name": "Corredor central — frente",
+      "cameras": []
+    },
+    {
+      "id": 15,
+      "name": "Corredor central — fundo",
+      "cameras": []
+    },
+    {
+      "id": 16,
+      "name": "Serviço (Parts & Service)",
+      "cameras": [
+        "CAM09"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Cozinha",
+      "cameras": [
+        "CAM10"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Retirada de comida",
+      "cameras": [
+        "CAM11"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "Corredor da CAM 12",
+      "cameras": [
+        "CAM12"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Sala da Nath",
+      "cameras": []
+    },
+    {
+      "id": 21,
+      "name": "Elétrica",
+      "cameras": []
+    },
+    {
+      "id": 22,
+      "name": "Saída do corredor",
+      "cameras": []
+    },
+    {
+      "id": 23,
+      "name": "Ponto cego do salão principal",
+      "cameras": []
+    },
+    {
+      "id": 24,
+      "name": "Banheiro — esconderijo da Gatinha",
+      "cameras": []
+    },
+    {
+      "id": 25,
+      "name": "Escondida na VIP 2",
+      "cameras": []
+    }
+  ],
+  "edges": [
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      2,
+      19
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      3,
+      23
+    ],
+    [
+      3,
+      24
+    ],
+    [
+      4,
+      24
+    ],
+    [
+      5,
+      8
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      7,
+      14
+    ],
+    [
+      7,
+      25
+    ],
+    [
+      8,
+      11
+    ],
+    [
+      8,
+      22
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      10,
+      12
+    ],
+    [
+      10,
+      14
+    ],
+    [
+      11,
+      22
+    ],
+    [
+      12,
+      13
+    ],
+    [
+      13,
+      14
+    ],
+    [
+      14,
+      15
+    ],
+    [
+      14,
+      25
+    ],
+    [
+      15,
+      16
+    ],
+    [
+      15,
+      17
+    ],
+    [
+      15,
+      18
+    ],
+    [
+      15,
+      19
+    ],
+    [
+      16,
+      17
+    ],
+    [
+      17,
+      18
+    ],
+    [
+      19,
+      20
+    ],
+    [
+      19,
+      21
+    ],
+    [
+      19,
+      22
+    ]
+  ],
+  "stage": 1,
+  "office": 13,
+  "left": 12,
+  "front": 14,
+  "back": 15,
+  "leftApproach": 10,
+  "capacities": {
+    "12": 1,
+    "14": 2,
+    "15": 3
+  },
+  "gateEdges": {
+    "G02": [[7, 14], [25, 14]],
+    "G06": [[2, 19]],
+    "G01": [
+      [
+        14,
+        13
+      ]
+    ],
+    "leftDoor": [
+      [
+        12,
+        13
+      ]
+    ]
+  },
+  "otherGateEdges": null,
+  "maxClosedMapGates": 3
+}

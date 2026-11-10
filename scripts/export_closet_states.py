@@ -130,7 +130,7 @@ def closed_gate(base):
     return Image.alpha_composite(base, shutter)
 
 
-def export(output):
+def room_art(base):
     base = load(CLOSET / "door-slats.png")
     images = OFFICE.parent
     master = load(images / "Cinco Nathzinhas no Escritório Neon.png").crop((0, 0, *base.size))
@@ -142,6 +142,21 @@ def export(output):
     platinada.putalpha(ImageChops.multiply(
         platinada.getchannel("A"), Image.composite(foreground, Image.new("L", base.size, 255), dark)
     ))
+    return room_layers
+
+
+def export_overflow(output):
+    layers = room_art(load(CLOSET / "door-slats.png"))
+    output.mkdir(parents=True, exist_ok=True)
+    # Only these portraits can follow the first three in the canonical art order.
+    for character in CHARACTERS[3:]:
+        layers[character].save(output / f"{character}.webp", lossless=True, method=6)
+
+
+def export(output):
+    base = load(CLOSET / "door-slats.png")
+    images = OFFICE.parent
+    room_layers = room_art(base)
     doorway_layers = {
         character: masked(load(images / name).crop((0, 0, *base.size)),
                           [[(541, 303), (698, 303), (698, 658), (541, 658)]], feather=3)
@@ -171,5 +186,9 @@ def export(output):
 if __name__ == "__main__":
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, nargs="?", default=CLOSET / "states")
+    parser.add_argument("--overflow-layers", action="store_true", help="Exporta apenas as camadas de ocupantes extras")
     args = parser.parse_args()
-    print(f"{export(args.output)} imagens exportadas para {args.output}")
+    if args.overflow_layers:
+        export_overflow(args.output)
+    else:
+        print(f"{export(args.output)} imagens exportadas para {args.output}")

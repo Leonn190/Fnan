@@ -1,0 +1,45 @@
+{
+  "jitter": {
+    "min": -1.5,
+    "max": 1.5
+  },
+  "weight": 1,
+  "backtrackFactor": 0.5,
+  "retryWindow": 3,
+  "failedIntervalFactor": 0.5,
+  "failedModifierRetention": 0.75,
+  "leftAttackChance": 75,
+  "leftApproachFactor": 0.45,
+  "retreat": {
+    "destinations": [
+      9,
+      6,
+      7
+    ],
+    "previous": {
+      "6": 15,
+      "7": 14,
+      "9": 10,
+      "11": 10
+    },
+    "intervalFactor": 1.5
+  },
+  "difficulty": {
+    "oddSteps": [
+      1,
+      3,
+      5,
+      7,
+      9
+    ],
+    "intervalReductionPerStep": 8,
+    "targetBonusLevels": [
+      2,
+      8
+    ],
+    "targetBonusIncreasePerStep": 40,
+    "abilityLevel": 4,
+    "reactionLevel": 6,
+    "reactionReduction": 11
+  }
+}

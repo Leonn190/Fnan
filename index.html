@@ -9,14 +9,28 @@
   <link rel="icon" type="image/svg+xml" href="./public/images/branding/favicon.svg">
   <link rel="stylesheet" href="./src/styles/main.css">
   <script defer src="./src/data/game-data.js"></script>
+  <script defer src="./src/config.js"></script>
+  <script defer src="./src/gameplay/routes.js"></script>
+  <script defer src="./src/gameplay/effects.js"></script>
+  <script defer src="./src/gameplay/threats.js"></script>
   <script defer src="./src/movement.js"></script>
+  <script defer src="./src/scene-art.js"></script>
   <script defer src="./src/map.js"></script>
   <script defer src="./src/sound.js"></script>
+  <script defer src="./src/night-menu.js"></script>
   <script defer src="./src/main.js"></script>
 </head>
 <body>
   <main class="entry-screen" id="entry-screen" aria-label="Entrada do jogo">
-    <button class="entry-button" id="enter-game" type="button">Jogar Nine Nights at Nath's</button>
+    <button class="entry-button" id="enter-game" type="button" disabled>Jogar Nine Nights at Nath's</button>
+    <div class="entry-config" id="local-config" hidden>
+      <label class="entry-config-picker">
+        Carregar pasta config
+        <input id="local-config-files" type="file" webkitdirectory>
+      </label>
+      <p id="local-config-status" role="status">Configuração padrão local.</p>
+    </div>
+    <p id="config-error" role="alert" hidden></p>
   </main>
 
   <main class="game title-screen" id="title-screen" aria-labelledby="game-title" hidden>
@@ -28,8 +42,21 @@
     <div class="feed-noise" aria-hidden="true"></div>
     <div class="title-content" lang="en">
       <h1 id="game-title">Nine<br>Nights<br>at Nath's</h1>
-      <button class="title-start" id="start-game" type="button"><span aria-hidden="true">&gt;&gt;</span> New Game</button>
+      <nav class="title-actions" aria-label="Modos de jogo">
+        <button class="title-start" id="start-game" type="button"><span aria-hidden="true">&gt;&gt;</span> New Game</button>
+        <button class="title-start" id="open-custom" type="button"><span aria-hidden="true">&gt;&gt;</span> Custom Night</button>
+      </nav>
     </div>
+    <section class="custom-night" id="custom-night" aria-labelledby="custom-title" hidden>
+      <h2 id="custom-title" lang="en">Custom Night</h2>
+      <form id="custom-form">
+        <div id="custom-levels"></div>
+        <div class="custom-actions">
+          <button type="button" id="close-custom">Voltar</button>
+          <button type="submit">Iniciar noite</button>
+        </div>
+      </form>
+    </section>
   </main>
 
   <main class="game" id="game" data-mode="office" hidden>
@@ -37,6 +64,7 @@
       <section class="office-view" id="office-view" aria-label="Escritório de segurança do restaurante">
         <div class="office-scene" id="office-scene">
           <img class="office-art" id="office-art" src="./public/images/office/states/open-dark.webp" alt="Escritório de segurança, portão principal aberto e corredor escuro" draggable="false">
+          <div class="corridor-characters" id="corridor-characters" aria-hidden="true"></div>
           <img class="clown-peek" id="clown-peek" src="./public/images/Palhaça Espiando no Armário Técnico.png" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
           <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa">
@@ -49,11 +77,14 @@
         </div>
         <div class="office-shading" aria-hidden="true"></div>
         <span class="office-reticle" aria-hidden="true"></span>
+        <button class="left-door-control" id="left-door" type="button" aria-keyshortcuts="Q" aria-pressed="false">PORTA ESQUERDA · ABERTA</button>
+        <button class="office-light-control" id="office-light" type="button" aria-keyshortcuts="F" aria-pressed="false">LANTERNA</button>
         <div class="office-location"><span class="location-dot"></span> ESCRITÓRIO DE SEGURANÇA <span class="location-sub">/ CONTROLE</span></div>
       </section>
 
       <section class="closet-view" id="closet-view" data-view="door" aria-label="Interior do armário técnico" aria-description="Olhe para os lados com o mouse, A e D ou as setas. Use W para a lanterna no fundo." tabindex="-1" hidden>
         <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
+        <div id="closet-extra" aria-hidden="true"></div>
         <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/seated-clown.png" alt="Palhaça dormindo no fundo do armário" fetchpriority="low" draggable="false" hidden>
         <button class="closet-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
         <button class="closet-light-toggle" id="closet-light" type="button" aria-label="Lanterna do armário" aria-keyshortcuts="W" aria-pressed="false" hidden>LANTERNA</button>
@@ -113,6 +144,7 @@
               <div class="feed-noise" aria-hidden="true"></div>
               <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
               <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
+              <div class="camera-static" id="camera-static" hidden aria-label="Sinal com interferência"></div>
               <div class="camera-offline" id="camera-offline" hidden><span>▣</span><strong>CÂMERAS INDISPONÍVEIS</strong><small>REINICIE O SISTEMA DE CÂMERAS NO PAINEL GERAL</small></div>
             </div>
             <div class="feed-heading">
@@ -164,16 +196,18 @@
       <div class="screen-grain" aria-hidden="true"></div>
 
       <header class="hud-top">
-        <div class="night-clock"><div class="clock-time" id="clock-label">12 <small>AM</small></div><span>NOITE <strong>01</strong></span></div>
+        <div class="night-clock"><div class="clock-time" id="clock-label">12 <small>AM</small></div><span id="night-mode">NOITE <strong>01</strong></span></div>
       </header>
 
+      <div class="threat-alert" id="threat-alert" role="status" hidden></div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
       <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR DA MESA PARA USAR O COMPUTADOR</div>
       <div class="movement-debug" id="movement-debug" hidden></div>
       <div class="closet-blackout" id="closet-blackout" aria-hidden="true"></div>
 
       <div class="shift-complete" id="shift-complete" hidden role="dialog" aria-modal="true" aria-label="Turno encerrado">
-        <div class="shift-light">✿</div><div class="shift-time">6:00 <small>AM</small></div><h2>O turno terminou.</h2><p>Primeira noite concluída.</p><button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
+        <div class="shift-light">✿</div><div class="shift-time" id="shift-time">6:00 <small>AM</small></div><h2>O turno terminou.</h2><p>Noite concluída.</p><button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
+        <button type="button" id="complete-menu">VOLTAR AO MENU</button>
       </div>
     </div>
 
@@ -186,8 +220,9 @@
     <section class="game-over" id="game-over" aria-labelledby="game-over-title" hidden>
       <div class="feed-noise" aria-hidden="true"></div>
       <div class="game-over-content">
-        <p class="game-over-status">SINAL PERDIDO</p>
+        <p class="game-over-status" id="game-over-status">SINAL PERDIDO</p>
         <h2 id="game-over-title" lang="en">GAME OVER</h2>
+        <button class="game-over-return" id="retry-night" type="button">TENTAR NOVAMENTE</button>
         <button class="game-over-return" id="return-to-menu" type="button">VOLTAR AO MENU</button>
       </div>
     </section>

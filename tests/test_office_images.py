@@ -1,8 +1,6 @@
 """Run python tests/test_office_images.py (Pillow); no image edits."""
-import json
-from itertools import combinations
 from pathlib import Path
-from PIL import Image, ImageChops, ImageDraw, ImageStat
+from PIL import Image, ImageChops, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 OFFICE = ROOT / 'public/images/office'
@@ -44,56 +42,20 @@ for character in ('original', 'maid', 'gotica', 'yandere', 'platinada'):
 
 print('PASS: office foreground, subdued corridor light and all five lit doorway variants.')
 
-folder = OFFICE / 'states/corridor'
-manifest = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
-characters = ('original', 'platinada', 'yandere', 'gotica', 'maid')
-assert manifest['characters'] == list(characters)
-assert (folder / manifest['base']).resolve() == OFFICE / 'states/open-lit.webp'
+with Image.open(OFFICE / 'states/corridor-atlas.webp') as atlas:
+    assert atlas.mode == 'RGBA'
+    assert atlas.size == (1320, 1320)
+    alpha = atlas.getchannel('A')
+    for character in range(5):
+        bounds = []
+        for slot in range(5):
+            x, y = 264 * character, 264 * slot
+            tile = alpha.crop((x, y, x + 264, y + 264))
+            bounds.append(tile.getbbox())
+        assert all(bounds)
+        assert max(bounds[i][3] for i in range(3)) < min(bounds[i][3] for i in range(3, 5))
 
-expected = {}
-for size in range(len(characters) + 1):
-    for group in combinations(characters, size):
-        key = f"corridor__{'-'.join(group) or 'vazio'}.webp"
-        if group:
-            expected[key] = (None, group)
-        for door in characters:
-            if door not in group:
-                expected[f'leftdoor__{door}__{key}'] = (door, group)
-assert len(manifest['states']) == len(expected) == 111
-assert {state['file']: (state['leftdoor'], tuple(state['corridor']))
-        for state in manifest['states']} == expected
-assert {path.name for path in folder.glob('*.webp')} == set(expected)
-
-outside_beam = Image.new('L', original.size, 255)
-ImageDraw.Draw(outside_beam).ellipse((955, 233, 1221, 499), fill=0)
-outside_beam = Image.merge('RGB', (outside_beam,) * 3)
-doorway = {}
-for character in characters:
-    with Image.open(OFFICE / f'characters/doorway/{character}.webp') as layer:
-        doorway[character] = layer.convert('RGBA')
-
-corridor_views = {(): views['open-lit']}
-for name, (door, group) in expected.items():
-    if door:
-        continue
-    with Image.open(folder / name) as frame:
-        assert frame.size == original.size, name
-        occupied = frame.convert('RGB')
-    diff = ImageChops.difference(occupied, views['open-lit'])
-    assert diff.getbbox(), name
-    assert ImageChops.multiply(diff, outside_beam).getbbox() is None, name
-    corridor_views[group] = occupied
-
-for name, (door, group) in expected.items():
-    if not door:
-        continue
-    composed = corridor_views[group].convert('RGBA')
-    composed.alpha_composite(doorway[door])
-    with Image.open(folder / name) as frame:
-        assert frame.size == original.size, name
-        assert ImageChops.difference(frame.convert('RGB'), composed.convert('RGB')).getbbox() is None, name
-
-print('PASS: 31 corridor states and 80 left-door states, with exact pixels outside the allowed areas.')
+print('PASS: five corridor characters have distinct front and back slots in the published atlas.')
 
 # Compare the visible portraits to the reference art, allowing for WebP compression.
 closet_states = OFFICE / 'closet/states'
@@ -125,3 +87,10 @@ for gate in ('open', 'closed'):
         assert max(ImageStat.Stat(difference).mean) < 8, (gate, name)
 
 print('PASS: all closet room and doorway portraits match their character references for both gate states.')
+
+for character in ('yandere', 'platinada'):
+    with Image.open(OFFICE / f'closet/layers/{character}.webp') as layer:
+        assert layer.size == (1671, 941)
+        assert layer.mode == 'RGBA'
+        assert layer.getchannel('A').getbbox()
+print('PASS: the closet has overlay art for a fourth and fifth invader.')

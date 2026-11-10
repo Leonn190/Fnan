@@ -26,7 +26,7 @@ class SoundEngine {
     osc.start();
     this.ambient = {osc,gain};
   }
-  tone({frequency=330, endingFrequency=120, duration=.12, volume=.06, wave='triangle', delay=0}={}) {
+  tone({frequency=330, endingFrequency=120, duration=.12, volume=.06, wave='triangle', delay=0, output}={}) {
     if (!this.enabled || !this.context || this.context.state!=='running') return;
     const osc=this.context.createOscillator();
     const gain=this.context.createGain();
@@ -35,17 +35,30 @@ class SoundEngine {
     osc.frequency.setValueAtTime(frequency,t);
     osc.frequency.exponentialRampToValueAtTime(Math.max(40,endingFrequency),t+duration);
     gain.gain.setValueAtTime(.0001,t);
-    gain.gain.exponentialRampToValueAtTime(volume,t+.008);
+    gain.gain.exponentialRampToValueAtTime(volume,t+Math.min(.008,duration/2));
     gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
-    osc.connect(gain).connect(this.context.destination);
+    osc.connect(gain).connect(output ?? this.context.destination);
     osc.start(t);
     osc.stop(t+duration+.01);
   }
   monitor(){this.tone({frequency:160,endingFrequency:70,duration:.21,volume:.07,wave:'sawtooth'});}
   switch(){this.tone({frequency:520,endingFrequency:180,duration:.08,volume:.055,wave:'square'});}
-  lure(){
-    this.tone({frequency:740,endingFrequency:420,duration:.16,volume:.055,wave:'square'});
-    this.tone({frequency:520,endingFrequency:320,duration:.22,volume:.045,wave:'triangle',delay:.2});
+  lure(duration) {
+    if (!this.enabled || this.context.state !== 'running') return;
+    this.stopLure();
+    const output = this.context.createGain();
+    output.connect(this.context.destination);
+    this.lureOutput = output;
+    for (let delay = 0; delay < duration; delay += 1) {
+      this.tone({frequency:740,endingFrequency:420,duration:Math.min(.16,duration-delay),volume:.055,wave:'square',delay,output});
+      if (delay + .2 < duration) {
+        this.tone({frequency:520,endingFrequency:320,duration:Math.min(.22,duration-delay-.2),volume:.045,delay:delay+.2,output});
+      }
+    }
+  }
+  stopLure() {
+    this.lureOutput?.disconnect();
+    this.lureOutput = null;
   }
   finish(){this.tone({frequency:440,endingFrequency:660,duration:.55,volume:.06});}
   connectRadio(media) {

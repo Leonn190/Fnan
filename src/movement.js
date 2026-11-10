@@ -1,232 +1,242 @@
 (() => {
 'use strict';
-const { CAMERAS, VENUE, OFFICE } = window.NathGame;
-const MIN_MOVE_MS = 10_000;
-const CAST = [
-  { id: 'original', name: 'Padrão', start: 'salao' },
-  { id: 'yandere', name: 'Yandere', start: 'salao' },
-  { id: 'gotica', name: 'Gótica', start: 'salao' },
-  { id: 'platinada', name: 'Gatinha', start: 'nathzinha' },
-  { id: 'maid', name: 'Maid', start: 'servico' }
-];
 
-function containsPoint(polygon, x, y) {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const [ax, ay] = polygon[i];
-    const [bx, by] = polygon[j];
-    if ((ay > y) !== (by > y) && x < ax + (y - ay) * (bx - ax) / (by - ay)) inside = !inside;
+const { factor, uniform, weighted, createRoutes, createEffects, createThreats } = window.NathGame;
+
+function createMovement(config, { random = Math.random, emit = () => {} } = {}) {
+  const { map, movement, characters, night } = config;
+  const { left, leftApproach, office, front, back } = map;
+  const { difficulty, retreat } = movement;
+  const routes = createRoutes(map);
+  const winAt = night.secondsPerHour * night.hoursToWin;
+  let actors, effects, threats, input, now, outcome;
+
+  function interval(actor) {
+    const initial = actor.rule.initialStationaryAttempts !== undefined && actor.position === actor.rule.start;
+    const extra = actor.rule.extraIntervalReduction ?? 0;
+    const acceleration = initial ? actor.rule.initialIntervalReduction : 0;
+    const seconds = actor.interval * (actor.abilityTier ? factor(-extra) * factor(-acceleration) : 1)
+      + uniform(random, movement.jitter);
+    if (!(seconds > 0 && Number.isFinite(seconds))) throw new Error(`Intervalo inválido para ${actor.rule.name}.`);
+    return seconds;
   }
-  return inside;
-}
 
-function buildRoomGraph(venue) {
-  const graph = new Map(venue.rooms.map(room => [room.id, []]));
-  for (const { id, axis, at, start, end, type } of venue.openings) {
-    if (type !== 'livre' && type !== 'portao') continue;
-    const middle = (start + end) / 2;
-    // Sample 1 cm into each side of the opening in the measured floor plan.
-    const sides = [-.01, .01].map(offset => {
-      const [x, y] = axis === 'H' ? [middle, at + offset] : [at + offset, middle];
-      return venue.rooms.filter(room => containsPoint(room.points, x, y));
+  function reset(levels = {}, initialInput = {}) {
+    now = 0;
+    outcome = null;
+    input = { ...initialInput, gates: new Set(initialInput.gates) };
+    actors = Object.entries(characters).map(([key, rule]) => {
+      const level = levels[key] ?? night.normalLevel;
+      const steps = difficulty.oddSteps.filter(step => level >= step).length;
+      const bonuses = difficulty.targetBonusLevels.filter(step => level >= step).length;
+      const allowed = new Set(rule.positions);
+      return {
+        key, rule, level, allowed, position: rule.start, previous: null, pending: null, stage: 0,
+        noise: 0, light: { advance: 0, retreat: 0 }, audioRetention: 1,
+        abilityTier: Number(level >= difficulty.abilityLevel),
+        interval: rule.interval * factor(-steps * difficulty.intervalReductionPerStep),
+        reaction: rule.reaction * (level >= difficulty.reactionLevel ? factor(-difficulty.reactionReduction) : 1),
+        targetBonus: rule.targetBonus * factor(bonuses * difficulty.targetBonusIncreasePerStep),
+        distance: routes.distances([rule.target], id => allowed.has(id))
+      };
     });
-    const [[from], [to]] = sides;
-    if (sides.some(side => side.length !== 1) || from === to) {
-      throw new Error(`[FNAN] A passagem ${id} precisa ligar duas salas distintas.`);
-    }
-    graph.get(from.id).push({ to: to.id, id, type });
-    graph.get(to.id).push({ to: from.id, id, type });
-  }
-  return graph;
-}
-
-const graph = buildRoomGraph(VENUE);
-const roomNames = new Map(VENUE.rooms.map(room => [room.id, room.name]));
-const roomCameras = new Map(VENUE.rooms.map(room => [room.id, CAMERAS.filter(cam => cam.room === room.id)]));
-const characterStateImages = cam => cam.characterStateImages ?? cam.stageStateImages ?? {};
-const officeCharacterImage = (phase, id) => `./public/images/office/characters/${phase}/${id}.webp`;
-
-function cameraStateKey(cam, occupants) {
-  if (!occupants.length) return 'vazia';
-  const states = characterStateImages(cam);
-  const ordered = CAST.map(({ id }) => id).filter(id => occupants.includes(id));
-  if (ordered.length !== occupants.length) return null;
-  const key = ordered.join('-');
-  if (key === cam.allCharacters?.join('-') && Object.hasOwn(states, 'todas')) return 'todas';
-  return Object.hasOwn(states, key) ? key : null;
-}
-
-function cameraStateVariants(cam, key) {
-  if (key === 'vazia') return cam.gateStateImages?.images ?? cam.image;
-  return characterStateImages(cam)[key];
-}
-
-function cameraFrame(cam, key, isGateClosed) {
-  const gates = cam.gateStateImages?.gates;
-  const gateKey = gates?.map(id => isGateClosed(id) ? 'closed' : 'open').join('-');
-  const variants = cameraStateVariants(cam, key);
-  return { key, gateKey, source: gates ? variants?.[gateKey] : variants };
-}
-
-function createMovement({ isGateClosed, imageStatus, random = Math.random, log = () => {} }) {
-  let cast;
-  const doorwayQueue = [];
-  const interval = () => MIN_MOVE_MS + random() * 4_000;
-  const occupants = room => cast.filter(actor => actor.room === room).map(actor => actor.id);
-  const location = (room, phase) => phase === 'doorway'
-    ? `${roomNames.get(room)} / porta lateral (P02)`
-    : roomNames.get(room);
-  const place = (room, phase) => roomCameras.get(room).map(cam => cam.id).join('/') || location(room, phase);
-
-  function checkImages(paths, label) {
-    let pending = false;
-    for (const path of paths) {
-      if (!path) return `ausência de imagem (${label})`;
-      const status = imageStatus(path);
-      if (status === 'missing') return `ausência de imagem (${label}: ${path})`;
-      pending ||= status === 'pending';
-    }
-    return pending ? `carregando imagem (${label})` : null;
+    for (const actor of actors) actor.due = interval(actor);
+    effects = createEffects(config, routes, actors);
+    threats = createThreats(config, { palhaca: levels.palhaca ?? night.normalLevel }, random, emit);
   }
 
-  function cameraIssue(room, ids) {
-    const cameras = roomCameras.get(room);
-    if (!cameras.length) return ids.length ? `ausência de imagem (${roomNames.get(room)} sem câmera)` : null;
-    let pending = null;
-    for (const cam of cameras) {
-      const key = cameraStateKey(cam, ids);
-      const variants = cameraStateVariants(cam, key);
-      const paths = cam.gateStateImages
-        ? Object.keys(cam.gateStateImages.images).map(gateKey => variants?.[gateKey])
-        : [variants];
-      const issue = checkImages(paths, `${cam.id}: ${key ?? ids.join('+')}`);
-      if (issue?.startsWith('ausência')) return issue;
-      pending ??= issue;
-    }
-    return pending;
+  function occupants(position) {
+    return actors.filter(actor => actor.position === position);
   }
 
-  function officeState() {
-    const office = cast.filter(actor => actor.room === OFFICE.room);
-    return {
-      room: office.filter(actor => actor.phase === 'room').map(actor => actor.id),
-      doorway: office.find(actor => actor.phase === 'doorway')?.id ?? null
-    };
+  function retreatChoice(actor) {
+    const candidates = [...retreat.destinations, ...(actor.rule.extraRetreat ?? [])].filter(id => actor.allowed.has(id));
+    return { to: weighted(random, candidates, () => 1), retreat: true };
   }
 
-  function edgeIssue(actor, edge) {
-    if (edge.type === 'portao' && isGateClosed(edge.id)) return `portão fechado (${edge.id})`;
-    const officeAccess = edge.to === OFFICE.room || actor.room === OFFICE.room;
-    if (officeAccess && edge.id !== OFFICE.doorwayPassage) return `ausência de imagem (porta ${edge.id})`;
-    if (edge.to === OFFICE.room) {
-      if (!OFFICE.doorwayCharacters.includes(actor.id)) return `passagem indisponível (${edge.id})`;
-      return checkImages(['doorway', 'room'].map(phase => officeCharacterImage(phase, actor.id)), 'escritório');
+  function choose(actor) {
+    if (actor.position === left) {
+      return random() * 100 < movement.leftAttackChance ? { to: office } : retreatChoice(actor);
     }
-    return cameraIssue(edge.to, [...occupants(edge.to), actor.id]);
+    if (actor.stage < actor.rule.initialStationaryAttempts) return { to: actor.position, stationary: true };
+    const choices = routes.neighbors.get(actor.position).filter(id => actor.allowed.has(id)
+      && !(actor.rule.initialStationaryAttempts !== undefined && id === actor.rule.start));
+    const distance = id => actor.distance.get(id) ?? Infinity;
+    const nearest = Math.min(...choices.map(distance));
+    const to = weighted(random, choices, id => movement.weight
+      * (id === actor.previous ? movement.backtrackFactor : 1)
+      * (distance(id) === nearest && Number.isFinite(nearest) ? factor(actor.targetBonus) : 1)
+      * effects.weight(actor, id, now));
+    return { to };
   }
 
-  function departureIssue(actor) {
-    return cameraIssue(actor.room, occupants(actor.room).filter(id => id !== actor.id));
+  function cameraObserves(position) {
+    return routes.positions.get(position).cameras.includes(input.camera);
   }
 
-  function joinDoorway(actor, choice) {
-    if (!doorwayQueue.includes(actor.id)) doorwayQueue.push(actor.id);
-    if (doorwayQueue[0] !== actor.id || officeState().doorway) {
-      return { reasons: ['fila da porta lateral (P02)'], waitingForDoor: true };
+  function transition(actor, choice, to) {
+    const from = actor.position;
+    actor.pending = null;
+    if (choice.stationary) actor.stage++;
+    else {
+      actor.previous = choice.retreat ? retreat.previous[to] : from;
+      actor.position = to;
     }
-    const issue = departureIssue(actor);
-    if (issue?.startsWith('carregando')) return { reasons: [issue] };
-    doorwayQueue.shift();
-    return issue ? { reasons: [issue] } : { choice };
+    actor.due = to === office ? Infinity : now + interval(actor) * (choice.retreat ? retreat.intervalFactor : 1);
+    emit('move', { actor, from, to });
+    if (to === office) threats.invade(actor, now);
+    if (actor.key === 'yandere' && to === config.threats.sabotage.position) threats.triggerSabotage(actor, now);
   }
 
-  function tryMove(actor) {
-    if (actor.phase === 'doorway') {
-      if (officeState().room.length >= 3) return { reasons: ['aguardando vaga dentro do escritório'] };
-      return { choice: { to: OFFICE.room, phase: 'room' } };
+  function tryPending(actor) {
+    const choice = actor.pending;
+    const from = actor.position;
+    const bypass = from === leftApproach && choice.to === left && occupants(office).length > 0;
+    const to = bypass ? office : choice.to;
+    const gate = choice.retreat || choice.stationary ? null : routes.gate(bypass ? left : from, to);
+    const observed = !effects.staticActive(now) && (cameraObserves(from) || cameraObserves(to)
+      || (bypass && cameraObserves(left)));
+    if (observed && actor.rule.staticChance && !choice.rolledStatic) {
+      choice.rolledStatic = true;
+      if (random() * 100 < actor.rule.staticChance[actor.abilityTier]) effects.triggerStatic(now);
     }
-    if (doorwayQueue.includes(actor.id)) {
-      const edge = graph.get(actor.room).find(edge => edge.id === OFFICE.doorwayPassage);
-      return joinDoorway(actor, { ...edge, phase: 'doorway' });
+    if (input.gates.has(gate) && actor.rule.doorChance && choice.rolledGate !== gate) {
+      choice.rolledGate = gate;
+      if (random() * 100 < actor.rule.doorChance[actor.abilityTier]) {
+        input.gates.delete(gate);
+        emit('openGate', gate);
+      }
     }
-    const reasons = [];
-    const choices = [];
-    for (const edge of graph.get(actor.room)) {
-      const issue = edgeIssue(actor, edge);
-      if (issue) reasons.push(issue);
-      else choices.push({ ...edge, phase: edge.to === OFFICE.room ? 'doorway' : null });
+    const touches = positions => positions.includes(from) || positions.includes(to);
+    const blockers = [
+      observed && !effects.staticActive(now) && 'câmera observada',
+      input.leftLook && (touches([left]) || bypass) && 'porta esquerda observada',
+      input.corridorLight && touches([front, back]) && 'corredor iluminado',
+      input.gates.has(gate) && 'porta fechada',
+      !choice.stationary && occupants(to).length >= (map.capacities[to] ?? Infinity) && 'posição lotada'
+    ].filter(Boolean);
+    if (blockers.length) {
+      choice.reason = blockers.join(' · ');
+      return false;
     }
-    if (reasons.some(reason => reason.startsWith('carregando')) || !choices.length) {
-      return { reasons: reasons.length ? reasons : ['ausência de caminho'] };
-    }
-
-    const choice = choices[Math.floor(random() * choices.length)];
-    if (choice.phase === 'doorway') return joinDoorway(actor, choice);
-    // Do not leave a camera with an unrepresentable combination behind.
-    const issue = actor.room === OFFICE.room ? null : departureIssue(actor);
-    return issue ? { reasons: [issue] } : { choice };
+    transition(actor, choice, to);
+    return true;
   }
 
-  function reset() {
-    doorwayQueue.length = 0;
-    cast = CAST.map(({ id, name, start }) => ({
-      id, name, room: start, phase: null, nextAttempt: interval(),
-      previousRoom: null, destination: null, reason: null
-    }));
-    for (const actor of cast) {
-      const issue = cameraIssue(actor.room, occupants(actor.room));
-      if (issue?.startsWith('ausência')) log(`${actor.name}: ${issue}`, true);
+  function settle() {
+    if (now >= winAt) {
+      outcome = 'win';
+      emit('win');
+      return;
     }
-  }
-
-  function advance(now, observedRoom) {
-    const changed = new Set();
-    const ready = cast.filter(actor => now >= actor.nextAttempt).sort((a, b) => a.nextAttempt - b.nextAttempt);
-    for (const actor of ready) {
-      if (actor.room === observedRoom) continue;
-      const { choice, reasons, waitingForDoor } = tryMove(actor);
-      if (!choice) {
-        const reason = [...new Set(reasons)].join(' · ');
-        if (reason !== actor.reason && reason.includes('ausência de imagem')) log(`${actor.name}: ${reason}`, true);
-        actor.reason = reason;
-        actor.destination = waitingForDoor ? location(OFFICE.room, 'doorway') : null;
-        const retrySoon = waitingForDoor || reasons.some(item => item.startsWith('carregando'));
-        actor.nextAttempt = now + (retrySoon ? 500 : MIN_MOVE_MS);
+    for (const actor of actors) {
+      if (actor.pending || actor.due > now) continue;
+      const choice = choose(actor);
+      if (choice.to === undefined) {
+        actor.due = now + interval(actor);
         continue;
       }
-      const from = place(actor.room, actor.phase);
-      changed.add(actor.room);
-      changed.add(choice.to);
-      if (actor.room !== choice.to) actor.previousRoom = actor.room;
-      actor.room = choice.to;
-      actor.phase = choice.phase;
-      actor.reason = null;
-      actor.destination = location(actor.room, actor.phase);
-      actor.nextAttempt = now + interval();
-      const states = roomCameras.get(actor.room).map(cam => cameraStateKey(cam, occupants(actor.room)));
-      const passage = choice.type === 'portao' ? `${choice.id} aberto` : choice.id ?? 'entrada pela P02';
-      log(`${actor.name}: ${from} → ${place(actor.room, actor.phase)} | ${passage} | estado: ${states.join('/') || actor.phase}`);
+      actor.pending = { ...choice, expires: now + movement.retryWindow };
     }
-    return changed;
+    // A traversal, a forced door or the onset of static can release other pending moves.
+    let changed;
+    do {
+      const staticBefore = effects.staticActive(now);
+      const gatesBefore = input.gates.size;
+      changed = false;
+      for (const actor of actors) if (actor.pending && tryPending(actor)) changed = true;
+      changed ||= staticBefore !== effects.staticActive(now) || gatesBefore !== input.gates.size;
+    } while (changed && actors.some(actor => actor.pending));
+    for (const actor of actors) {
+      if (!actor.pending || actor.pending.expires > now) continue;
+      actor.pending = null;
+      effects.retain(actor);
+      actor.due = now + movement.failedIntervalFactor * interval(actor);
+    }
+    threats.resolve(now, actor => {
+      const choice = retreatChoice(actor);
+      transition(actor, choice, choice.to);
+    }, source => {
+      outcome = 'loss';
+      emit('loss', source);
+    });
   }
 
-  function diagnostics(now, observedRoom) {
-    return cast.map(actor => ({
-      ...actor,
-      camera: roomCameras.get(actor.room).map(cam => cam.id).join('/') || 'sem câmera',
-      location: location(actor.room, actor.phase),
-      previous: roomNames.get(actor.previousRoom),
-      remaining: Math.max(0, actor.nextAttempt - now),
-      stopped: actor.room === observedRoom ? 'observação' : actor.reason ?? 'cooldown',
-      representation: actor.room === OFFICE.room ? null : cameraIssue(actor.room, occupants(actor.room))
-    }));
+  function integrate(until) {
+    const dt = until - now;
+    effects.integrate(dt, input);
+    threats.integrate(dt, input);
+    now = until;
+  }
+
+  function advance(until, nextInput, action) {
+    if (outcome) return;
+    while (true) {
+      const due = Math.min(winAt, threats.nextDeadline(now, input),
+        ...actors.map(actor => actor.pending?.expires ?? actor.due));
+      if (due >= until) break;
+      integrate(due);
+      settle();
+      if (outcome) return;
+    }
+    integrate(until);
+    const current = typeof nextInput === 'function' ? nextInput() : nextInput;
+    input = { ...current, gates: new Set(current.gates) };
+    let accepted = false;
+    switch (action?.type) {
+      case 'closetEnter':
+        threats.enterCloset(now);
+        break;
+      case 'closetExit':
+        threats.exitCloset();
+        effects.addNoiseEvent('closetRoundTrip');
+        break;
+      case 'cameraAudio':
+        accepted = effects.startAudio(now, input.camera);
+        break;
+      case 'gate':
+        if (action.id === 'leftDoor') effects.addNoiseEvent('workshopDoor');
+        if (action.closed && action.visible && random() * 100 < config.effects.static.gateClosingChance) {
+          effects.triggerStatic(now);
+        }
+        break;
+    }
+    settle();
+    return accepted;
+  }
+
+  function cameraActors(camera) {
+    return actors.filter(actor => actor.rule.cameras.includes(camera) && routes.positions.get(actor.position).cameras.includes(camera));
+  }
+
+  function diagnostics() {
+    return actors.map(actor => {
+      const position = routes.positions.get(actor.position);
+      return {
+        id: actor.rule.artId, key: actor.key, name: actor.rule.name, trackable: actor.rule.trackable,
+        position: actor.position, level: actor.level, location: position.name,
+        camera: position.cameras.join('/') || 'sem câmera',
+        previous: routes.positions.get(actor.previous)?.name,
+        destination: routes.positions.get(actor.pending?.to)?.name,
+        remaining: Math.max(0, (actor.pending?.expires ?? actor.due) - now),
+        stopped: actor.pending?.reason ?? (actor.position === office ? 'invasão' : 'intervalo'),
+        light: { ...actor.light }, noise: actor.noise, audioRetention: actor.audioRetention
+      };
+    });
   }
 
   reset();
-  return { advance, reset, occupants, officeState, diagnostics };
+  return {
+    reset, advance, cameraActors, diagnostics,
+    officeState: () => ({
+      room: occupants(office).map(actor => actor.rule.artId),
+      doorway: occupants(left)[0]?.rule.artId ?? null,
+      front: occupants(front).map(actor => actor.rule.artId),
+      back: occupants(back).map(actor => actor.rule.artId)
+    }),
+    snapshot: () => ({ now, outcome, ...threats.snapshot(now), audio: effects.audioStatus(now), static: effects.staticActive(now) })
+  };
 }
 
-Object.assign(window.NathGame, {
-  buildRoomGraph, createMovement, cameraStateKey, cameraFrame, characterStateImages, officeCharacterImage
-});
+window.NathGame.createMovement = createMovement;
 })();

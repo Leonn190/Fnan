@@ -1,0 +1,55 @@
+{
+  "cameraAudio": {
+    "duration": 7,
+    "cooldown": 12,
+    "factors": [
+      1,
+      1,
+      0.15
+    ],
+    "excluded": [
+      8,
+      11,
+      22,
+      23,
+      24,
+      25
+    ]
+  },
+  "static": {
+    "duration": 2.5,
+    "gateClosingChance": 100
+  },
+  "flashlight": {
+    "rates": {
+      "gotica": {
+        "advance": -4,
+        "retreat": 4
+      },
+      "yandere": {
+        "advance": -4,
+        "retreat": 4
+      },
+      "gatinha": {
+        "advance": 6,
+        "retreat": 0
+      }
+    },
+    "min": -90,
+    "max": 90,
+    "recovery": 1.5
+  },
+  "noise": {
+    "rates": {
+      "radio": 3,
+      "computer": 1.5,
+      "viewMoving": 0.2
+    },
+    "events": {
+      "closetRoundTrip": 15,
+      "workshopDoor": 10
+    },
+    "decay": 2,
+    "max": null
+  }
+}

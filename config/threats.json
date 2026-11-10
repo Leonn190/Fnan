@@ -1,0 +1,60 @@
+{
+  "attack": {
+    "stay": 5.5,
+    "lateStay": 8.5,
+    "lateThreshold": 0.8,
+    "jitter": {
+      "min": -2.5,
+      "max": 2.5
+    }
+  },
+  "clown": {
+    "name": "Palhaça",
+    "initial": 1,
+    "min": 1,
+    "max": 100,
+    "stages": [
+      1,
+      20,
+      50,
+      80
+    ],
+    "entryDeathAbove": 80,
+    "floorPerEntry": 10,
+    "growth": 0.8,
+    "closetGrowthFactor": 3,
+    "musicReduction": 2,
+    "growthIncreasePerLevel": 10
+  },
+  "sabotage": {
+    "position": 21,
+    "systems": {
+      "cameras": 1,
+      "portas": 1,
+      "audio": 1,
+      "ventilacao": 1
+    },
+    "countWeights": [
+      {
+        "1": 75,
+        "2": 25
+      },
+      {
+        "1": 51,
+        "2": 39,
+        "3": 10
+      }
+    ],
+    "duration": null,
+    "effects": {
+      "cameras": null,
+      "portas": null,
+      "audio": null,
+      "ventilacao": {
+        "deadline": 25,
+        "repair": null,
+        "autoEnd": null
+      }
+    }
+  }
+}
