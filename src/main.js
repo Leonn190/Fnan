@@ -23,7 +23,7 @@ const startGame = $('#start-game');
 const menuMusic = $('#menu-music');
 const radioMusic = $('#radio-music');
 const dom = {
-  game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'), desktop: $('#computer-desktop'), systems: $('#systems-view'),
+  game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'), desktop: $('#computer-desktop'),
   playfield: $('#playfield'), scareArt: $('#jumpscare-art'),
   gameOver: $('#game-over'), returnToMenu: $('#return-to-menu'), scareSound: $('#jumpscare-sound'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
@@ -34,15 +34,26 @@ const dom = {
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
   camNumber: $('#cam-number'), flash: $('#camera-switch-flash'), cameraOffline: $('#camera-offline'), cameraAudio: $('#camera-audio'),
-  openCameras: $('#open-cameras'), openSystems: $('#open-systems'), systemsGrid: $('#systems-grid'), locatorGrid: $('#locator-grid'),
+  systemsGrid: $('#systems-grid'), locatorGrid: $('#locator-grid'),
   restartAllSystems: $('#restart-all-systems'), restartAllLocators: $('#restart-all-locators'),
-  closeCameras: $('#close-cameras'), closeDesktop: $('#close-desktop'), closeSystems: $('#close-systems'),
-  taskbarCameras: $('#taskbar-cameras'), taskbarSystems: $('#taskbar-systems'), openStart: $('#open-start'),
+  closeDesktop: $('#close-desktop'), openStart: $('#open-start'), startMenu: $('#start-menu'),
+  taskTime: $('#task-time'), taskDate: $('#task-date'),
   clock: $('#clock-label'),
   hint: $('#initial-hint'),
   toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift'),
   debug: $('#movement-debug')
 };
+
+const desktopApps = Object.fromEntries(['cameras', 'systems'].map(id => [id, {
+  panel: $('#' + id + '-view'),
+  task: $('#taskbar-' + id),
+  titlebar: $('#' + id + '-titlebar'),
+  maximize: $('#maximize-' + id),
+  open: false
+}]));
+const desktopTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const desktopDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+let lastDesktopMinute;
 
 const HOURS_PER_SHIFT = 6;
 const SECONDS_PER_HOUR = 90;
@@ -450,11 +461,15 @@ function setMode(mode, withSound = true) {
   state.mode = mode;
   dom.game.dataset.mode = mode;
   dom.office.hidden = mode !== 'office';
-  dom.cameras.hidden = !watching;
   dom.closet.hidden = !hiding;
-  dom.desktop.hidden = !['desktop', 'cameras', 'systems'].includes(mode);
-  dom.systems.hidden = mode !== 'systems';
-  dom.desktop.dataset.activeApp = ['cameras', 'systems'].includes(mode) ? mode : 'desktop';
+  dom.desktop.hidden = mode !== 'desktop' && !Object.hasOwn(desktopApps, mode);
+  setStartMenu(false);
+  if (dom.desktop.hidden) {
+    for (const app of Object.values(desktopApps)) resetApp(app);
+  } else {
+    updateDesktopClock();
+  }
+  renderDesktopApps();
   dom.hint.hidden = true;
   state.dragging = false;
   state.pointerX = null;
@@ -481,12 +496,77 @@ function openComputer() {
 }
 
 function closeComputer() {
-  if (state.mode !== 'desktop') return;
+  if (dom.desktop.hidden || state.complete) return;
   setMode('office');
+  dom.officeMonitor.focus({ preventScroll: true });
 }
 
-function minimizeApp() {
-  if (state.mode === 'cameras' || state.mode === 'systems') setMode('desktop');
+function updateDesktopClock() {
+  const now = new Date();
+  const minute = Math.floor(now.getTime() / 60_000);
+  if (minute === lastDesktopMinute) return;
+  lastDesktopMinute = minute;
+  dom.taskTime.textContent = dom.taskTime.dateTime = desktopTime.format(now);
+  const date = desktopDate.format(now);
+  dom.taskDate.textContent = date;
+  dom.taskDate.dateTime = date.split('/').reverse().join('-');
+}
+
+function setStartMenu(open) {
+  dom.startMenu.hidden = !open;
+  dom.openStart.setAttribute('aria-expanded', String(open));
+}
+
+function renderDesktopApps() {
+  for (const [id, app] of Object.entries(desktopApps)) {
+    const active = state.mode === id;
+    app.task.setAttribute('aria-pressed', String(active));
+    if (active) app.panel.dataset.active = '';
+    else delete app.panel.dataset.active;
+    if (app.open) app.task.dataset.open = '';
+    else delete app.task.dataset.open;
+  }
+}
+
+function showApp(id) {
+  if (state.complete || dom.desktop.hidden) return;
+  const app = desktopApps[id];
+  const fromStart = !dom.startMenu.hidden;
+  setStartMenu(false);
+  app.open = true;
+  app.panel.hidden = false;
+  setMode(id);
+  if (fromStart) app.task.focus({ preventScroll: true });
+}
+
+function setMaximized(app, maximized) {
+  if (maximized) app.panel.dataset.maximized = '';
+  else delete app.panel.dataset.maximized;
+  const label = maximized ? 'Restaurar janela' : 'Maximizar janela';
+  app.maximize.title = label;
+  app.maximize.setAttribute('aria-label', label);
+}
+
+function resetApp(app) {
+  app.open = false;
+  app.panel.hidden = true;
+  setMaximized(app, false);
+  app.panel.style.setProperty('--window-x', '');
+  app.panel.style.setProperty('--window-y', '');
+}
+
+function hideApp(id, close = false) {
+  const app = desktopApps[id];
+  if (!app || state.complete) return;
+  if (close) resetApp(app);
+  else app.panel.hidden = true;
+  if (state.mode === id) {
+    const nextApp = Object.keys(desktopApps).find(key => !desktopApps[key].panel.hidden);
+    setMode(nextApp ?? 'desktop');
+  } else {
+    renderDesktopApps();
+  }
+  app.task.focus({ preventScroll: true });
 }
 
 function updateRadioMix() {
@@ -766,6 +846,7 @@ function tick(now) {
     }
     if (now >= nextHudUpdate) {
       updateClockUI();
+      if (!dom.desktop.hidden) updateDesktopClock();
       updateMovementDebug();
       nextHudUpdate = now + 200;
     }
@@ -792,16 +873,58 @@ radioMusic.addEventListener('pause', () => { if (radioMusic.paused) state.radioP
 radioMusic.addEventListener('error', stopRadio);
 dom.closetExit.addEventListener('click', () => beginClosetTransition('exit'));
 dom.closetLight.addEventListener('click', toggleClosetLight);
-dom.openCameras.addEventListener('click', () => setMode('cameras'));
-dom.openSystems.addEventListener('click', () => setMode('systems'));
-dom.taskbarCameras.addEventListener('click', () => state.mode === 'cameras' ? minimizeApp() : setMode('cameras'));
-dom.taskbarSystems.addEventListener('click', () => state.mode === 'systems' ? minimizeApp() : setMode('systems'));
-dom.openStart.addEventListener('click', () => setMode('desktop'));
+for (const [id, app] of Object.entries(desktopApps)) {
+  $('#open-' + id).addEventListener('click', () => showApp(id));
+  $('#start-' + id).addEventListener('click', () => showApp(id));
+  app.task.addEventListener('click', () => state.mode === id ? hideApp(id) : showApp(id));
+  app.panel.addEventListener('pointerdown', () => showApp(id));
+  app.panel.addEventListener('focusin', () => showApp(id));
+  $('#minimize-' + id).addEventListener('click', () => hideApp(id));
+  $('#close-' + id).addEventListener('click', () => hideApp(id, true));
+
+  const toggleMaximized = () => setMaximized(app, app.panel.dataset.maximized === undefined);
+  app.maximize.addEventListener('click', toggleMaximized);
+  app.titlebar.addEventListener('dblclick', event => {
+    if (!event.target.closest('button')) toggleMaximized();
+  });
+
+  let drag;
+  app.titlebar.addEventListener('pointerdown', event => {
+    if (!event.isPrimary || event.button !== 0 || event.target.closest('button')
+        || app.panel.dataset.maximized !== undefined) return;
+    drag = {
+      pointer: event.pointerId,
+      x: event.clientX - app.panel.offsetLeft,
+      y: event.clientY - app.panel.offsetTop
+    };
+    app.titlebar.setPointerCapture(event.pointerId);
+  });
+  app.titlebar.addEventListener('pointermove', event => {
+    if (drag?.pointer !== event.pointerId) return;
+    const workspace = app.panel.parentElement;
+    const x = Math.max(0, Math.min(workspace.clientWidth - app.panel.offsetWidth, event.clientX - drag.x));
+    const y = Math.max(0, Math.min(workspace.clientHeight - app.panel.offsetHeight, event.clientY - drag.y));
+    app.panel.style.setProperty('--window-x', x + 'px');
+    app.panel.style.setProperty('--window-y', y + 'px');
+  });
+  app.titlebar.addEventListener('lostpointercapture', () => { drag = null; });
+}
+dom.openStart.addEventListener('click', () => {
+  const open = dom.startMenu.hidden;
+  setStartMenu(open);
+  if (open) $('#start-cameras').focus({ preventScroll: true });
+});
+dom.desktop.addEventListener('pointerdown', event => {
+  if (!dom.startMenu.hidden && !event.target.closest('#start-menu, #open-start')) setStartMenu(false);
+});
+$('#show-desktop').addEventListener('click', () => {
+  if (state.complete) return;
+  for (const app of Object.values(desktopApps)) app.panel.hidden = true;
+  setStartMenu(false);
+  setMode('desktop');
+});
 dom.cameraAudio.addEventListener('click', playCameraAudio);
-(document.querySelectorAll?.('[data-computer-home]') ?? []).forEach(button => button.addEventListener('click', () => setMode('desktop')));
-dom.closeCameras.addEventListener('click', minimizeApp);
 dom.closeDesktop.addEventListener('click', closeComputer);
-dom.closeSystems.addEventListener('click', minimizeApp);
 dom.systemsGrid.addEventListener('click', event => {
   const button = event.target.closest('[data-restart-system]');
   if (!button) return;
@@ -887,7 +1010,6 @@ document.addEventListener('keydown', event => {
     return;
   }
   if (state.closetTransition) return;
-  const focusedButton = event.target instanceof Element && Boolean(event.target.closest('button, [role="button"]'));
   if (state.mode === 'closet') {
     if (key === 'w') {
       event.preventDefault();
@@ -903,14 +1025,18 @@ document.addEventListener('keydown', event => {
       updateOfficeView();
     }
   } else if (key === 'escape') {
-    if (state.mode === 'cameras' || state.mode === 'systems') {
+    if (!dom.startMenu.hidden) {
       event.preventDefault();
-      minimizeApp();
+      setStartMenu(false);
+      dom.openStart.focus({ preventScroll: true });
+    } else if (Object.hasOwn(desktopApps, state.mode)) {
+      event.preventDefault();
+      hideApp(state.mode);
     } else if (state.mode === 'desktop') {
       event.preventDefault();
       closeComputer();
     }
-  } else if (key === 'arrowleft' || key === 'arrowright') {
+  } else if ((state.mode === 'cameras' || state.mode === 'office') && (key === 'arrowleft' || key === 'arrowright')) {
     event.preventDefault();
     if (state.mode === 'cameras') cycleCamera(key === 'arrowright' ? 1 : -1);
     else {

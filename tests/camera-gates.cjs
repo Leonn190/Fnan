@@ -140,7 +140,38 @@ window.fire('blur'); office('dark');
 pressF(); office('lit');
 nodes['office-monitor'].fire('click');
 assert.equal(nodes['computer-desktop'].hidden, false);
+assert.equal(nodes['cameras-view'].hidden, true);
+assert.equal(nodes['systems-view'].hidden, true);
+assert.match(nodes['task-time'].textContent, /^\d{2}:\d{2}$/);
+assert.match(nodes['task-date'].textContent, /^\d{2}\/\d{2}\/\d{4}$/);
+
+// The taskbar keeps minimized apps open and restores their window state.
+nodes['open-cameras'].fire('click');
+nodes['maximize-cameras'].fire('click');
+nodes['open-systems'].fire('click');
+assert.equal(nodes['cameras-view'].hidden, false);
+assert.equal(nodes['taskbar-systems'].attrs['aria-pressed'], 'true');
+nodes['minimize-systems'].fire('click');
+assert.equal(nodes['systems-view'].hidden, true);
+assert(Object.hasOwn(nodes['taskbar-systems'].dataset, 'open'));
+assert.equal(nodes['taskbar-cameras'].attrs['aria-pressed'], 'true');
+nodes['taskbar-cameras'].fire('click');
+assert.equal(nodes.game.dataset.mode, 'desktop');
+nodes['taskbar-cameras'].fire('click');
+assert(Object.hasOwn(nodes['cameras-view'].dataset, 'maximized'));
+nodes['close-cameras'].fire('click');
+assert(!Object.hasOwn(nodes['taskbar-cameras'].dataset, 'open'));
+
+nodes['open-start'].fire('click');
+assert.equal(nodes['start-menu'].hidden, false);
+nodes['start-systems'].fire('click');
+assert.equal(nodes['start-menu'].hidden, true);
+assert.equal(nodes['systems-view'].hidden, false);
+nodes['show-desktop'].fire('click');
+assert.equal(nodes['systems-view'].hidden, true);
+nodes['close-systems'].fire('click');
 nodes['open-cameras'].fire('click'); office('dark');
+assert(!Object.hasOwn(nodes['cameras-view'].dataset, 'maximized'));
 pressF(); office('dark');
 camera('CAM05'); check('open-open');
 // Corrected visual mapping: screen-left G04; screen-right G05.
