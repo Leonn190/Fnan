@@ -25,13 +25,5 @@
     "leftPanFraction": 0.55,
     "corridorPanFraction": 0.5
   },
-  "unillustratedCameraPositions": [8, 11],
-  "trackingRooms": {
-    "12": "controle",
-    "13": "controle",
-    "14": "corredor_servico",
-    "15": "corredor_servico",
-    "20": "nathzinha",
-    "21": "eletrica"
-  }
+  "unillustratedCameraPositions": [8, 11]
 }

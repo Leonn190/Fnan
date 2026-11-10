@@ -266,15 +266,7 @@ window.NathGame.localConfig = {
     "unillustratedCameraPositions": [
       8,
       11
-    ],
-    "trackingRooms": {
-      "12": "controle",
-      "13": "controle",
-      "14": "corredor_servico",
-      "15": "corredor_servico",
-      "20": "nathzinha",
-      "21": "eletrica"
-    }
+    ]
   },
   "effects": {
     "cameraAudio": {

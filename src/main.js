@@ -244,11 +244,9 @@ function advanceRestarts(now) {
 }
 
 function trackedActors() {
-  return movement.diagnostics().filter(actor => actor.trackable && locatorOnline(actor.id)).map(actor => {
-    const camera = CAMERAS.find(cam => actor.camera.split('/').includes(cam.id));
-    const room = camera?.room ?? controls.trackingRooms[actor.position];
-    return { ...LOCATORS.find(locator => locator.id === actor.id), room };
-  });
+  return movement.diagnostics()
+    .filter(actor => actor.trackable && locatorOnline(actor.id))
+    .map(({ id, position }) => ({ ...LOCATORS.find(locator => locator.id === id), position }));
 }
 
 function refreshComputerState() {
@@ -589,8 +587,9 @@ function resetApp(app) {
   app.open = false;
   app.panel.hidden = true;
   setMaximized(app, false);
-  app.panel.style.setProperty('--window-x', '');
-  app.panel.style.setProperty('--window-y', '');
+  for (const property of ['--window-x', '--window-y', '--resized-width', '--resized-height']) {
+    app.panel.style.setProperty(property, '');
+  }
 }
 
 function hideApp(id, close = false) {
@@ -1007,7 +1006,6 @@ for (const [id, app] of Object.entries(desktopApps)) {
   $('#open-' + id).addEventListener('click', () => showApp(id));
   $('#start-' + id).addEventListener('click', () => showApp(id));
   app.task.addEventListener('click', () => state.mode === id ? hideApp(id) : showApp(id));
-  app.panel.addEventListener('pointerdown', () => showApp(id));
   app.panel.addEventListener('focusin', () => showApp(id));
   $('#minimize-' + id).addEventListener('click', () => hideApp(id));
   $('#close-' + id).addEventListener('click', () => hideApp(id, true));
@@ -1018,26 +1016,77 @@ for (const [id, app] of Object.entries(desktopApps)) {
     if (!event.target.closest('button')) toggleMaximized();
   });
 
-  let drag;
-  app.titlebar.addEventListener('pointerdown', event => {
-    if (!event.isPrimary || event.button !== 0 || event.target.closest('button')
-        || app.panel.dataset.maximized !== undefined) return;
-    drag = {
+  const { panel, titlebar } = app;
+  for (const edge of ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se']) {
+    const handle = document.createElement('div');
+    handle.className = 'window-resize';
+    handle.dataset.resize = edge;
+    handle.setAttribute('aria-hidden', 'true');
+    panel.append(handle);
+  }
+
+  let gesture;
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  panel.addEventListener('pointerdown', event => {
+    showApp(id);
+    if (state.complete || gesture || !event.isPrimary || event.button !== 0
+        || panel.dataset.maximized !== undefined) return;
+    const edge = event.target.dataset.resize;
+    if (!edge && (!titlebar.contains(event.target) || event.target.closest('button'))) return;
+
+    const { offsetLeft: left, offsetTop: top, offsetWidth: width, offsetHeight: height } = panel;
+    gesture = {
       pointer: event.pointerId,
-      x: event.clientX - app.panel.offsetLeft,
-      y: event.clientY - app.panel.offsetTop
+      x: event.clientX,
+      y: event.clientY,
+      edge,
+      left, top, right: left + width, bottom: top + height
     };
-    app.titlebar.setPointerCapture(event.pointerId);
+    const handle = edge ? event.target : titlebar;
+    handle.setPointerCapture(event.pointerId);
   });
-  app.titlebar.addEventListener('pointermove', event => {
-    if (drag?.pointer !== event.pointerId) return;
-    const workspace = app.panel.parentElement;
-    const x = Math.max(0, Math.min(workspace.clientWidth - app.panel.offsetWidth, event.clientX - drag.x));
-    const y = Math.max(0, Math.min(workspace.clientHeight - app.panel.offsetHeight, event.clientY - drag.y));
-    app.panel.style.setProperty('--window-x', x + 'px');
-    app.panel.style.setProperty('--window-y', y + 'px');
+  panel.addEventListener('pointermove', event => {
+    if (gesture?.pointer !== event.pointerId || panel.hidden || dom.desktop.hidden
+        || state.complete || panel.dataset.maximized !== undefined) return;
+    const { clientWidth, clientHeight } = panel.parentElement;
+    const { edge, x, y } = gesture;
+    const dx = event.clientX - x;
+    const dy = event.clientY - y;
+    let { left, top, right, bottom } = gesture;
+    if (!edge) {
+      panel.style.setProperty('--window-x', clamp(left + dx, 0, clientWidth - panel.offsetWidth) + 'px');
+      panel.style.setProperty('--window-y', clamp(top + dy, 0, clientHeight - panel.offsetHeight) + 'px');
+      return;
+    }
+    if (edge.includes('w') || edge.includes('e')) {
+      if (edge.includes('w')) {
+        right = Math.min(right, clientWidth);
+        left = clamp(left + dx, 0, Math.max(0, right - 300));
+      } else {
+        left = Math.min(left, Math.max(0, clientWidth - 300));
+        right = clamp(right + dx, left + 300, clientWidth);
+      }
+      panel.style.setProperty('--window-x', left + 'px');
+      panel.style.setProperty('--resized-width', right - left + 'px');
+    }
+    if (edge.includes('n') || edge.includes('s')) {
+      if (edge.includes('n')) {
+        bottom = Math.min(bottom, clientHeight);
+        top = clamp(top + dy, 0, Math.max(0, bottom - 200));
+      } else {
+        top = Math.min(top, Math.max(0, clientHeight - 200));
+        bottom = clamp(bottom + dy, top + 200, clientHeight);
+      }
+      panel.style.setProperty('--window-y', top + 'px');
+      panel.style.setProperty('--resized-height', bottom - top + 'px');
+    }
   });
-  app.titlebar.addEventListener('lostpointercapture', () => { drag = null; });
+  const endGesture = event => {
+    if (gesture?.pointer === event.pointerId) gesture = null;
+  };
+  panel.addEventListener('pointerup', endGesture);
+  panel.addEventListener('pointercancel', endGesture);
+  panel.addEventListener('lostpointercapture', endGesture);
 }
 dom.openStart.addEventListener('click', () => {
   const open = dom.startMenu.hidden;

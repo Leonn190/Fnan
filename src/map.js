@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const { CAMERAS, VENUE } = window.NathGame;
+const { CAMERAS, VENUE, TRACKING_POINTS } = window.NathGame;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCALE = 10.5;
@@ -28,11 +28,6 @@ function bindMapButton(node, activate) {
 function setGateClosed(gate, closed) {
   gate.classList.toggle('closed', closed);
   gate.setAttribute('aria-pressed', String(closed));
-}
-
-function roomCenter(room) {
-  const [sumX, sumY] = room.points.reduce(([x, y], point) => [x + point[0], y + point[1]], [0, 0]);
-  return [sumX / room.points.length, sumY / room.points.length];
 }
 
 function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGatesChange = () => {} }) {
@@ -101,7 +96,6 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
   }
 
   const trackingLayer = makeSvg('g', { class: 'map-tracking', 'aria-hidden': 'true' });
-  svg.append(trackingLayer);
 
   const cameraNodes = new Map();
   for (const cam of CAMERAS) {
@@ -131,7 +125,7 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
   }
 
   // The gate targets sit above camera halos where their coordinates are close.
-  svg.append(gateLayer);
+  svg.append(gateLayer, trackingLayer);
   canvas.append(svg);
   return {
     isGateClosed(id) {
@@ -154,29 +148,35 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
       for (const [id,polygon] of polygons) polygon.classList.toggle('highlight',id===camera.room);
     },
     setTracking(actors) {
-      if (trackingLayer.replaceChildren) trackingLayer.replaceChildren();
-      else trackingLayer.children.length = 0; // Lightweight test DOM fallback.
-      const byRoom = new Map();
+      const byPosition = new Map();
       for (const actor of actors) {
-        const list = byRoom.get(actor.room) ?? [];
+        if (!Object.hasOwn(TRACKING_POINTS, actor.position)) continue;
+        const list = byPosition.get(actor.position) ?? [];
         list.push(actor);
-        byRoom.set(actor.room, list);
+        byPosition.set(actor.position, list);
       }
-      for (const [roomId, actorsInRoom] of byRoom) {
-        const room = VENUE.rooms.find(item => item.id === roomId);
-        if (!room) continue;
-        const [centerX, centerY] = roomCenter(room);
-        actorsInRoom.forEach((actor, index) => {
-          const angle = actorsInRoom.length === 1 ? 0 : (index / actorsInRoom.length) * Math.PI * 2;
-          const dot = makeSvg('circle', {
-            cx: X(centerX) + Math.cos(angle) * 5,
-            cy: Y(centerY) + Math.sin(angle) * 5,
-            r: 4.3, class: 'animatronic-marker', fill: actor.color
+
+      const markers = [];
+      for (const [position, occupants] of byPosition) {
+        const [x, y] = TRACKING_POINTS[position];
+        let fill = occupants[0].color;
+        if (occupants.length > 1) {
+          const id = `locator-colors-${position}`;
+          const gradient = makeSvg('linearGradient', { id });
+          occupants.forEach(({ color }, index) => {
+            const stop = offset => makeSvg('stop', { offset, 'stop-color': color });
+            gradient.append(stop(index / occupants.length), stop((index + 1) / occupants.length));
           });
-          dot.append(makeSvg('title', {}, actor.name));
-          trackingLayer.append(dot);
+          markers.push(gradient);
+          fill = `url(#${id})`;
+        }
+        const dot = makeSvg('circle', {
+          cx: X(x), cy: Y(y), r: 4.3, class: 'animatronic-marker', 'data-position': position, fill,
         });
+        dot.append(makeSvg('title', {}, occupants.map(actor => actor.name).join(', ')));
+        markers.push(dot);
       }
+      trackingLayer.replaceChildren(...markers);
     },
   };
 }
