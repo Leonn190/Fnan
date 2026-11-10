@@ -523,12 +523,7 @@ function setMode(mode, withSound = true) {
 }
 
 function openComputer() {
-  if (state.mode !== 'office' || state.closetTransition) return;
-  dom.game.dataset.computerTransition = 'opening';
-  setMode('desktop');
-  setTimeout(() => {
-    delete dom.game.dataset.computerTransition;
-  }, 360);
+  if (state.mode === 'office' && !state.closetTransition) setMode('desktop');
 }
 
 function closeComputer() {
@@ -689,7 +684,6 @@ function beginClosetTransition(kind) {
   state.closetTouchX = null;
   state.dragging = false;
   state.targetPan = state.pan;
-  panKeys.clear();
   dom.game.style.setProperty('--closet-duration', `${duration}ms`);
   // Restart the CSS animation if a new action follows the previous one immediately.
   void dom.closetBlackout.offsetWidth;
@@ -724,12 +718,6 @@ function advanceClosetTransition(now) {
     }
   }
   if (now >= transition.endAt) clearClosetTransition();
-}
-
-function cycleCamera(direction) {
-  if (!systemOnline('cameras')) return;
-  const next = (state.cameraIndex + direction + CAMERAS.length) % CAMERAS.length;
-  changeCamera(CAMERAS[next].id, true);
 }
 
 function playCameraAudio() {
@@ -776,7 +764,6 @@ function prepareDefeat() {
   stopRadio();
   sound.stopLure();
   state.dragging = false;
-  panKeys.clear();
   clearClosetTransition();
   dom.playfield.inert = true;
 }
@@ -844,7 +831,6 @@ function resetShift() {
   dom.playfield.inert = false;
   delete dom.game.dataset.defeat;
   delete dom.game.dataset.scare;
-  delete dom.game.dataset.computerTransition;
   $('#game-over-status').textContent = 'SINAL PERDIDO';
   $('#night-mode').textContent = state.custom ? 'CUSTOM NIGHT' : 'NOITE 01';
   clearTimeout(toastTimeout);
@@ -866,7 +852,6 @@ function resetShift() {
   setClownPhase(movement.snapshot().clownStage);
   clearClosetTransition();
   setClosetView('door');
-  panKeys.clear();
   state.pan = state.targetPan = 0;
   dom.officeScene.style.setProperty('--pan-shift', '0px');
   map.resetGates();
@@ -985,8 +970,10 @@ function tick(now) {
 }
 
 document.addEventListener('visibilitychange', () => advanceGame(performance.now()));
-dom.officeMonitor.addEventListener('click', () => {
-  if (state.mode === 'office') openComputer();
+dom.officeMonitor.addEventListener('click', openComputer);
+$('#monitor-exit').addEventListener('click', closeComputer);
+document.addEventListener('click', event => {
+  if (event.target === document.body) closeComputer();
 });
 dom.officeCloset.addEventListener('click', () => beginClosetTransition('enter'));
 dom.officeRadio.addEventListener('click', toggleRadio);
@@ -1059,23 +1046,25 @@ for (const [id, app] of Object.entries(desktopApps)) {
       return;
     }
     if (edge.includes('w') || edge.includes('e')) {
+      const minWidth = Math.min(300, Math.round(clientWidth * .85));
       if (edge.includes('w')) {
         right = Math.min(right, clientWidth);
-        left = clamp(left + dx, 0, Math.max(0, right - 300));
+        left = clamp(left + dx, 0, Math.max(0, right - minWidth));
       } else {
-        left = Math.min(left, Math.max(0, clientWidth - 300));
-        right = clamp(right + dx, left + 300, clientWidth);
+        left = Math.min(left, clientWidth - minWidth);
+        right = clamp(right + dx, left + minWidth, clientWidth);
       }
       panel.style.setProperty('--window-x', left + 'px');
       panel.style.setProperty('--resized-width', right - left + 'px');
     }
     if (edge.includes('n') || edge.includes('s')) {
+      const minHeight = Math.min(200, Math.round(clientHeight * .75));
       if (edge.includes('n')) {
         bottom = Math.min(bottom, clientHeight);
-        top = clamp(top + dy, 0, Math.max(0, bottom - 200));
+        top = clamp(top + dy, 0, Math.max(0, bottom - minHeight));
       } else {
-        top = Math.min(top, Math.max(0, clientHeight - 200));
-        bottom = clamp(bottom + dy, top + 200, clientHeight);
+        top = Math.min(top, clientHeight - minHeight);
+        bottom = clamp(bottom + dy, top + minHeight, clientHeight);
       }
       panel.style.setProperty('--window-y', top + 'px');
       panel.style.setProperty('--resized-height', bottom - top + 'px');
@@ -1178,8 +1167,6 @@ dom.closet.addEventListener('pointerup', event => {
 });
 dom.closet.addEventListener('pointercancel', () => { state.closetTouchX = null; });
 
-const panKeys = new Set();
-
 function toggleLeftDoor() {
   if (state.complete || state.mode !== 'office' || state.closetTransition || !systemOnline('doors')) return;
   state.leftClosed = !state.leftClosed;
@@ -1206,51 +1193,18 @@ document.addEventListener('keydown', event => {
     }
     return;
   }
-  if (state.closetTransition) return;
-  if (state.mode === 'closet') {
-    if (key === 'w') {
-      event.preventDefault();
-      if (!event.repeat) toggleClosetLight();
-    } else if (['a', 'd', 'arrowleft', 'arrowright'].includes(key)) {
-      event.preventDefault();
-      if (!event.repeat) beginClosetTransition('turn');
-    }
-  } else if (key === 'f' && state.mode === 'office') {
-    event.preventDefault();
-    if (!event.repeat) toggleFlashlight();
-  } else if (key === 'q' && state.mode === 'office') {
-    event.preventDefault();
-    if (!event.repeat) toggleLeftDoor();
-  } else if (key === 'escape') {
-    if (!dom.startMenu.hidden) {
-      event.preventDefault();
-      setStartMenu(false);
-      dom.openStart.focus({ preventScroll: true });
-    } else if (Object.hasOwn(desktopApps, state.mode)) {
-      event.preventDefault();
-      hideApp(state.mode);
-    } else if (state.mode === 'desktop') {
-      event.preventDefault();
-      closeComputer();
-    }
-  } else if ((state.mode === 'cameras' || state.mode === 'office') && (key === 'arrowleft' || key === 'arrowright')) {
-    event.preventDefault();
-    if (state.mode === 'cameras') cycleCamera(key === 'arrowright' ? 1 : -1);
-    else {
-      panKeys.add(key);
-      state.targetPan = maxPanShift() * (key === 'arrowleft' ? .9 : -.9);
-    }
-  } else if (state.mode === 'office' && (key === 'a' || key === 'd')) {
-    panKeys.add(key);
-    state.targetPan = maxPanShift() * (key === 'a' ? .9 : -.9);
+  if (state.closetTransition || event.repeat) return;
+  if (state.mode === 'office') {
+    if (key === 'w') toggleFlashlight();
+    else if (key === 's') openComputer();
+    else if (key === 'a' || key === 'd') state.targetPan = maxPanShift() * (key === 'a' ? 1 : -1);
+  } else if (state.mode === 'closet') {
+    if (key === 'w') toggleClosetLight();
+    else if ((key === 'a' && dom.closet.dataset.view === 'back')
+      || (key === 'd' && dom.closet.dataset.view === 'door')) beginClosetTransition('turn');
   }
 });
-document.addEventListener('keyup', event => {
-  const key = event.key.toLowerCase();
-  if (panKeys.delete(key) && state.mode === 'office' && panKeys.size === 0) state.targetPan = 0;
-});
 window.addEventListener('blur', () => {
-  panKeys.clear();
   state.targetPan = 0;
   state.flashlight = false;
   state.closetTouchX = null;

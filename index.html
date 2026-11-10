@@ -72,7 +72,7 @@
           <div class="corridor-characters" id="corridor-characters" aria-hidden="true"></div>
           <img class="clown-peek" id="clown-peek" src="./public/images/Palhaça Espiando no Armário Técnico.png" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
-          <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa">
+          <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa" aria-keyshortcuts="S">
             <span class="hotspot-corner top-left"></span><span class="hotspot-corner top-right"></span>
             <span class="hotspot-corner bottom-left"></span><span class="hotspot-corner bottom-right"></span>
             <span class="hotspot-label">USAR COMPUTADOR <span aria-hidden="true">↗</span></span>
@@ -82,12 +82,12 @@
         </div>
         <div class="office-shading" aria-hidden="true"></div>
         <span class="office-reticle" aria-hidden="true"></span>
-        <button class="left-door-control" id="left-door" type="button" aria-keyshortcuts="Q" aria-pressed="false">PORTA ESQUERDA · ABERTA</button>
-        <button class="office-light-control" id="office-light" type="button" aria-keyshortcuts="F" aria-pressed="false">LANTERNA</button>
+        <button class="left-door-control" id="left-door" type="button" aria-pressed="false">PORTA ESQUERDA · ABERTA</button>
+        <button class="office-light-control" id="office-light" type="button" aria-keyshortcuts="W" aria-pressed="false">LANTERNA</button>
         <div class="office-location"><span class="location-dot"></span> ESCRITÓRIO DE SEGURANÇA <span class="location-sub">/ CONTROLE</span></div>
       </section>
 
-      <section class="closet-view" id="closet-view" data-view="door" aria-label="Interior do armário técnico" aria-description="Olhe para os lados com o mouse, A e D ou as setas. Use W para a lanterna no fundo." tabindex="-1" hidden>
+      <section class="closet-view" id="closet-view" data-view="door" aria-label="Interior do armário técnico" aria-description="Use A para olhar pelas frestas, D para olhar o fundo e W para a lanterna." tabindex="-1" hidden>
         <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
         <div id="closet-extra" aria-hidden="true"></div>
         <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/seated-clown.png" alt="Palhaça dormindo no fundo do armário" fetchpriority="low" draggable="false" hidden>
@@ -95,106 +95,112 @@
         <button class="closet-light-toggle" id="closet-light" type="button" aria-label="Lanterna do armário" aria-keyshortcuts="W" aria-pressed="false" hidden>LANTERNA</button>
       </section>
 
-      <section class="computer-desktop" id="computer-desktop" aria-label="Área de trabalho do computador" hidden>
-        <svg class="desktop-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <symbol id="icon-cameras" viewBox="0 0 48 48">
-            <path fill="#1476b8" d="M32 20l11-6v21l-11-6z"/>
-            <rect x="4" y="12" width="31" height="25" rx="3" fill="#28a9eb"/>
-            <path fill="#80d9ff" d="M7 12h25a3 3 0 0 1 3 3v2H4v-2a3 3 0 0 1 3-3z"/>
-            <circle cx="19.5" cy="25" r="8" fill="#126396"/>
-            <circle cx="19.5" cy="25" r="5" fill="#e1f6ff"/>
-            <circle cx="21" cy="23.5" r="2" fill="#65bdec"/>
-          </symbol>
-          <symbol id="icon-systems" viewBox="0 0 48 48">
-            <rect x="4" y="8" width="40" height="29" rx="2" fill="#555ca8"/>
-            <path fill="#dee4ff" d="M7 11h34v22H7z"/>
-            <path fill="#8792e1" d="M20 37h8v4h7v3H13v-3h7z"/>
-            <path d="M11 25h7l4-8 5 12 3-7h7" fill="none" stroke="#505bc6" stroke-width="2" stroke-linejoin="round"/>
-          </symbol>
-          <symbol id="icon-power" viewBox="0 0 16 16">
-            <path d="M8 1v7m-3.4-5a6 6 0 1 0 6.8 0" fill="none" stroke="currentColor"/>
-          </symbol>
-        </svg>
-        <div class="desktop-workspace">
-          <div class="desktop-shortcuts" aria-label="Atalhos da área de trabalho">
-            <button class="desktop-shortcut" id="open-cameras" type="button">
-              <span class="shortcut-image"><svg aria-hidden="true"><use href="#icon-cameras"/></svg></span>
-              Câmeras
-            </button>
-            <button class="desktop-shortcut" id="open-systems" type="button">
-              <span class="shortcut-image"><svg aria-hidden="true"><use href="#icon-systems"/></svg></span>
-              Painel Geral
-            </button>
-          </div>
-
-          <section class="desktop-window cameras-view" id="cameras-view" aria-labelledby="cameras-title" hidden>
-            <header class="window-titlebar" id="cameras-titlebar">
-              <svg aria-hidden="true"><use href="#icon-cameras"/></svg>
-              <span id="cameras-title">Câmeras</span>
-              <button class="window-minimize" id="minimize-cameras" type="button" aria-label="Minimizar Câmeras" title="Minimizar"></button>
-              <button class="window-maximize" id="maximize-cameras" type="button" aria-label="Maximizar Câmeras" title="Maximizar"></button>
-              <button class="window-close" id="close-cameras" type="button" aria-label="Fechar Câmeras" title="Fechar"></button>
-            </header>
-            <div class="camera-feed" id="camera-feed">
-              <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async">
-              <div class="technical-feed" id="technical-feed" hidden>
-                <div class="technical-frame">
-                  <p class="technical-overline">MODO DE REFERÊNCIA</p>
-                  <img id="technical-art" alt="Planta técnica com campo de visão da câmera selecionada" decoding="async">
-                  <div class="technical-caption"><span id="technical-number">CAM 04</span> · CENÁRIO CINEMATOGRÁFICO AINDA NÃO INCLUÍDO</div>
-                </div>
+      <section class="computer-view" id="computer-desktop" aria-label="Monitor do escritório" hidden>
+        <button class="monitor-exit" id="monitor-exit" type="button" aria-label="Sair do monitor e voltar ao escritório"></button>
+        <div class="monitor-frame">
+          <img class="monitor-art" src="./public/images/Monitor Preto com Detalhes Kawaii em Rosa.png" width="1672" height="941" alt="" draggable="false">
+          <div class="computer-screen" role="group" aria-label="Área de trabalho do computador">
+            <svg class="desktop-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <symbol id="icon-cameras" viewBox="0 0 48 48">
+                <path fill="#1476b8" d="M32 20l11-6v21l-11-6z"/>
+                <rect x="4" y="12" width="31" height="25" rx="3" fill="#28a9eb"/>
+                <path fill="#80d9ff" d="M7 12h25a3 3 0 0 1 3 3v2H4v-2a3 3 0 0 1 3-3z"/>
+                <circle cx="19.5" cy="25" r="8" fill="#126396"/>
+                <circle cx="19.5" cy="25" r="5" fill="#e1f6ff"/>
+                <circle cx="21" cy="23.5" r="2" fill="#65bdec"/>
+              </symbol>
+              <symbol id="icon-systems" viewBox="0 0 48 48">
+                <rect x="4" y="8" width="40" height="29" rx="2" fill="#555ca8"/>
+                <path fill="#dee4ff" d="M7 11h34v22H7z"/>
+                <path fill="#8792e1" d="M20 37h8v4h7v3H13v-3h7z"/>
+                <path d="M11 25h7l4-8 5 12 3-7h7" fill="none" stroke="#505bc6" stroke-width="2" stroke-linejoin="round"/>
+              </symbol>
+              <symbol id="icon-power" viewBox="0 0 16 16">
+                <path d="M8 1v7m-3.4-5a6 6 0 1 0 6.8 0" fill="none" stroke="currentColor"/>
+              </symbol>
+            </svg>
+            <div class="desktop-workspace">
+              <div class="desktop-shortcuts" aria-label="Atalhos da área de trabalho">
+                <button class="desktop-shortcut" id="open-cameras" type="button">
+                  <span class="shortcut-image"><svg aria-hidden="true"><use href="#icon-cameras"/></svg></span>
+                  Câmeras
+                </button>
+                <button class="desktop-shortcut" id="open-systems" type="button">
+                  <span class="shortcut-image"><svg aria-hidden="true"><use href="#icon-systems"/></svg></span>
+                  Painel Geral
+                </button>
               </div>
-              <div class="feed-color" aria-hidden="true"></div>
-              <div class="feed-scanlines" aria-hidden="true"></div>
-              <div class="feed-noise" aria-hidden="true"></div>
-              <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-              <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
-              <div class="camera-static" id="camera-static" hidden aria-label="Sinal com interferência"></div>
-              <div class="camera-offline" id="camera-offline" hidden><span>▣</span><strong>CÂMERAS INDISPONÍVEIS</strong><small>REINICIE O SISTEMA DE CÂMERAS NO PAINEL GERAL</small></div>
-            </div>
-            <div class="feed-heading">
-              <div class="feed-heading-first"><span class="rec-light"></span> <span>REC</span><span class="feed-divider"></span><strong id="cam-number">CAM 01</strong></div>
-            </div>
-            <aside class="map-panel" id="map-canvas" aria-label="Mapa de câmeras e portões"></aside>
-            <button class="camera-audio" id="camera-audio" type="button">▸ REPRODUZIR SOM NESTA CÂMERA</button>
-          </section>
 
-          <section class="desktop-window systems-view" id="systems-view" aria-labelledby="systems-title" hidden>
-            <header class="window-titlebar" id="systems-titlebar">
-              <svg aria-hidden="true"><use href="#icon-systems"/></svg>
-              <span id="systems-title">Painel Geral</span>
-              <button class="window-minimize" id="minimize-systems" type="button" aria-label="Minimizar Painel Geral" title="Minimizar"></button>
-              <button class="window-maximize" id="maximize-systems" type="button" aria-label="Maximizar Painel Geral" title="Maximizar"></button>
-              <button class="window-close" id="close-systems" type="button" aria-label="Fechar Painel Geral" title="Fechar"></button>
-            </header>
-            <div class="systems-content">
-              <div class="systems-title"><p>DIAGNÓSTICO DO RESTAURANTE</p><h2>Sistemas</h2><button class="restart-all" id="restart-all-systems" type="button">REINICIAR TODOS <small>9s</small></button></div>
-              <div class="systems-grid" id="systems-grid"></div>
-              <div class="locator-heading"><div><p>RASTREAMENTO PASSIVO</p><h2>Localização das animatrônicas</h2><small>Maid e Palhaça não podem ser localizadas.</small></div><button class="restart-all" id="restart-all-locators" type="button">REINICIAR LOCALIZAÇÕES <small>7s</small></button></div>
-              <div class="locator-grid" id="locator-grid"></div>
-            </div>
-          </section>
-        </div>
+              <section class="desktop-window cameras-view" id="cameras-view" aria-labelledby="cameras-title" hidden>
+                <header class="window-titlebar" id="cameras-titlebar">
+                  <svg aria-hidden="true"><use href="#icon-cameras"/></svg>
+                  <span id="cameras-title">Câmeras</span>
+                  <button class="window-minimize" id="minimize-cameras" type="button" aria-label="Minimizar Câmeras" title="Minimizar"></button>
+                  <button class="window-maximize" id="maximize-cameras" type="button" aria-label="Maximizar Câmeras" title="Maximizar"></button>
+                  <button class="window-close" id="close-cameras" type="button" aria-label="Fechar Câmeras" title="Fechar"></button>
+                </header>
+                <div class="camera-feed" id="camera-feed">
+                  <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async">
+                  <div class="technical-feed" id="technical-feed" hidden>
+                    <div class="technical-frame">
+                      <p class="technical-overline">MODO DE REFERÊNCIA</p>
+                      <img id="technical-art" alt="Planta técnica com campo de visão da câmera selecionada" decoding="async">
+                      <div class="technical-caption"><span id="technical-number">CAM 04</span> · CENÁRIO CINEMATOGRÁFICO AINDA NÃO INCLUÍDO</div>
+                    </div>
+                  </div>
+                  <div class="feed-color" aria-hidden="true"></div>
+                  <div class="feed-scanlines" aria-hidden="true"></div>
+                  <div class="feed-noise" aria-hidden="true"></div>
+                  <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                  <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
+                  <div class="camera-static" id="camera-static" hidden aria-label="Sinal com interferência"></div>
+                  <div class="camera-offline" id="camera-offline" hidden><span>▣</span><strong>CÂMERAS INDISPONÍVEIS</strong><small>REINICIE O SISTEMA DE CÂMERAS NO PAINEL GERAL</small></div>
+                </div>
+                <div class="feed-heading">
+                  <div class="feed-heading-first"><span class="rec-light"></span> <span>REC</span><span class="feed-divider"></span><strong id="cam-number">CAM 01</strong></div>
+                </div>
+                <aside class="map-panel" id="map-canvas" aria-label="Mapa de câmeras e portões"></aside>
+                <button class="camera-audio" id="camera-audio" type="button">▸ REPRODUZIR SOM NESTA CÂMERA</button>
+              </section>
 
-        <div class="desktop-start-menu" id="start-menu" aria-label="Menu Iniciar" hidden>
-          <span class="start-heading">Iniciar</span>
-          <button id="start-cameras" type="button"><svg aria-hidden="true"><use href="#icon-cameras"/></svg>Câmeras</button>
-          <button id="start-systems" type="button"><svg aria-hidden="true"><use href="#icon-systems"/></svg>Painel Geral</button>
-          <button class="start-power" id="close-desktop" type="button"><svg aria-hidden="true"><use href="#icon-power"/></svg>Voltar ao escritório</button>
-        </div>
-        <nav class="computer-taskbar" aria-label="Barra de tarefas">
-          <button class="task-start" id="open-start" type="button" aria-label="Iniciar" aria-controls="start-menu" aria-expanded="false" title="Iniciar">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M1 4l7-1v6H1zm8-1.2L19 1v8H9zM1 10h7v6L1 15zm8 0h10v9L9 17z"/></svg>
-          </button>
-          <button class="task-app" id="taskbar-cameras" type="button" aria-label="Câmeras" aria-controls="cameras-view" aria-pressed="false" title="Câmeras"><svg aria-hidden="true"><use href="#icon-cameras"/></svg></button>
-          <button class="task-app" id="taskbar-systems" type="button" aria-label="Painel Geral" aria-controls="systems-view" aria-pressed="false" title="Painel Geral"><svg aria-hidden="true"><use href="#icon-systems"/></svg></button>
-          <div class="task-tray">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.5h13v8h-13zM8 12v2m-3.5.5h7" fill="none" stroke="currentColor"/></svg>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2zm9-1q3 3 0 6m1-8q5 5 0 10" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>
-            <div class="task-clock"><time id="task-time"></time><time id="task-date"></time></div>
+              <section class="desktop-window systems-view" id="systems-view" aria-labelledby="systems-title" hidden>
+                <header class="window-titlebar" id="systems-titlebar">
+                  <svg aria-hidden="true"><use href="#icon-systems"/></svg>
+                  <span id="systems-title">Painel Geral</span>
+                  <button class="window-minimize" id="minimize-systems" type="button" aria-label="Minimizar Painel Geral" title="Minimizar"></button>
+                  <button class="window-maximize" id="maximize-systems" type="button" aria-label="Maximizar Painel Geral" title="Maximizar"></button>
+                  <button class="window-close" id="close-systems" type="button" aria-label="Fechar Painel Geral" title="Fechar"></button>
+                </header>
+                <div class="systems-content">
+                  <div class="systems-title"><p>DIAGNÓSTICO DO RESTAURANTE</p><h2>Sistemas</h2><button class="restart-all" id="restart-all-systems" type="button">REINICIAR TODOS <small>9s</small></button></div>
+                  <div class="systems-grid" id="systems-grid"></div>
+                  <div class="locator-heading"><div><p>RASTREAMENTO PASSIVO</p><h2>Localização das animatrônicas</h2><small>Maid e Palhaça não podem ser localizadas.</small></div><button class="restart-all" id="restart-all-locators" type="button">REINICIAR LOCALIZAÇÕES <small>7s</small></button></div>
+                  <div class="locator-grid" id="locator-grid"></div>
+                </div>
+              </section>
+            </div>
+
+            <div class="desktop-start-menu" id="start-menu" aria-label="Menu Iniciar" hidden>
+              <span class="start-heading">Iniciar</span>
+              <button id="start-cameras" type="button"><svg aria-hidden="true"><use href="#icon-cameras"/></svg>Câmeras</button>
+              <button id="start-systems" type="button"><svg aria-hidden="true"><use href="#icon-systems"/></svg>Painel Geral</button>
+              <button class="start-power" id="close-desktop" type="button"><svg aria-hidden="true"><use href="#icon-power"/></svg>Voltar ao escritório</button>
+            </div>
+            <nav class="computer-taskbar" aria-label="Barra de tarefas">
+              <button class="task-start" id="open-start" type="button" aria-label="Iniciar" aria-controls="start-menu" aria-expanded="false" title="Iniciar">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M1 4l7-1v6H1zm8-1.2L19 1v8H9zM1 10h7v6L1 15zm8 0h10v9L9 17z"/></svg>
+              </button>
+              <button class="task-app" id="taskbar-cameras" type="button" aria-label="Câmeras" aria-controls="cameras-view" aria-pressed="false" title="Câmeras"><svg aria-hidden="true"><use href="#icon-cameras"/></svg></button>
+              <button class="task-app" id="taskbar-systems" type="button" aria-label="Painel Geral" aria-controls="systems-view" aria-pressed="false" title="Painel Geral"><svg aria-hidden="true"><use href="#icon-systems"/></svg></button>
+              <div class="task-tray">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.5h13v8h-13zM8 12v2m-3.5.5h7" fill="none" stroke="currentColor"/></svg>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2zm9-1q3 3 0 6m1-8q5 5 0 10" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>
+                <div class="task-clock"><time id="task-time"></time><time id="task-date"></time></div>
+              </div>
+              <button class="task-show-desktop" id="show-desktop" type="button" aria-label="Mostrar área de trabalho" title="Mostrar área de trabalho"></button>
+            </nav>
           </div>
-          <button class="task-show-desktop" id="show-desktop" type="button" aria-label="Mostrar área de trabalho" title="Mostrar área de trabalho"></button>
-        </nav>
+        </div>
       </section>
 
       <div class="global-vignette" aria-hidden="true"></div>
@@ -206,7 +212,7 @@
 
       <div class="threat-alert" id="threat-alert" role="status" hidden></div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
-      <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR DA MESA PARA USAR O COMPUTADOR</div>
+      <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR OU PRESSIONE S PARA ABRIR O COMPUTADOR</div>
       <div class="movement-debug" id="movement-debug" hidden></div>
       <div class="closet-blackout" id="closet-blackout" aria-hidden="true"></div>
 
