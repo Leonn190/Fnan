@@ -23,7 +23,7 @@ const startGame = $('#start-game');
 const menuMusic = $('#menu-music');
 const radioMusic = $('#radio-music');
 const dom = {
-  game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'),
+  game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'), desktop: $('#computer-desktop'), systems: $('#systems-view'),
   playfield: $('#playfield'), scareArt: $('#jumpscare-art'),
   gameOver: $('#game-over'), returnToMenu: $('#return-to-menu'), scareSound: $('#jumpscare-sound'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
@@ -33,8 +33,12 @@ const dom = {
   closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
-  camNumber: $('#cam-number'), camRoom: $('#cam-room'), flash: $('#camera-switch-flash'),
-  clock: $('#clock-label'), handle: $('#monitor-handle'), handleLabel: $('#handle-label'),
+  camNumber: $('#cam-number'), flash: $('#camera-switch-flash'), cameraOffline: $('#camera-offline'), cameraAudio: $('#camera-audio'),
+  openCameras: $('#open-cameras'), openSystems: $('#open-systems'), systemsGrid: $('#systems-grid'), locatorGrid: $('#locator-grid'),
+  restartAllSystems: $('#restart-all-systems'), restartAllLocators: $('#restart-all-locators'),
+  closeCameras: $('#close-cameras'), closeDesktop: $('#close-desktop'), closeSystems: $('#close-systems'),
+  taskbarCameras: $('#taskbar-cameras'), taskbarSystems: $('#taskbar-systems'), openStart: $('#open-start'),
+  clock: $('#clock-label'),
   hint: $('#initial-hint'),
   toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift'),
   debug: $('#movement-debug')
@@ -74,6 +78,18 @@ const CLOSET_TRANSITIONS = {
   turn: { swap: 320, duration: 640 },
   exit: { swap: 650, duration: 1040 }
 };
+const SYSTEMS = [
+  { id: 'doors', name: 'Sistema de portas', icon: '▥', duration: 5 },
+  { id: 'cameras', name: 'Sistema de câmeras', icon: '▣', duration: 5 },
+  { id: 'audio', name: 'Sistema de áudio', icon: '◖', duration: 5 },
+  { id: 'ventilation', name: 'Sistema de ventilação', icon: '≋', duration: 5 }
+];
+const LOCATORS = [
+  { id: 'original', name: 'Padrão', color: '#ffce65' },
+  { id: 'yandere', name: 'Yandere', color: '#ff6e9f' },
+  { id: 'gotica', name: 'Gótica', color: '#a88cff' },
+  { id: 'platinada', name: 'Gatinha', color: '#79e6ef' }
+];
 const sound = new SoundEngine();
 let audioReady;
 // Browsers unlock audio after the first interaction with the game.
@@ -99,11 +115,15 @@ const state = {
   complete: false, flashlight: false, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now(),
   closetTransition: null, closetMouseAtEdge: true, closetTouchX: null,
-  clownPhase: 0, clownTimeLeft: 0, radioPlaying: false
+  clownPhase: 0, clownTimeLeft: 0, radioPlaying: false,
+  systems: Object.fromEntries(SYSTEMS.map(({ id }) => [id, 'online'])),
+  locators: Object.fromEntries(LOCATORS.map(({ id }) => [id, 'online'])),
+  restarts: new Map(), cameraAudioUntil: 0
 };
 let toastTimeout;
 let flashTimeout;
 let nextHudUpdate = 0;
+let nextRestartPanelUpdate = 0;
 let defeatDeadline = 0;
 let scareReplay = 0;
 let radioPlayback = null;
@@ -127,6 +147,98 @@ function announce(message) {
   dom.toast.textContent = message;
   dom.toast.classList.add('show');
   toastTimeout = setTimeout(() => dom.toast.classList.remove('show'), 2350);
+}
+
+function systemOnline(id) {
+  return state.systems[id] === 'online';
+}
+
+function locatorOnline(id) {
+  return state.locators[id] === 'online';
+}
+
+function locatorPosition(id) {
+  return movement.diagnostics(state.movementTime, observedRoom()).find(actor => actor.id === id)?.location ?? 'SINAL INDISPONÍVEL';
+}
+
+function restartLabel(id, collection) {
+  const restart = state.restarts.get(`${collection}:${id}`);
+  if (!restart) return null;
+  return `${Math.max(0, Math.ceil((restart.endsAt - performance.now()) / 1000))}s`;
+}
+
+function renderSystemPanel() {
+  if (!dom.systemsGrid) return;
+  dom.systemsGrid.innerHTML = SYSTEMS.map(system => {
+    const remaining = restartLabel(system.id, 'system');
+    const status = remaining ? 'REINICIANDO' : systemOnline(system.id) ? 'ONLINE' : 'OFFLINE';
+    return `<article class="system-card ${remaining ? 'restarting' : ''}">
+      <span class="system-icon">${system.icon}</span><div><h3>${system.name}</h3><p><i></i>${status}</p></div>
+      <button type="button" data-restart-system="${system.id}" ${remaining ? 'disabled' : ''}>${remaining ? `REINICIANDO ${remaining}` : 'REINICIAR'} <small>5s</small></button>
+    </article>`;
+  }).join('');
+  dom.locatorGrid.innerHTML = LOCATORS.map(locator => {
+    const remaining = restartLabel(locator.id, 'locator');
+    const status = remaining ? 'REINICIANDO' : locatorOnline(locator.id) ? 'LOCALIZANDO' : 'SINAL PERDIDO';
+    return `<article class="locator-card ${remaining ? 'restarting' : ''}">
+      <span class="locator-dot" style="--locator-color:${locator.color}"></span><div><h3>${locator.name}</h3><p>${status}${locatorOnline(locator.id) && !remaining ? ` · ${locatorPosition(locator.id)}` : ''}</p></div>
+      <button type="button" data-restart-locator="${locator.id}" ${remaining ? 'disabled' : ''}>${remaining ? `REINICIANDO ${remaining}` : 'REINICIAR'} <small>4s</small></button>
+    </article>`;
+  }).join('');
+  const allSystemsBusy = SYSTEMS.some(({ id }) => restartLabel(id, 'system'));
+  const allLocatorsBusy = LOCATORS.some(({ id }) => restartLabel(id, 'locator'));
+  dom.restartAllSystems.disabled = allSystemsBusy;
+  dom.restartAllLocators.disabled = allLocatorsBusy;
+}
+
+function beginRestart(collection, ids, duration) {
+  if (state.complete || ids.some(id => state.restarts.has(`${collection}:${id}`))) return;
+  const endsAt = performance.now() + duration * 1000;
+  for (const id of ids) {
+    state.restarts.set(`${collection}:${id}`, { endsAt, collection, id });
+    if (collection === 'system') state.systems[id] = 'restarting';
+    else state.locators[id] = 'restarting';
+  }
+  if (collection === 'system' && ids.includes('audio')) stopRadio();
+  renderSystemPanel();
+  refreshComputerState();
+  announce(`Reiniciando ${ids.length > 1 ? 'os sistemas' : 'o sistema'}...`);
+}
+
+function advanceRestarts(now) {
+  let changed = false;
+  for (const [key, restart] of state.restarts) {
+    if (now < restart.endsAt) continue;
+    state.restarts.delete(key);
+    if (restart.collection === 'system') state.systems[restart.id] = 'online';
+    else state.locators[restart.id] = 'online';
+    changed = true;
+  }
+  if (changed) {
+    renderSystemPanel();
+    refreshComputerState();
+    announce('Sistema reiniciado e online.');
+  } else if (state.restarts.size && state.mode === 'systems' && now >= nextRestartPanelUpdate) {
+    renderSystemPanel();
+    nextRestartPanelUpdate = now + 250;
+  }
+}
+
+function trackedActors() {
+  return LOCATORS.filter(locator => locatorOnline(locator.id)).map(locator => {
+    const actor = movement.diagnostics(state.movementTime, observedRoom()).find(item => item.id === locator.id);
+    return actor ? { ...locator, room: actor.room } : null;
+  }).filter(Boolean);
+}
+
+function refreshComputerState() {
+  const camerasOnline = systemOnline('cameras');
+  dom.cameraOffline.hidden = camerasOnline;
+  dom.cameraAudio.disabled = !systemOnline('audio') || !camerasOnline;
+  dom.cameraAudio.textContent = !systemOnline('audio') ? 'ÁUDIO INDISPONÍVEL' : '▸ REPRODUZIR SOM NESTA CÂMERA';
+  map.setTracking(trackedActors());
+  if (state.mode === 'cameras') updateCameraFeed(CAMERAS[state.cameraIndex]);
+  updateOfficeView();
 }
 
 function preloadCamera(cam) {
@@ -155,7 +267,7 @@ function imageStatus(source) {
 
 const map = makeCameraMap({
   canvas: $('#map-canvas'),
-  canToggleGate: () => state.mode === 'cameras' && !state.complete,
+  canToggleGate: () => state.mode === 'cameras' && !state.complete && systemOnline('doors'),
   onGatesChange: () => {
     updateOfficeView();
     const cam = CAMERAS[state.cameraIndex];
@@ -163,7 +275,7 @@ const map = makeCameraMap({
     updateMovementDebug();
   },
   onSelect: id => {
-    if (state.complete) return;
+    if (state.complete || !systemOnline('cameras')) return;
     changeCamera(id, true);
   }
 });
@@ -248,6 +360,13 @@ function setCameraCharacterState(cam, key) {
 }
 
 function updateCameraFeed(cam) {
+  if (!systemOnline('cameras')) {
+    dom.feedArt.hidden = true;
+    dom.tech.hidden = true;
+    dom.cameraOffline.hidden = false;
+    return;
+  }
+  dom.cameraOffline.hidden = true;
   const source = cameraImage(cam);
   if (!source) {
     showTechnical(cam);
@@ -256,7 +375,7 @@ function updateCameraFeed(cam) {
   }
   dom.tech.hidden = true;
   dom.feedArt.hidden = false;
-  dom.feedArt.alt = `Câmera ${cam.id}: ${cam.name}, cenário noturno`;
+  dom.feedArt.alt = `Câmera ${cam.id}, cenário noturno`;
   dom.feedArt.onerror = () => {
     if (CAMERAS[state.cameraIndex].id === cam.id && dom.feedArt.getAttribute('src') === source) {
       showTechnical(cam);
@@ -298,6 +417,7 @@ function syncMovement(changed) {
     const { room, doorway } = movement.officeState();
     setOfficeCharacterState(room, doorway);
   }
+  map.setTracking(trackedActors());
 }
 
 function changeCamera(id, withSound = false) {
@@ -307,7 +427,6 @@ function changeCamera(id, withSound = false) {
   state.cameraIndex = index;
   const cam = CAMERAS[index];
   dom.camNumber.textContent = cam.id.replace('CAM', 'CAM ');
-  dom.camRoom.textContent = cam.name.toUpperCase();
   map.setActive(cam);
 
   updateCameraFeed(cam);
@@ -333,9 +452,9 @@ function setMode(mode, withSound = true) {
   dom.office.hidden = mode !== 'office';
   dom.cameras.hidden = !watching;
   dom.closet.hidden = !hiding;
-  dom.handle.hidden = hiding;
-  dom.handleLabel.textContent = watching ? 'ABAIXAR MONITOR' : 'ABRIR MONITOR';
-  dom.handle.setAttribute('aria-label', watching ? 'Abaixar o monitor para voltar ao escritório' : 'Abrir câmeras de segurança');
+  dom.desktop.hidden = !['desktop', 'cameras', 'systems'].includes(mode);
+  dom.systems.hidden = mode !== 'systems';
+  dom.desktop.dataset.activeApp = ['cameras', 'systems'].includes(mode) ? mode : 'desktop';
   dom.hint.hidden = true;
   state.dragging = false;
   state.pointerX = null;
@@ -347,12 +466,27 @@ function setMode(mode, withSound = true) {
     changeCamera(CAMERAS[state.cameraIndex].id);
     preloadCamera(CAMERAS[0]);
   }
+  if (mode === 'systems') renderSystemPanel();
+  refreshComputerState();
   updateMovementDebug();
 }
 
-function toggleMonitor() {
-  if (state.mode === 'closet' || state.closetTransition) return;
-  setMode(state.mode === 'office' ? 'cameras' : 'office');
+function openComputer() {
+  if (state.mode !== 'office' || state.closetTransition) return;
+  dom.game.dataset.computerTransition = 'opening';
+  setMode('desktop');
+  setTimeout(() => {
+    delete dom.game.dataset.computerTransition;
+  }, 360);
+}
+
+function closeComputer() {
+  if (state.mode !== 'desktop') return;
+  setMode('office');
+}
+
+function minimizeApp() {
+  if (state.mode === 'cameras' || state.mode === 'systems') setMode('desktop');
 }
 
 function updateRadioMix() {
@@ -374,6 +508,10 @@ function stopRadio() {
 
 function toggleRadio() {
   if (state.complete || state.closetTransition || state.mode !== 'office') return;
+  if (!systemOnline('audio')) {
+    announce('Sistema de áudio indisponível.');
+    return;
+  }
   if (radioPlayback) {
     stopRadio();
     return;
@@ -477,8 +615,24 @@ function advanceClosetTransition(now) {
 }
 
 function cycleCamera(direction) {
+  if (!systemOnline('cameras')) return;
   const next = (state.cameraIndex + direction + CAMERAS.length) % CAMERAS.length;
   changeCamera(CAMERAS[next].id, true);
+}
+
+function playCameraAudio() {
+  if (state.mode !== 'cameras') return;
+  if (!systemOnline('audio') || !systemOnline('cameras')) {
+    announce('Não foi possível transmitir áudio.');
+    return;
+  }
+  if (performance.now() < state.cameraAudioUntil) {
+    announce('Aguarde antes de reproduzir outro som.');
+    return;
+  }
+  state.cameraAudioUntil = performance.now() + 1800;
+  playSound('lure');
+  announce(`Som reproduzido em ${CAMERAS[state.cameraIndex].id}.`);
 }
 
 function updateClockUI() {
@@ -554,6 +708,9 @@ function resetShift() {
   movement.reset();
   state.characterPreviews.clear();
   state.flashlight = false;
+  state.systems = Object.fromEntries(SYSTEMS.map(({ id }) => [id, 'online']));
+  state.locators = Object.fromEntries(LOCATORS.map(({ id }) => [id, 'online']));
+  state.restarts.clear();
   stopRadio();
   setClownPhase(0);
   clearClosetTransition();
@@ -598,6 +755,7 @@ function tick(now) {
   const realDelta = Math.max(0, now - state.lastFrame);
   const delta = Math.min(100, realDelta);
   state.lastFrame = now;
+  advanceRestarts(now);
   if (!state.complete && !document.hidden) {
     const seconds = delta / 1000;
     state.elapsed += seconds;
@@ -624,7 +782,7 @@ function tick(now) {
 
 document.addEventListener('visibilitychange', () => { state.lastFrame = performance.now(); });
 dom.officeMonitor.addEventListener('click', () => {
-  if (state.mode === 'office') toggleMonitor();
+  if (state.mode === 'office') openComputer();
 });
 dom.officeCloset.addEventListener('click', () => beginClosetTransition('enter'));
 dom.officeRadio.addEventListener('click', toggleRadio);
@@ -634,7 +792,28 @@ radioMusic.addEventListener('pause', () => { if (radioMusic.paused) state.radioP
 radioMusic.addEventListener('error', stopRadio);
 dom.closetExit.addEventListener('click', () => beginClosetTransition('exit'));
 dom.closetLight.addEventListener('click', toggleClosetLight);
-dom.handle.addEventListener('click', toggleMonitor);
+dom.openCameras.addEventListener('click', () => setMode('cameras'));
+dom.openSystems.addEventListener('click', () => setMode('systems'));
+dom.taskbarCameras.addEventListener('click', () => state.mode === 'cameras' ? minimizeApp() : setMode('cameras'));
+dom.taskbarSystems.addEventListener('click', () => state.mode === 'systems' ? minimizeApp() : setMode('systems'));
+dom.openStart.addEventListener('click', () => setMode('desktop'));
+dom.cameraAudio.addEventListener('click', playCameraAudio);
+(document.querySelectorAll?.('[data-computer-home]') ?? []).forEach(button => button.addEventListener('click', () => setMode('desktop')));
+dom.closeCameras.addEventListener('click', minimizeApp);
+dom.closeDesktop.addEventListener('click', closeComputer);
+dom.closeSystems.addEventListener('click', minimizeApp);
+dom.systemsGrid.addEventListener('click', event => {
+  const button = event.target.closest('[data-restart-system]');
+  if (!button) return;
+  beginRestart('system', [button.dataset.restartSystem], 5);
+});
+dom.locatorGrid.addEventListener('click', event => {
+  const button = event.target.closest('[data-restart-locator]');
+  if (!button) return;
+  beginRestart('locator', [button.dataset.restartLocator], 4);
+});
+dom.restartAllSystems.addEventListener('click', () => beginRestart('system', SYSTEMS.map(({ id }) => id), 9));
+dom.restartAllLocators.addEventListener('click', () => beginRestart('locator', LOCATORS.map(({ id }) => id), 7));
 dom.restart.addEventListener('click', resetShift);
 dom.returnToMenu.addEventListener('click', () => {
   dom.scareSound.pause();
@@ -717,9 +896,6 @@ document.addEventListener('keydown', event => {
       event.preventDefault();
       if (!event.repeat) beginClosetTransition('turn');
     }
-  } else if ((key === ' ' && !focusedButton) || key === 'm') {
-    event.preventDefault();
-    if (!event.repeat) toggleMonitor();
   } else if (key === 'f' && state.mode === 'office') {
     event.preventDefault();
     if (!event.repeat && !state.officeRoom.size && !map.isGateClosed(OFFICE.gate)) {
@@ -727,9 +903,12 @@ document.addEventListener('keydown', event => {
       updateOfficeView();
     }
   } else if (key === 'escape') {
-    if (state.mode === 'cameras') {
+    if (state.mode === 'cameras' || state.mode === 'systems') {
       event.preventDefault();
-      setMode('office');
+      minimizeApp();
+    } else if (state.mode === 'desktop') {
+      event.preventDefault();
+      closeComputer();
     }
   } else if (key === 'arrowleft' || key === 'arrowright') {
     event.preventDefault();

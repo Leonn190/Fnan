@@ -31,23 +31,10 @@ function setGateClosed(gate, closed) {
   gate.setAttribute('aria-pressed', String(closed));
 }
 
-// Positions inside their corresponding rooms, rather than approximated rectangles.
-const LABELS = {
-  loja: ['LOJA', 6, 2.8],
-  recepcao: ['RECEPÇÃO', 19, 1.4],
-  fliperama: ['ARCADE', 30, 5.8],
-  estoque: ['ESTOQUE', 2.1, 12],
-  controle: ['CONTROLE', 5.65, 6.8],
-  vip2: ['VIP 2', 9.2, 12],
-  vip1: ['VIP 1', 9.2, 19.3],
-  servico: ['SERVIÇO', 2.1, 19],
-  cozinha: ['COZINHA', 4.5, 26.2],
-  retirada: ['RETIRADA', 14.6, 26.1],
-  nathzinha: ['NATH', 21.2, 26.1],
-  eletrica: ['ELÉTRICA', 27.3, 26.1],
-  salao: ['SALÃO', 19.7, 12.9],
-  circ_wc: ['WC', 30.15, 12.15],
-};
+function roomCenter(room) {
+  const [sumX, sumY] = room.points.reduce(([x, y], point) => [x + point[0], y + point[1]], [0, 0]);
+  return [sumX / room.points.length, sumY / room.points.length];
+}
 
 function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => {} }) {
   const svg = makeSvg('svg', {
@@ -68,7 +55,6 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
     if (obj.id !== 'PALCO') continue;
     const [x0,y0,x1,y1] = obj.bounds;
     svg.append(makeSvg('rect',{x:X(x0),y:Y(y1),width:(x1-x0)*SCALE,height:(y1-y0)*SCALE,class:'map-stage'}));
-    svg.append(makeSvg('text',{x:X((x0+x1)/2),y:Y((y0+y1)/2)+3,class:'map-label'},'PALCO'));
   }
 
   const gateLayer = makeSvg('g', { role: 'group', 'aria-label': 'Portões' });
@@ -114,9 +100,8 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
     }));
   }
 
-  for (const [_, [text,x,y]] of Object.entries(LABELS)) {
-    svg.append(makeSvg('text',{x:X(x),y:Y(y)+3,class:'map-label'},text));
-  }
+  const trackingLayer = makeSvg('g', { class: 'map-tracking', 'aria-hidden': 'true' });
+  svg.append(trackingLayer);
 
   const cameraNodes = new Map();
   for (const cam of CAMERAS) {
@@ -126,7 +111,7 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
       'data-cam':cam.id,
       tabindex:'0',
       role:'button',
-      'aria-label':`${cam.id}: ${cam.name}${cam.renderAvailable?'':' (somente planta técnica)'}`,
+      'aria-label':`${cam.id}${cam.renderAvailable?'':' (somente planta técnica)'}`,
     });
     const length = 20;
     const rads = cam.angle * Math.PI / 180;
@@ -139,7 +124,7 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
     g.append(makeSvg('circle',{cx:px,cy:py,r:10.7,class:'pin-body'}));
     g.append(makeSvg('text',{x:px,y:py+3.5,class:'pin-number'},String(cam.number).padStart(2,'0')));
     bindMapButton(g, () => onSelect(cam.id));
-    const tip = makeSvg('title',{},`${cam.id} — ${cam.name}`);
+    const tip = makeSvg('title',{},cam.id);
     g.append(tip);
     svg.append(g);
     cameraNodes.set(cam.id,g);
@@ -163,6 +148,31 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, onGatesChange = () => 
         node.setAttribute('aria-pressed',String(id===camera.id));
       }
       for (const [id,polygon] of polygons) polygon.classList.toggle('highlight',id===camera.room);
+    },
+    setTracking(actors) {
+      if (trackingLayer.replaceChildren) trackingLayer.replaceChildren();
+      else trackingLayer.children.length = 0; // Lightweight test DOM fallback.
+      const byRoom = new Map();
+      for (const actor of actors) {
+        const list = byRoom.get(actor.room) ?? [];
+        list.push(actor);
+        byRoom.set(actor.room, list);
+      }
+      for (const [roomId, actorsInRoom] of byRoom) {
+        const room = VENUE.rooms.find(item => item.id === roomId);
+        if (!room) continue;
+        const [centerX, centerY] = roomCenter(room);
+        actorsInRoom.forEach((actor, index) => {
+          const angle = actorsInRoom.length === 1 ? 0 : (index / actorsInRoom.length) * Math.PI * 2;
+          const dot = makeSvg('circle', {
+            cx: X(centerX) + Math.cos(angle) * 5,
+            cy: Y(centerY) + Math.sin(angle) * 5,
+            r: 4.3, class: 'animatronic-marker', fill: actor.color
+          });
+          dot.append(makeSvg('title', {}, actor.name));
+          trackingLayer.append(dot);
+        });
+      }
     },
   };
 }

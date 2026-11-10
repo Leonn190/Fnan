@@ -43,6 +43,10 @@ class SoundEngine {
   }
   monitor(){this.tone({frequency:160,endingFrequency:70,duration:.21,volume:.07,wave:'sawtooth'});}
   switch(){this.tone({frequency:520,endingFrequency:180,duration:.08,volume:.055,wave:'square'});}
+  lure(){
+    this.tone({frequency:740,endingFrequency:420,duration:.16,volume:.055,wave:'square'});
+    this.tone({frequency:520,endingFrequency:320,duration:.22,volume:.045,wave:'triangle',delay:.2});
+  }
   finish(){this.tone({frequency:440,endingFrequency:660,duration:.55,volume:.06});}
   connectRadio(media) {
     const context = this.context;

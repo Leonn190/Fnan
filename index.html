@@ -39,10 +39,10 @@
           <img class="office-art" id="office-art" src="./public/images/office/states/open-dark.webp" alt="Escritório de segurança, portão principal aberto e corredor escuro" draggable="false">
           <img class="clown-peek" id="clown-peek" src="./public/images/Palhaça Espiando no Armário Técnico.png" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
-          <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Clicar no monitor da mesa para abrir as câmeras">
+          <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa">
             <span class="hotspot-corner top-left"></span><span class="hotspot-corner top-right"></span>
             <span class="hotspot-corner bottom-left"></span><span class="hotspot-corner bottom-right"></span>
-            <span class="hotspot-label">ABRIR MONITOR <span aria-hidden="true">↗</span></span>
+            <span class="hotspot-label">USAR COMPUTADOR <span aria-hidden="true">↗</span></span>
           </button>
           <button class="radio-hotspot" id="office-radio" type="button" aria-label="Rádio da mesa" aria-pressed="false"></button>
           <button class="closet-hotspot" id="office-closet" type="button" aria-label="Entrar no armário técnico"></button>
@@ -60,6 +60,11 @@
       </section>
 
       <section class="cameras-view" id="cameras-view" aria-label="Monitor de câmeras de segurança" hidden>
+        <header class="computer-bar">
+          <button class="computer-home" type="button" data-computer-home aria-label="Voltar para a tela inicial do computador">⌂ <span>INÍCIO</span></button>
+          <strong>SEGURANÇA / CÂMERAS</strong>
+          <button class="computer-close" id="close-cameras" type="button" aria-label="Minimizar janela de câmeras">—</button>
+        </header>
         <div class="camera-feed" id="camera-feed">
           <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async">
           <div class="technical-feed" id="technical-feed" hidden>
@@ -74,13 +79,50 @@
           <div class="feed-noise" aria-hidden="true"></div>
           <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
           <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
+          <div class="camera-offline" id="camera-offline" hidden><span>▣</span><strong>CÂMERAS INDISPONÍVEIS</strong><small>REINICIE O SISTEMA DE CÂMERAS NO PAINEL GERAL</small></div>
         </div>
 
         <div class="feed-heading">
           <div class="feed-heading-first"><span class="rec-light"></span> <span>REC</span><span class="feed-divider"></span><strong id="cam-number">CAM 01</strong></div>
-          <div class="feed-room" id="cam-room">Lojinha</div>
         </div>
         <aside class="map-panel" id="map-canvas" aria-label="Mapa de câmeras e portões"></aside>
+        <button class="camera-audio" id="camera-audio" type="button">▸ REPRODUZIR SOM NESTA CÂMERA</button>
+      </section>
+
+      <section class="computer-desktop" id="computer-desktop" aria-label="Tela inicial do computador" hidden>
+        <header class="computer-bar">
+          <span class="computer-brand">NATH'S <small>SECURITY OS</small></span>
+          <button class="computer-close" id="close-desktop" type="button" aria-label="Desligar o computador">DESLIGAR</button>
+        </header>
+        <div class="desktop-content">
+          <p class="desktop-greeting">TERMINAL DE SEGURANÇA</p>
+          <h2>Bem-vinda de volta.</h2>
+          <p class="desktop-description">Selecione um aplicativo para controlar o restaurante.</p>
+          <div class="app-grid">
+            <button class="app-icon" id="open-cameras" type="button"><span class="app-symbol">▣</span><strong>CÂMERAS</strong><small>VIGILÂNCIA AO VIVO</small></button>
+            <button class="app-icon" id="open-systems" type="button"><span class="app-symbol">◫</span><strong>PAINEL GERAL</strong><small>SISTEMAS E LOCALIZAÇÃO</small></button>
+          </div>
+        </div>
+        <nav class="computer-taskbar" aria-label="Barra de tarefas">
+          <button class="task-start" id="open-start" type="button" aria-label="Abrir menu iniciar">✦</button>
+          <button class="task-app" id="taskbar-cameras" type="button"><span>▣</span> CÂMERAS</button>
+          <button class="task-app" id="taskbar-systems" type="button"><span>◫</span> PAINEL GERAL</button>
+          <span class="task-clock">SECURITY OS · 01</span>
+        </nav>
+      </section>
+
+      <section class="systems-view" id="systems-view" aria-label="Painel geral de sistemas" hidden>
+        <header class="computer-bar">
+          <button class="computer-home" type="button" data-computer-home aria-label="Voltar para a tela inicial do computador">⌂ <span>INÍCIO</span></button>
+          <strong>PAINEL GERAL</strong>
+          <button class="computer-close" id="close-systems" type="button" aria-label="Minimizar painel geral">—</button>
+        </header>
+        <div class="systems-content">
+          <div class="systems-title"><p>DIAGNÓSTICO DO RESTAURANTE</p><h2>Sistemas</h2><button class="restart-all" id="restart-all-systems" type="button">REINICIAR TODOS <small>9s</small></button></div>
+          <div class="systems-grid" id="systems-grid"></div>
+          <div class="locator-heading"><div><p>RASTREAMENTO PASSIVO</p><h2>Localização das animatrônicas</h2><small>Maid e Palhaça não podem ser localizadas.</small></div><button class="restart-all" id="restart-all-locators" type="button">REINICIAR LOCALIZAÇÕES <small>7s</small></button></div>
+          <div class="locator-grid" id="locator-grid"></div>
+        </div>
       </section>
 
       <div class="global-vignette" aria-hidden="true"></div>
@@ -90,9 +132,8 @@
         <div class="night-clock"><div class="clock-time" id="clock-label">12 <small>AM</small></div><span>NOITE <strong>01</strong></span></div>
       </header>
 
-      <button class="monitor-handle" id="monitor-handle" type="button" aria-label="Abrir as câmeras de segurança"><span class="handle-edge">⌃</span><span class="handle-icon">▣</span><span id="handle-label">ABRIR MONITOR</span><small id="handle-shortcut">ESPAÇO</small></button>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
-      <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR DA MESA OU USE A BARRA INFERIOR</div>
+      <div class="initial-hint" id="initial-hint" aria-hidden="true">CLIQUE NO MONITOR DA MESA PARA USAR O COMPUTADOR</div>
       <div class="movement-debug" id="movement-debug" hidden></div>
       <div class="closet-blackout" id="closet-blackout" aria-hidden="true"></div>
 
