@@ -10,11 +10,12 @@ from export_office_states import CHARACTERS, OFFICE, load
 
 
 CLOSET = OFFICE / "closet"
+CLOSET_SOURCES = Path(__file__).resolve().parents[1] / "outros/arte/office/closet"
 DOORWAY_SOURCES = {
-    "original": "Boneca animatrônica sob persianas neon.png",
-    "gotica": "Nathzinha Gótica no Escritório.png",
-    "yandere": "yandere porta do escritorio.png",
-    "platinada": "Animatrônica Gatinha no Portal Neon.png",
+    "original": "doorway-original.png",
+    "gotica": "doorway-gotica.png",
+    "yandere": "doorway-yandere.png",
+    "platinada": "doorway-platinada.png",
 }
 
 # Contornos na arte das cinco Nathzinhas, separados pelas três frestas.
@@ -131,9 +132,7 @@ def closed_gate(base):
 
 
 def room_art(base):
-    base = load(CLOSET / "door-slats.png")
-    images = OFFICE.parent
-    master = load(images / "Cinco Nathzinhas no Escritório Neon.png").crop((0, 0, *base.size))
+    master = load(CLOSET_SOURCES / "group.png").crop((0, 0, *base.size))
     room_layers = {character: masked(master, outlines) for character, outlines in ROOM_OUTLINES.items()}
     # A Platinada cruza o vão escuro. Abra espaço para o portão aparecer em volta dela.
     dark = base.getchannel("R").point(lambda value: 255 if value < 12 else 0)
@@ -146,7 +145,7 @@ def room_art(base):
 
 
 def export_overflow(output):
-    layers = room_art(load(CLOSET / "door-slats.png"))
+    layers = room_art(load(CLOSET_SOURCES / "door-slats.png"))
     output.mkdir(parents=True, exist_ok=True)
     # Only these portraits can follow the first three in the canonical art order.
     for character in CHARACTERS[3:]:
@@ -154,11 +153,10 @@ def export_overflow(output):
 
 
 def export(output):
-    base = load(CLOSET / "door-slats.png")
-    images = OFFICE.parent
+    base = load(CLOSET_SOURCES / "door-slats.png")
     room_layers = room_art(base)
     doorway_layers = {
-        character: masked(load(images / name).crop((0, 0, *base.size)),
+        character: masked(load(CLOSET_SOURCES / name).crop((0, 0, *base.size)),
                           [[(541, 303), (698, 303), (698, 658), (541, 658)]], feather=3)
         for character, name in DOORWAY_SOURCES.items()
     }

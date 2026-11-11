@@ -589,9 +589,9 @@ const [, peekSource] = html.match(/id="clown-peek" src="([^"]+)"/);
 assert(fs.existsSync(path.join(root, peekSource)));
 const start = now;
 step(start + 23_749);
-assert.match(closetBeam.src, /seated-clown\.png$/);
+assert.match(closetBeam.src, /clown\/sleeping\.webp$/);
 step(start + 23_751);
-assert.match(closetBeam.src, /seated-clown-alternate\.png$/);
+assert.match(closetBeam.src, /clown\/eyes-lit\.webp$/);
 const tracks = new Set();
 for (const draw of [0, .5, .99]) {
   randomValue = () => draw;
@@ -604,7 +604,7 @@ for (const draw of [0, .5, .99]) {
 assert.equal(tracks.size, 3);
 radio.fire('playing');
 step(now + 10_000);
-assert.match(closetBeam.src, /seated-clown\.png$/);
+assert.match(closetBeam.src, /clown\/sleeping\.webp$/);
 radioButton.fire('click');
 document.fire('click');
 const quiet = now;

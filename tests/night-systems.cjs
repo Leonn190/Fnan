@@ -150,9 +150,9 @@ const shadowTest = (level, sanity, draws = [0, .99], tune = () => {}) => scenari
   levels: { shadow: level }, draws, tune(config) { config.sanity.initial = sanity; tune(config); }
 });
 assert.equal(shadowDifficulty(base.shadow, 0, 10), null);
-assert.deepEqual(shadowDifficulty(base.shadow, 1, 10), { sanityLimit: 35, chance: 10, searchSeconds: 8 });
-assert.deepEqual(shadowDifficulty(base.shadow, 10, 10), { sanityLimit: 50, chance: 15, searchSeconds: 6 });
-near(shadowDifficulty(base.shadow, 5, 10).searchSeconds, 8 - 8 / 9);
+assert.deepEqual(shadowDifficulty(base.shadow, 1, 10), { sanityLimit: 35, chance: 10, searchSeconds: 10 });
+assert.deepEqual(shadowDifficulty(base.shadow, 10, 10), { sanityLimit: 50, chance: 15, searchSeconds: 7.5 });
+near(shadowDifficulty(base.shadow, 5, 10).searchSeconds, 10 - 10 / 9);
 for (const [level, sanity] of [[0, 0], [1, 35], [10, 50]]) {
   const test = shadowTest(level, sanity);
   test.returnAt(0);
@@ -167,7 +167,7 @@ for (const [sanity, draw, expected] of [[34, .109, 'manifested'], [34, .111, 'in
   assert.equal(test.state().shadow.phase, expected);
   assert.equal(test.calls(), expected === 'manifested' ? 2 : 1);
 }
-for (const [level, sanity, duration] of [[1, 34, 8], [10, 49, 6]]) {
+for (const [level, sanity, duration] of [[1, 34, 10], [10, 49, 7.5]]) {
   const test = shadowTest(level, sanity);
   test.returnAt(0);
   assert.deepEqual(test.state().shadow, { phase: 'manifested', camera: 'CAM12' });
@@ -205,6 +205,6 @@ assert.equal(interrupted.state().shadow.phase, 'inactive');
 assert.deepEqual(interrupted.events, []);
 interrupted.returnAt(11);
 assert.equal(interrupted.calls(), 2);
-for (const asset of [base.shadow.sprite, base.shadow.jumpscare]) assert(fs.existsSync(asset));
+for (const asset of [base.shadow.officeArt, base.shadow.sprite, base.shadow.jumpscare]) assert(fs.existsSync(asset));
 
 console.log('PASS: sanity and visibility, dynamic clock, zero and maximum levels, power and radio, Shadow deadlines and reset.');

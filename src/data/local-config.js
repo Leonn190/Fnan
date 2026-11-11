@@ -753,18 +753,19 @@ window.NathGame.localConfig = {
     "firstLevel": {
       "sanityLimit": 35,
       "chance": 10,
-      "searchSeconds": 8
+      "searchSeconds": 10
     },
     "lastLevel": {
       "sanityLimit": 50,
       "chance": 15,
-      "searchSeconds": 6
+      "searchSeconds": 7.5
     },
     "chancePerSanityPoint": 1,
     "manifestSeconds": 1.15,
     "foundSeconds": 0.65,
     "jumpscareMs": 1200,
-    "sprite": "./public/images/Nathzinha Espírito_ Boneca Animatrônica Flutuante.png",
+    "officeArt": "./public/images/shadow/office.webp",
+    "sprite": "./public/images/shadow/camera-sprite.webp",
     "jumpscare": "./public/images/jumpscares/shadow.webp"
   },
   "threats": {

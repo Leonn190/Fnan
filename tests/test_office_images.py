@@ -59,19 +59,14 @@ print('PASS: five corridor characters have distinct front and back slots in the 
 
 # Compare the visible portraits to the reference art, allowing for WebP compression.
 closet_states = OFFICE / 'closet/states'
-door_sources = {
-    'original': 'Boneca animatrônica sob persianas neon.png',
-    'yandere': 'yandere porta do escritorio.png',
-    'gotica': 'Nathzinha Gótica no Escritório.png',
-    'platinada': 'Animatrônica Gatinha no Portal Neon.png',
-}
+closet_sources = ROOT / 'outros/arte/office/closet'
 door_box = (555, 312, 693, 410)
 portraits = {}
-for character, source in door_sources.items():
-    with Image.open(OFFICE.parent / source) as image:
+for character in ('original', 'yandere', 'gotica', 'platinada'):
+    with Image.open(closet_sources / f'doorway-{character}.png') as image:
         portraits[f'sala-vazia--porta-{character}.webp'] = (door_box, image.convert('RGB').crop(door_box))
 
-with Image.open(OFFICE.parent / 'Cinco Nathzinhas no Escritório Neon.png') as image:
+with Image.open(closet_sources / 'group.png') as image:
     master = image.convert('RGB')
 for character, (x, y) in {
     'original': (525, 320), 'yandere': (707, 326), 'maid': (847, 326),

@@ -53,7 +53,8 @@ const dom = {
   clock: $('#clock-label'),
   resourceHud: $('#resource-hud'), sanityMeter: $('#sanity-meter'), sanityValue: $('#sanity-value'),
   energyMeter: $('#energy-meter'), energyValue: $('#energy-value'),
-  shadowManifest: $('#shadow-manifest'), shadowFeed: $('#shadow-feed'), shadowSprite: $('#shadow-sprite'),
+  shadowManifest: $('#shadow-manifest'), shadowOfficeArt: $('#shadow-office-art'),
+  shadowFeed: $('#shadow-feed'), shadowSprite: $('#shadow-sprite'),
   hint: $('#initial-hint'),
   toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift'),
   debug: $('#movement-debug')
@@ -73,11 +74,12 @@ let lastDesktopMinute;
 const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
 const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
 const SHADOW_IMAGE = config.shadow.jumpscare;
+const CLOWN_ART = './public/images/office/closet/clown/';
 const CLOWN_PHASES = [
-  { art: 'office/closet/seated-clown.png', alt: 'Palhaça dormindo no fundo do armário' },
-  { art: 'office/closet/seated-clown-alternate.png', alt: 'Palhaça sentada com os olhos acesos' },
-  { art: 'Boneca Animatrônica Jester na Cela Sombria (1).png', alt: 'Palhaça em pé no fundo do armário' },
-  { art: 'Arlequina animatrônica no corredor sombrio.png', alt: 'Palhaça de perto com os olhos pretos' }
+  { art: 'sleeping.webp', alt: 'Palhaça dormindo no fundo do armário' },
+  { art: 'eyes-lit.webp', alt: 'Palhaça sentada com os olhos acesos' },
+  { art: 'standing.webp', alt: 'Palhaça em pé no fundo do armário' },
+  { art: 'close-up.webp', alt: 'Palhaça de perto com os olhos pretos' }
 ];
 const JUMPSCARE_IMAGES = ['original', 'yandere', 'gotica', 'maid', 'platinada']
   .map(character => `./public/images/jumpscares/${character}.gif`)
@@ -662,7 +664,7 @@ function setClownPhase(index) {
     return;
   }
   const { art, alt } = CLOWN_PHASES[index];
-  const source = `./public/images/${art}`;
+  const source = CLOWN_ART + art;
   if (dom.closetBeam.getAttribute('src') !== source) dom.closetBeam.src = source;
   dom.closetBeam.alt = alt;
 }
@@ -801,7 +803,7 @@ function stopShift() {
   clearTimeout(flashTimeout);
   dom.toast.classList.remove('show');
   dom.flash.classList.remove('active');
-  dom.resourceHud.hidden = dom.shadowManifest.hidden = dom.shadowFeed.hidden = true;
+  dom.resourceHud.hidden = dom.shadowManifest.hidden = dom.shadowOfficeArt.hidden = dom.shadowFeed.hidden = true;
   delete dom.shadowFeed.dataset.phase;
   clearFlashlight();
   stopRadio();
@@ -1027,7 +1029,9 @@ function renderResources({ sanity, energy, blackout, computerOn, radioAvailable 
 }
 
 function renderShadow({ phase, camera }) {
-  dom.shadowManifest.hidden = phase !== 'manifested' || state.mode !== 'office';
+  const inOffice = state.mode === 'office';
+  dom.shadowManifest.hidden = !inOffice || phase !== 'manifested';
+  dom.shadowOfficeArt.hidden = !inOffice || (phase !== 'manifested' && phase !== 'searching');
   dom.shadowFeed.hidden = phase !== 'found' || state.mode !== 'cameras' || CAMERAS[state.cameraIndex].id !== camera;
   if (!dom.shadowFeed.hidden) dom.shadowFeed.dataset.phase = phase;
   else delete dom.shadowFeed.dataset.phase;
@@ -1393,10 +1397,11 @@ function startShift(levels, custom) {
   dom.game.hidden = false;
   resetShift();
   preloadImages(Object.values(OFFICE.images));
-  if (levels.palhaca > 0) preloadImages(CLOWN_PHASES.map(({ art }) => `./public/images/${art}`));
+  if (levels.palhaca > 0) preloadImages(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
   if (levels.shadow > 0) {
+    dom.shadowOfficeArt.src = config.shadow.officeArt;
     dom.shadowSprite.src = config.shadow.sprite;
-    preloadImages([config.shadow.sprite, SHADOW_IMAGE]);
+    preloadImages([config.shadow.officeArt, config.shadow.sprite, SHADOW_IMAGE]);
   }
   // Load state variants before the player starts toggling their gates.
   for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);

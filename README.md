@@ -26,9 +26,11 @@ Restaurante_da_Nathzinha_Web_V1/
 ├── public/                          # Recursos consumidos pelo navegador
 │   ├── images/
 │   │   ├── office/                  # Mestre, fundos e camadas de personagens
-│   │   │   └── closet/              # Visão pelas frestas e fundo do armário
+│   │   │   └── closet/              # Frestas, camadas e poses da Palhaça
+│   │   ├── computer/                # Moldura do monitor e papel de parede
+│   │   ├── shadow/                  # Confronto Neon e sprite das câmeras
 │   │   ├── menu/                    # Arte da tela de título e variações de glitch
-│   │   ├── jumpscares/              # GIFs de susto por personagem e variação
+│   │   ├── jumpscares/              # GIFs por personagem e WebP animado da Shadow
 │   │   ├── cameras/
 │   │   │   └── CAM01/ … CAM12/      # Uma pasta por câmera
 │   │   │       ├── base.webp        # Fundo usado pelo jogo
@@ -41,7 +43,8 @@ Restaurante_da_Nathzinha_Web_V1/
 │   │   └── maps/                    # Imagens da planta V7/V8
 │   └── models/                      # Reserva para futuros modelos 3D
 └── outros/                          # Arquivos de produção e documentação
-    ├── arte/                        # Referências PNG por câmera e artes individuais
+    ├── arte/                        # Referências, PNGs de origem e quadros da Shadow
+    ├── audio/                       # Áudio original do rádio
     ├── documentacao/               # V8, checklist, manifesto e hashes
     ├── identidade_visual/          # Bíblia visual, paleta e materiais
     ├── planta/                     # Fonte técnica em JSON/Python/SVG
@@ -49,6 +52,8 @@ Restaurante_da_Nathzinha_Web_V1/
 ```
 
 O arquivo `outros/documentacao/MAPEAMENTO_ORIGINAIS.json` registra a importação dos **60 arquivos originais** do ZIP V8, com os caminhos e hashes SHA-256 da época.
+
+As imagens do menu, do computador, da Shadow e da Palhaça usam WebP sem perdas. Os PNGs correspondentes ficam em `outros/arte/`, com a mesma estrutura e extensão `.png`. O arquivo `outros/arte/shadow/jumpscare-frames.zip` guarda os 48 quadros e a animação usada em `public/images/jumpscares/shadow.webp`. As faixas de `public/audio/radio/` são as versões usadas pelo jogo, com as gravações de origem em `outros/audio/radio/`.
 
 ## Publicar no GitHub Pages (sem build)
 
