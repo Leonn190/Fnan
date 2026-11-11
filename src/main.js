@@ -582,6 +582,7 @@ function resetApp(app) {
   app.open = false;
   app.panel.hidden = true;
   setMaximized(app, false);
+  delete app.panel.dataset.snapped;
   for (const property of ['--window-x', '--window-y', '--resized-width', '--resized-height']) {
     app.panel.style.setProperty(property, '');
   }
@@ -1051,10 +1052,15 @@ for (const [id, app] of Object.entries(desktopApps)) {
 
   let gesture;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const snapSide = event => {
+    const { left, right } = panel.parentElement.parentElement.getBoundingClientRect();
+    if (event.clientX <= left + 18) return 'left';
+    if (event.clientX >= right - 18) return 'right';
+    return '';
+  };
   panel.addEventListener('pointerdown', event => {
     showApp(id);
-    if (state.complete || gesture || !event.isPrimary || event.button !== 0
-        || panel.dataset.maximized !== undefined) return;
+    if (state.complete || gesture || !event.isPrimary || event.button !== 0) return;
     const edge = event.target.dataset.resize;
     if (!edge && (!titlebar.contains(event.target) || event.target.closest('button'))) return;
 
@@ -1064,6 +1070,7 @@ for (const [id, app] of Object.entries(desktopApps)) {
       x: event.clientX,
       y: event.clientY,
       edge,
+      moving: false,
       left, top, right: left + width, bottom: top + height
     };
     const handle = edge ? event.target : titlebar;
@@ -1071,15 +1078,29 @@ for (const [id, app] of Object.entries(desktopApps)) {
   });
   panel.addEventListener('pointermove', event => {
     if (gesture?.pointer !== event.pointerId || panel.hidden || dom.desktop.hidden
-        || state.complete || panel.dataset.maximized !== undefined) return;
-    const { clientWidth, clientHeight } = panel.parentElement;
+        || state.complete) return;
+    const workspace = panel.parentElement;
+    const { clientWidth, clientHeight } = workspace;
     const { edge, x, y } = gesture;
     const dx = event.clientX - x;
     const dy = event.clientY - y;
     let { left, top, right, bottom } = gesture;
     if (!edge) {
-      panel.style.setProperty('--window-x', clamp(left + dx, 0, clientWidth - panel.offsetWidth) + 'px');
-      panel.style.setProperty('--window-y', clamp(top + dy, 0, clientHeight - panel.offsetHeight) + 'px');
+      if (!gesture.moving) {
+        if (Math.hypot(dx, dy) < 5) return;
+        gesture.moving = true;
+        if (panel.hasAttribute('data-snapped') || panel.hasAttribute('data-maximized')) {
+          const bounds = workspace.getBoundingClientRect();
+          const grip = clamp((x - bounds.left - left) / (right - left), 0, 1);
+          setMaximized(app, false);
+          delete panel.dataset.snapped;
+          gesture.left = left = x - bounds.left - panel.offsetWidth * grip;
+          gesture.top = top = y - bounds.top - clamp(y - bounds.top - top, 0, titlebar.offsetHeight);
+        }
+      }
+      panel.style.setProperty('--window-x', clamp(left + dx, 0, Math.max(0, clientWidth - panel.offsetWidth)) + 'px');
+      panel.style.setProperty('--window-y', clamp(top + dy, 0, Math.max(0, clientHeight - panel.offsetHeight)) + 'px');
+      workspace.dataset.snapPreview = snapSide(event);
       return;
     }
     if (edge.includes('w') || edge.includes('e')) {
@@ -1108,7 +1129,13 @@ for (const [id, app] of Object.entries(desktopApps)) {
     }
   });
   const endGesture = event => {
-    if (gesture?.pointer === event.pointerId) gesture = null;
+    if (gesture?.pointer !== event.pointerId) return;
+    if (event.type === 'pointerup' && gesture.moving && !state.complete && !panel.hidden && !dom.desktop.hidden) {
+      const side = snapSide(event);
+      if (side) panel.dataset.snapped = side;
+    }
+    delete panel.parentElement.dataset.snapPreview;
+    gesture = null;
   };
   panel.addEventListener('pointerup', endGesture);
   panel.addEventListener('pointercancel', endGesture);

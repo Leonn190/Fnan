@@ -110,7 +110,9 @@ for (const [level, opens] of [[3, false], [4, true]]) {
   assert.equal(actor('padrao').position, 2);
   assert.equal(actor('gotica').position, 2);
   assert.equal(actor('yandere').position, 2);
-  at(13.5, { camera: 'CAM03', gates: ['G06'] });
+  at(12.99, { camera: 'CAM03', gates: ['G06'] });
+  assert.equal(game.snapshot().static, true);
+  at(13, { camera: 'CAM03', gates: ['G06'] });
   assert.equal(game.snapshot().static, false);
 }
 

@@ -287,7 +287,7 @@ window.NathGame.localConfig = {
       ]
     },
     "static": {
-      "duration": 2.5,
+      "duration": 2,
       "gateClosingChance": 100
     },
     "flashlight": {
