@@ -64,6 +64,7 @@ function createEffects(config, routes, actors) {
   return {
     startAudio, integrate, weight,
     staticActive: now => now < staticUntil,
+    staticDeadline: now => now < staticUntil ? staticUntil : Infinity,
     triggerStatic: now => { staticUntil = now + config.effects.static.duration; },
     audioStatus: now => ({ remaining: Math.max(0, readyAt - now), camera: now < lure?.ends ? lure.camera : null }),
     addNoiseEvent: event => actors.forEach(actor => addNoise(actor, noise.events[event])),

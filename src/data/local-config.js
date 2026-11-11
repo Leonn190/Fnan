@@ -696,7 +696,8 @@ window.NathGame.localConfig = {
         3,
         5,
         7,
-        9
+        9,
+        10
       ],
       "intervalReductionPerStep": 8,
       "targetBonusLevels": [
@@ -711,15 +712,60 @@ window.NathGame.localConfig = {
   },
   "night": {
     "rulesVersion": "1.1.2",
-    "secondsPerHour": 60,
+    "clock": {
+      "fastSanity": 90,
+      "slowSanity": 10,
+      "fastSecondsPerHour": 60,
+      "slowSecondsPerHour": 240
+    },
     "startHour": 12,
     "hoursToWin": 6,
     "normalLevel": 0,
     "levels": [
       0,
-      9
-    ],
-    "sanity": null
+      10
+    ]
+  },
+  "power": {
+    "initial": 100,
+    "computerDrain": 0.018,
+    "gateDrain": 0.028,
+    "radioGraceSeconds": 25,
+    "warningBelow": 15
+  },
+  "sanity": {
+    "initial": 100,
+    "loss": {
+      "camera": 0.15,
+      "direct": 0.35,
+      "centralGate": 0.1,
+      "closet": 0.5,
+      "invasion": 2
+    },
+    "recovery": {
+      "music": 0.2,
+      "passive": 0.05
+    },
+    "blackoutLossMultiplier": 2
+  },
+  "shadow": {
+    "name": "Nathzinha Shadow",
+    "firstLevel": {
+      "sanityLimit": 35,
+      "chance": 10,
+      "searchSeconds": 8
+    },
+    "lastLevel": {
+      "sanityLimit": 50,
+      "chance": 15,
+      "searchSeconds": 6
+    },
+    "chancePerSanityPoint": 1,
+    "manifestSeconds": 1.15,
+    "foundSeconds": 0.65,
+    "jumpscareMs": 1200,
+    "sprite": "./public/images/Nathzinha Espírito_ Boneca Animatrônica Flutuante.png",
+    "jumpscare": "./public/images/jumpscares/shadow.webp"
   },
   "threats": {
     "attack": {

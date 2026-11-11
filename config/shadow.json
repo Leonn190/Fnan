@@ -1,0 +1,11 @@
+{
+  "name": "Nathzinha Shadow",
+  "firstLevel": { "sanityLimit": 35, "chance": 10, "searchSeconds": 8 },
+  "lastLevel": { "sanityLimit": 50, "chance": 15, "searchSeconds": 6 },
+  "chancePerSanityPoint": 1,
+  "manifestSeconds": 1.15,
+  "foundSeconds": 0.65,
+  "jumpscareMs": 1200,
+  "sprite": "./public/images/Nathzinha Espírito_ Boneca Animatrônica Flutuante.png",
+  "jumpscare": "./public/images/jumpscares/shadow.webp"
+}

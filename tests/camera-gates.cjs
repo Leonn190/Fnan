@@ -21,6 +21,7 @@ class Element {
   setAttribute(key, value) { this.attrs[key] = String(value); }
   getAttribute(key) { return this.attrs[key] ?? null; }
   removeAttribute(key) { delete this.attrs[key]; }
+  toggleAttribute(key, enabled) { if (enabled) this.setAttribute(key, ''); else this.removeAttribute(key); }
   append(...items) { this.children.push(...items); }
   replaceChildren(...items) { this.children = items; }
   querySelector() { return new Element(); }
@@ -36,6 +37,7 @@ for (const [, id, attributes] of html.matchAll(/<main [^>]*id="([^"]+)"([^>]*)>/
   nodes[id].hidden = /\bhidden\b/.test(attributes);
 }
 nodes.game.clientWidth = 1280;
+nodes.game.clientHeight = 720;
 nodes['office-scene'].offsetWidth = 2160;
 const music = nodes['menu-music'];
 const scream = nodes['jumpscare-sound'];
@@ -78,6 +80,7 @@ const context = vm.createContext({
     if (url.pathname.endsWith('/characters.json')) {
       for (const actor of Object.values(data)) actor.interval = 1000;
     }
+    if (url.pathname.endsWith('/threats.json')) data.clown.growthIncreasePerLevel = 0;
     return { ok: true, json: async () => data };
   },
   setTimeout: () => 1, clearTimeout() {}, requestAnimationFrame: fn => { frame = fn; },
@@ -113,13 +116,25 @@ step(2_000);
 assert.equal(music.volume, .58);
 now = 600_000;
 nodes['start-game'].fire('click');
+assert.deepEqual(nodes['office-characters'].children.filter(image => !image.hidden), []);
+assert.match(nodes['movement-debug'].textContent, /Palhaça · 0\.0/);
+const customStart = levels => {
+  nodes['open-custom'].fire('click');
+  const selectors = nodes['custom-levels'].children.map(label => label.children[1]);
+  for (const select of selectors) {
+    assert.deepEqual(select.children.map(option => option.value), Array.from({ length: 11 }, (_, level) => String(level)));
+    select.value = String(levels[select.name] ?? 0);
+  }
+  nodes['custom-form'].fire('submit');
+};
+customStart({ padrao: 1, gotica: 1, yandere: 1, maid: 1, gatinha: 1 });
 const nightStart = now;
 assert.equal(nodes['title-screen'].hidden, true);
 assert.equal(nodes.game.hidden, false);
 assert.equal(music.paused, true);
 step(nightStart + 100);
 assert.match(nodes['clock-label'].innerHTML, /^12 /);
-assert.match(nodes['movement-debug'].textContent, /Padrão.*998\.4 s/);
+assert.match(nodes['movement-debug'].textContent, /Padrão.*918\.4 s/);
 const svg = nodes['map-canvas'].children[0];
 const cameras = svg.children.filter(node => node.attrs['data-cam']);
 const gates = svg.children.find(node => node.attrs['aria-label'] === 'Portões').children;
@@ -404,7 +419,7 @@ pressW(); office('lit');
 console.log('PASS: 12 camera folders, all gate states, 208 office combinations and 172 closet frames.');
 
 // The closet only exits through the slatted door. Turning resets the flashlight.
-nodes['restart-shift'].fire('click');
+customStart({ palhaca: 1 });
 nodes.game.clientWidth = 1280;
 nodes['office-scene'].offsetWidth = 2160;
 const closetStart = now;
@@ -533,6 +548,7 @@ console.log('PASS: six one-shot jumpscares, including the clown from the right i
 
 const bottomGif = './public/images/jumpscares/palhaca-baixo.gif';
 assert(!fs.readFileSync(path.join(root, bottomGif)).includes('NETSCAPE2.0'));
+customStart({ palhaca: 1 });
 for (const closetState of ['door', 'lit', 'turning']) {
   const entry = now;
   nodes['office-closet'].fire('click');
@@ -563,7 +579,7 @@ for (const closetState of ['door', 'lit', 'turning']) {
   nodes['return-to-menu'].fire('click');
   assert.equal(nodes.game.dataset.scare, undefined);
   randomValue = () => 0;
-  nodes['start-game'].fire('click');
+  customStart({ palhaca: 1 });
 }
 console.log('PASS: J always picks the bottom clown inside the closet, including with the light on or while turning.');
 

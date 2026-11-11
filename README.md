@@ -1,6 +1,6 @@
 # Nine Nights at Nath's — Sistema de jogo v1.1.2 🌸
 
-Fangame de terror com um turno de 12 AM a 6 AM. **New Game** inicia todas as Nathzinhas no nível 0. **Custom Night** permite escolher o nível de cada uma das seis, inclusive a Palhaça, de 0 a 9. Cada hora dura 60 segundos reais e a vitória ocorre aos 360 segundos. A mesma noite pode ser repetida após vitória ou derrota.
+Fangame de terror com um turno de 12 AM a 6 AM. **New Game** inicia com todas as ameaças desativadas. **Custom Night** permite escolher o nível de 0 a 10 para cada personagem, incluindo a Palhaça e a Nathzinha Shadow. O nível 0 desativa a personagem. Cada hora do turno leva entre 60 e 240 segundos reais, conforme a sanidade. A mesma noite pode ser repetida após vitória ou derrota.
 
 **Projeto estático puro:** HTML + CSS + JavaScript com scripts locais. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
 
@@ -16,7 +16,7 @@ Restaurante_da_Nathzinha_Web_V1/
 │   ├── main.js                      # Escritório, monitor, noite, HUD, entradas
 │   ├── config.js                    # Leitura dos JSONs por HTTP(S)
 │   ├── movement.js                  # Relógio, tentativas, ocupação e transições
-│   ├── gameplay/                    # Grafo, pesos, ataques, Palhaça e sabotagem
+│   ├── gameplay/                    # Grafo, efeitos, ameaças, recursos e Shadow
 │   ├── night-menu.js                # Menu e seletores do Custom Night
 │   ├── scene-art.js                 # Seleção das variantes e dos slots visuais
 │   ├── map.js                       # Mapa clicável da planta real
@@ -67,16 +67,21 @@ Em HTTP(S), inclusive no GitHub Pages, o jogo carrega `config/` diretamente. Par
 
 Ao alterar os padrões que serão distribuídos para abertura direta, atualize a cópia local com `node scripts/sync-local-config.cjs`. Confira a sincronização com `node scripts/sync-local-config.cjs --check`. Abrir o jogo e publicar no Pages dispensam essa etapa.
 
+Execute `node tests/night-systems.cjs`, `node tests/movement.cjs` e `node tests/camera-gates.cjs` para validar as regras e os controles. Os testes de arte `tests/test_cam05_images.py` e `tests/test_office_images.py` rodam diretamente com Python e Pillow.
+
 A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Monitores ultrawide, incluindo modelos curvos, recebem bordas pretas nas laterais: escritório, câmeras, mapa e HUD usam a mesma área útil. A curvatura física não é detectável pelo navegador; a proporção da tela define as bordas. O movimento do panorama usa as bordas da área do jogo.
 
 ## Como jogar
 
-- Pressione **S** ou clique no monitor para abrir o computador. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela do monitor para voltar ao escritório. As janelas e a câmera selecionada são preservadas ao reabrir o PC.
+- Pressione **S** ou clique no monitor para abrir o computador. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela do monitor para voltar ao escritório. O botão ⏻ no monitor liga e desliga o computador. O menu Iniciar também permite desligá-lo.
 - No escritório, pressione **A** ou **D** para ir até a extremidade esquerda ou direita. Também é possível usar as bordas do panorama ou arrastar no touch. A porta esquerda fica sempre aberta. Olhar para ela impede travessias na aproximação.
 - Clique no botão rosa à direita do portão principal para fechar ou abrir o G01. Segure **W** ou pressione e segure no breu do portão para iluminar o corredor quando ele está aberto e a sala está vazia. A luz impede movimentos pelo corredor enquanto apontada para ele e afeta os pesos de Gótica, Yandere e Gatinha. A planta também controla o G01. O limite de três portões fechados no mapa preserva a reabertura automática do último a ter sido fechado.
 - Use o botão **Reproduzir som nesta câmera** para atrair ou repelir personagens. O som dura 7 s na câmera de origem, inclusive depois de mudar de câmera, com recarga de 12 s desde o acionamento.
 - Se houver uma invasão, vire para a direita e clique na porta do armário técnico dentro do prazo. A proteção começa no clique. Espere as invasoras saírem antes de voltar ao escritório. No armário, pressione **D** para olhar o fundo ou **A** para voltar às frestas. As bordas da visão e o gesto horizontal também viram a câmera. Segure **W** ou pressione e segure sobre a Palhaça para iluminá-la e congelar seu contador. Clique nas frestas para sair.
 - O botão redondo do rádio toca uma das três faixas e reduz o contador da Palhaça. Cada entrada no armário registra um possível piso. O piso passa a valer se o contador cruzar o limiar para cima após o registro. O rádio, o computador, o movimento da visão e as viagens ao armário contribuem para o barulho.
+- Observe as barras no canto inferior esquerdo. Ver animatrônicas, ficar no armário e fechar o portão central reduzem a sanidade. A música ajuda a recuperá-la. Sanidade baixa desacelera o relógio e favorece a Shadow.
+- Ao ver **FIND ME**, abra as câmeras e encontre a Shadow antes do fim do prazo. Ela escolhe uma câmera por aparição e só pode se manifestar no retorno ao escritório.
+- O computador ligado e os portões fechados consomem energia. No apagão, o computador para, o rádio ainda pode funcionar por 25 s e as perdas de sanidade dobram. O armário e a lanterna continuam disponíveis.
 - Abra `?debug=1` para acompanhar posições, dificuldades, bloqueios, contadores e o estado da câmera. Nesse modo, **J** testa os sustos.
 
 ## Configuração
@@ -84,6 +89,9 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | Arquivo | Regras e dados |
 |---|---|
 | `night.json` | Horário inicial, duração, vitória e faixa de dificuldade |
+| `sanity.json` | Perdas, recuperação e multiplicador do apagão |
+| `power.json` | Energia inicial, consumo, aviso e prazo do rádio |
+| `shadow.json` | Dificuldade, chance, prazos e recursos visuais da Shadow |
 | `map.json` | 25 posições, 36 ligações, câmeras, capacidade e arestas de portões |
 | `characters.json` | Posições permitidas, partida, IA, rastreamento, reação e habilidades individuais |
 | `movement.json` | Sorteio, variação dos intervalos, efeitos dos níveis, bloqueios e recuo |
@@ -99,7 +107,6 @@ O temporizador de permanência de cada invasora conta desde a entrada dela no co
 
 ### Pendências da especificação e da arte
 
-- **Sanidade** tem configuração `null`. A especificação não define medidor, taxas ou efeito.
 - **P04** deixa o teto do barulho em `null`. O acúmulo segue as taxas confirmadas e o peso não fica negativo.
 - **P06** define a roleta de sabotagens e a morte após 25 s de ventilação sabotada. Faltam o procedimento de conserto, as durações e os efeitos técnicos de câmeras, portas e áudio. O Painel Geral sinaliza as falhas sorteadas. Os reinícios manuais já existentes no painel continuam separados da sabotagem.
 - **P08** deixa os demais vínculos entre portões e arestas pendentes. Os controles e as variantes visuais existentes desses portões continuam disponíveis.

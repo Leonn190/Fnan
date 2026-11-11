@@ -16,7 +16,7 @@ function createNightMenu(config, { startShift, onEnter }) {
   const [min, max] = config.night.levels;
   const inputs = new Map();
 
-  for (const [id, { name }] of Object.entries({ ...config.characters, palhaca: config.threats.clown })) {
+  for (const [id, { name }] of Object.entries({ ...config.characters, palhaca: config.threats.clown, shadow: config.shadow })) {
     const label = document.createElement('label');
     const select = document.createElement('select');
     select.name = id;

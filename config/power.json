@@ -1,0 +1,7 @@
+{
+  "initial": 100,
+  "computerDrain": 0.018,
+  "gateDrain": 0.028,
+  "radioGraceSeconds": 25,
+  "warningBelow": 15
+}

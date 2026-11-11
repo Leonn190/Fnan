@@ -1,15 +1,16 @@
 (() => {
 'use strict';
 
-const { factor, uniform, weighted, createRoutes, createEffects, createThreats } = window.NathGame;
+const { factor, uniform, weighted, createRoutes, createEffects, createThreats,
+  createResources, createShadow, shadowDifficulty, CAMERAS } = window.NathGame;
 
 function createMovement(config, { random = Math.random, emit = () => {} } = {}) {
   const { map, movement, characters, night } = config;
   const { left, leftApproach, office, front, back } = map;
   const { difficulty, retreat } = movement;
   const routes = createRoutes(map);
-  const winAt = night.secondsPerHour * night.hoursToWin;
-  let actors, effects, threats, input, now, outcome;
+  const cameraIds = CAMERAS.map(cam => cam.id);
+  let actors, effects, threats, resources, shadow, input, now, outcome;
 
   function interval(actor) {
     const initial = actor.rule.initialStationaryAttempts !== undefined && actor.position === actor.rule.start;
@@ -25,8 +26,9 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     now = 0;
     outcome = null;
     input = { ...initialInput, gates: new Set(initialInput.gates) };
-    actors = Object.entries(characters).map(([key, rule]) => {
-      const level = levels[key] ?? night.normalLevel;
+    const levelFor = key => Math.max(0, Math.min(night.levels[1], levels[key] ?? night.normalLevel));
+    actors = Object.entries(characters).filter(([key]) => levelFor(key) > 0).map(([key, rule]) => {
+      const level = levelFor(key);
       const steps = difficulty.oddSteps.filter(step => level >= step).length;
       const bonuses = difficulty.targetBonusLevels.filter(step => level >= step).length;
       const allowed = new Set(rule.positions);
@@ -42,7 +44,10 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     });
     for (const actor of actors) actor.due = interval(actor);
     effects = createEffects(config, routes, actors);
-    threats = createThreats(config, { palhaca: levels.palhaca ?? night.normalLevel }, random, emit);
+    threats = createThreats(config, { palhaca: levelFor('palhaca') }, random, emit);
+    resources = createResources(config);
+    shadow = createShadow(config.shadow, shadowDifficulty(config.shadow, levelFor('shadow'), night.levels[1]),
+      cameraIds, random);
   }
 
   function occupants(position) {
@@ -71,7 +76,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   }
 
   function cameraObserves(position) {
-    return routes.positions.get(position).cameras.includes(input.camera);
+    return resources.snapshot(now).computerOn && routes.positions.get(position).cameras.includes(input.camera);
   }
 
   function transition(actor, choice, to) {
@@ -123,10 +128,16 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     return true;
   }
 
+  function finish(result, source) {
+    outcome = result;
+    shadow.stop();
+    emit(result, source);
+  }
+
   function settle() {
-    if (now >= winAt) {
-      outcome = 'win';
-      emit('win');
+    const { blackout, computerOn } = resources.snapshot(now);
+    if (shadow.update(now, computerOn && input.findShadow !== false ? input.camera : null, blackout)) {
+      finish('loss', 'shadow');
       return;
     }
     for (const actor of actors) {
@@ -156,30 +167,37 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     threats.resolve(now, actor => {
       const choice = retreatChoice(actor);
       transition(actor, choice, choice.to);
-    }, source => {
-      outcome = 'loss';
-      emit('loss', source);
-    });
+    }, source => finish('loss', source));
   }
 
   function integrate(until) {
-    const dt = until - now;
-    effects.integrate(dt, input);
-    threats.integrate(dt, input);
-    now = until;
+    const { computerOn } = resources.snapshot(now);
+    const observation = window.NathGame.sanityObservation(config, actors, cameraActors, {
+      ...input, camera: computerOn && !effects.staticActive(now) ? input.camera : null,
+      view: !computerOn && input.computer ? 'office' : input.view,
+      clownStage: threats.clownStage()
+    });
+    const { end, radio, won } = resources.segment(now, until, input, observation);
+    const activeInput = { ...input, radio, computer: computerOn && input.computer };
+    effects.integrate(end - now, activeInput);
+    threats.integrate(end - now, activeInput);
+    now = end;
+    if (won) finish('win');
   }
 
   function advance(until, nextInput, action) {
     if (outcome) return;
-    while (true) {
-      const due = Math.min(winAt, threats.nextDeadline(now, input),
+    until = Math.max(now, until);
+    while (now < until) {
+      const radio = input.radio && resources.snapshot(now).radioAvailable;
+      const due = Math.min(until, shadow.nextDeadline(), effects.staticDeadline(now),
+        threats.nextDeadline(now, { ...input, radio }),
         ...actors.map(actor => actor.pending?.expires ?? actor.due));
-      if (due >= until) break;
       integrate(due);
-      settle();
+      if (outcome) return;
+      if (now < until) settle();
       if (outcome) return;
     }
-    integrate(until);
     const current = typeof nextInput === 'function' ? nextInput() : nextInput;
     input = { ...current, gates: new Set(current.gates) };
     let accepted = false;
@@ -192,8 +210,16 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         effects.addNoiseEvent('closetRoundTrip');
         break;
       case 'cameraAudio':
-        accepted = effects.startAudio(now, input.camera);
+        accepted = resources.snapshot(now).computerOn && effects.startAudio(now, input.camera);
         break;
+      case 'computerPower':
+        resources.toggleComputer();
+        break;
+      case 'returnToOffice': {
+        const { sanity, blackout } = resources.snapshot(now);
+        shadow.returnToOffice(now, action.source, sanity, blackout);
+        break;
+      }
       case 'gate':
         if (action.closed && action.visible && random() * 100 < config.effects.static.gateClosingChance) {
           effects.triggerStatic(now);
@@ -226,14 +252,15 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
 
   reset();
   return {
-    reset, advance, cameraActors, diagnostics,
+    reset, advance, cameraActors, diagnostics, stop: () => shadow.stop(),
     officeState: () => ({
       room: occupants(office).map(actor => actor.rule.artId),
       doorway: occupants(left)[0]?.rule.artId ?? null,
       front: occupants(front).map(actor => actor.rule.artId),
       back: occupants(back).map(actor => actor.rule.artId)
     }),
-    snapshot: () => ({ now, outcome, ...threats.snapshot(now), audio: effects.audioStatus(now), static: effects.staticActive(now) })
+    snapshot: () => ({ now, outcome, ...resources.snapshot(now), shadow: shadow.snapshot(), ...threats.snapshot(now),
+      audio: effects.audioStatus(now), static: effects.staticActive(now) })
   };
 }
 

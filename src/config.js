@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const sections = ['night', 'map', 'movement', 'characters', 'effects', 'threats', 'controls'];
+const sections = ['night', 'map', 'movement', 'characters', 'effects', 'threats', 'controls', 'sanity', 'power', 'shadow'];
 const scriptUrl = document.currentScript.src;
 const configDirectory = new URL('../config/', scriptUrl);
 

@@ -13,6 +13,8 @@
   <script defer src="./src/gameplay/routes.js"></script>
   <script defer src="./src/gameplay/effects.js"></script>
   <script defer src="./src/gameplay/threats.js"></script>
+  <script defer src="./src/gameplay/resources.js"></script>
+  <script defer src="./src/gameplay/shadow.js"></script>
   <script defer src="./src/movement.js"></script>
   <script defer src="./src/scene-art.js"></script>
   <script defer src="./src/map.js"></script>
@@ -65,7 +67,9 @@
           <div class="corridor-characters" id="corridor-characters" aria-hidden="true"></div>
           <img class="clown-peek" id="clown-peek" src="./public/images/Palhaça Espiando no Armário Técnico.png" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
+          <div class="office-blackout" aria-hidden="true"></div>
           <button class="scene-hotspot monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa" aria-keyshortcuts="S"></button>
+          <button class="scene-hotspot monitor-power" id="office-power" type="button" aria-label="Energia do computador" title="Energia do computador" aria-pressed="true">⏻</button>
           <button class="scene-hotspot gate-light-hotspot" id="office-light" type="button" aria-label="Segurar para iluminar o corredor" aria-keyshortcuts="W" aria-pressed="false"></button>
           <button class="scene-hotspot gate-button-hotspot" id="office-gate" type="button" aria-label="Portão principal" aria-pressed="false"></button>
           <button class="scene-hotspot radio-hotspot" id="office-radio" type="button" aria-label="Rádio da mesa" aria-pressed="false"></button>
@@ -143,6 +147,9 @@
                   <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
                   <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
                   <div class="camera-static" id="camera-static" hidden aria-label="Sinal com interferência"></div>
+                  <div class="shadow-feed" id="shadow-feed" hidden>
+                    <img id="shadow-sprite" alt="Nathzinha Shadow" draggable="false">
+                  </div>
                   <div class="camera-offline" id="camera-offline" hidden><span>▣</span><strong>CÂMERAS INDISPONÍVEIS</strong><small>REINICIE O SISTEMA DE CÂMERAS NO PAINEL GERAL</small></div>
                 </div>
                 <div class="feed-heading">
@@ -173,6 +180,7 @@
               <span class="start-heading">Iniciar</span>
               <button id="start-cameras" type="button"><svg aria-hidden="true"><use href="#icon-cameras"/></svg>Câmeras</button>
               <button id="start-systems" type="button"><svg aria-hidden="true"><use href="#icon-systems"/></svg>Painel Geral</button>
+              <button id="shutdown-desktop" type="button"><svg aria-hidden="true"><use href="#icon-power"/></svg>Desligar computador</button>
               <button class="start-power" id="close-desktop" type="button"><svg aria-hidden="true"><use href="#icon-power"/></svg>Voltar ao escritório</button>
             </div>
             <nav class="computer-taskbar" aria-label="Barra de tarefas">
@@ -198,6 +206,14 @@
       <header class="hud-top">
         <div class="night-clock"><div class="clock-time" id="clock-label">12 <small>AM</small></div><span id="night-mode">NOITE <strong>01</strong></span></div>
       </header>
+
+      <div class="resource-hud" id="resource-hud" hidden>
+        <label for="sanity-meter">Sanidade <span id="sanity-value" aria-hidden="true">100%</span></label>
+        <meter id="sanity-meter" min="0" max="100" value="100"></meter>
+        <label for="energy-meter">Energia <span id="energy-value" aria-hidden="true">100%</span></label>
+        <meter id="energy-meter" min="0" max="100" value="100"></meter>
+      </div>
+      <div class="shadow-manifest" id="shadow-manifest" hidden><span lang="en">FIND ME</span></div>
 
       <div class="threat-alert" id="threat-alert" role="status" hidden></div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>

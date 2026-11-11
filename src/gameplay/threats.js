@@ -5,13 +5,14 @@ const { factor, uniform, weighted } = window.NathGame;
 
 function createThreats(config, levels, random, emit) {
   const { attack, clown, sabotage } = config.threats;
+  const clownEnabled = levels.palhaca > 0;
   const growth = clown.growth * factor(clown.growthIncreasePerLevel * levels.palhaca);
   const invasions = new Map();
   const faults = new Map();
   const thresholds = [];
   let hidden = false;
-  let counter = clown.initial;
-  let floor = clown.min;
+  let counter = clownEnabled ? clown.initial : 0;
+  let floor = clownEnabled ? clown.min : 0;
   let entries = 0;
   let clownDeath = false;
 
@@ -22,13 +23,15 @@ function createThreats(config, levels, random, emit) {
   }
 
   function enterCloset(now) {
-    if (counter > clown.entryDeathAbove) {
+    if (clownEnabled && counter > clown.entryDeathAbove) {
       clownDeath = true;
       return;
     }
     hidden = true;
-    const threshold = Math.min(clown.max, ++entries * clown.floorPerEntry);
-    if (!thresholds.includes(threshold)) thresholds.push(threshold);
+    if (clownEnabled) {
+      const threshold = Math.min(clown.max, ++entries * clown.floorPerEntry);
+      if (!thresholds.includes(threshold)) thresholds.push(threshold);
+    }
     for (const invasion of invasions.values()) if (invasion.leaveAt === null) protect(invasion, now);
   }
 
@@ -62,6 +65,7 @@ function createThreats(config, levels, random, emit) {
   }
 
   function integrate(dt, input) {
+    if (!clownEnabled) return;
     const next = Math.max(floor, Math.min(clown.max, counter + dt * clownRate(input)));
     for (const threshold of thresholds) {
       if (counter <= threshold && next > threshold) floor = Math.max(floor, threshold);
@@ -75,7 +79,7 @@ function createThreats(config, levels, random, emit) {
   }
 
   function nextDeadline(now, input) {
-    const rate = clownRate(input);
+    const rate = clownEnabled ? clownRate(input) : 0;
     const deathAt = rate > 0 ? now + (clown.max - counter) / rate : Infinity;
     return Math.min(deathAt, ventilationDeadline(), ...[...invasions.values()].map(invasion =>
       hidden ? invasion.leaveAt : invasion.reactionEnds
@@ -83,7 +87,7 @@ function createThreats(config, levels, random, emit) {
   }
 
   function resolve(now, retreat, lose) {
-    if (clownDeath || clown.max - counter <= Number.EPSILON * clown.max) return lose('palhaca');
+    if (clownEnabled && (clownDeath || clown.max - counter <= Number.EPSILON * clown.max)) return lose('palhaca');
     if (now >= ventilationDeadline()) return lose('ventilacao');
     for (const [actor, invasion] of invasions) {
       if (!hidden && now >= invasion.reactionEnds) return lose(actor.key);
@@ -94,13 +98,14 @@ function createThreats(config, levels, random, emit) {
     }
   }
 
+  const clownStage = () => clownEnabled ? clown.stages.findLastIndex(threshold => counter >= threshold) : -1;
   return {
     enterCloset, exitCloset: () => { hidden = false; },
-    invade, triggerSabotage, integrate, nextDeadline, resolve,
+    invade, triggerSabotage, integrate, nextDeadline, resolve, clownStage,
     snapshot: now => ({
       hidden, counter, floor, faults: [...faults.keys()],
       ventilationRemaining: faults.has('ventilacao') ? Math.max(0, ventilationDeadline() - now) : null,
-      clownStage: clown.stages.findLastIndex(threshold => counter >= threshold)
+      clownStage: clownStage()
     })
   };
 }

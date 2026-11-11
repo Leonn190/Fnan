@@ -3,11 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 global.window = {};
-for (const file of ['data/game-data', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats', 'movement', 'scene-art']) {
+for (const file of ['data/game-data', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
+  'gameplay/resources', 'gameplay/shadow', 'movement', 'scene-art']) {
   require('../src/' + file + '.js');
 }
 const { createRoutes, createEffects, createMovement, cameraStateKey, corridorSlots, CAMERAS } = window.NathGame;
-const base = Object.fromEntries(['night', 'map', 'movement', 'characters', 'effects', 'threats', 'controls']
+const base = Object.fromEntries(['night', 'map', 'movement', 'characters', 'effects', 'threats', 'controls', 'sanity', 'power', 'shadow']
   .map(name => [name, require('../config/' + name + '.json')]));
 
 const closeTo = (actual, expected) => assert(Math.abs(actual - expected) < 1e-8, actual + ' != ' + expected);
@@ -17,11 +18,18 @@ function scenario(overrides = {}, { levels, random = () => .5 } = {}) {
   const { map, movement, threats } = config;
   config.characters = Object.fromEntries(Object.entries(overrides).map(([id, fields]) =>
     [id, { ...config.characters[id], ...fields }]));
+  const activeLevels = { ...levels };
+  // Unspecified fixtures use their stated interval exactly, with abilities still disabled.
+  for (const [id, actor] of Object.entries(config.characters)) {
+    if (activeLevels[id] !== undefined) continue;
+    activeLevels[id] = 1;
+    actor.interval /= 1 - movement.difficulty.intervalReductionPerStep / 100;
+  }
   movement.jitter = { min: 0, max: 0 };
   threats.attack.jitter = { min: 0, max: 0 };
   const events = [];
   const game = createMovement(config, { random, emit: (event, value) => events.push([event, value]) });
-  game.reset(levels, { radio: true });
+  game.reset(activeLevels, { radio: true });
   return {
     game, map, events,
     actor: key => game.diagnostics().find(actor => actor.key === key),
@@ -43,11 +51,11 @@ assert.equal(routes.gate(13, 14), 'G01');
 assert.equal(routes.gate(13, 12), undefined);
 
 {
-  const { game } = scenario(base.characters, { levels: { gatinha: 9, yandere: 1, maid: 4, gotica: 6 } });
+  const { game } = scenario(base.characters, { levels: { padrao: 1, gatinha: 9, yandere: 1, maid: 4, gotica: 6 } });
   const roster = game.diagnostics();
   assert.deepEqual(roster.map(x => x.position), [1, 1, 1, 3, 16]);
-  assert.deepEqual(roster.map(x => x.level), [0, 6, 1, 9, 4]);
-  [24, 19.76, 19.32, 10.83, 21.924].forEach((interval, index) => closeTo(roster[index].remaining, interval));
+  assert.deepEqual(roster.map(x => x.level), [1, 6, 1, 9, 4]);
+  [22.08, 19.76, 19.32, 10.83, 21.924].forEach((interval, index) => closeTo(roster[index].remaining, interval));
 }
 
 {
@@ -271,7 +279,7 @@ for (const [level, opens] of [[3, false], [4, true]]) {
 }
 
 {
-  const { game, at, output } = scenario();
+  const { game, at, output } = scenario({}, { levels: { palhaca: 1 } });
   at(0, { radio: false });
   at(100, { radio: false }, { type: 'closetEnter' });
   assert.deepEqual(output('loss'), ['palhaca']);
@@ -280,10 +288,10 @@ for (const [level, opens] of [[3, false], [4, true]]) {
   assert.equal(game.snapshot().outcome, null);
   at(360);
   assert.equal(game.snapshot().outcome, 'win');
-  game.reset({}, { radio: false });
+  game.reset({ palhaca: 1 }, { radio: false });
   at(360);
   assert.deepEqual(output('loss'), ['palhaca', 'palhaca']);
-  closeTo(game.snapshot().now, 123.75);
+  closeTo(game.snapshot().now, 99 / .88);
 }
 
 {

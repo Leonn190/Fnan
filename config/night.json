@@ -1,12 +1,16 @@
 {
   "rulesVersion": "1.1.2",
-  "secondsPerHour": 60,
+  "clock": {
+    "fastSanity": 90,
+    "slowSanity": 10,
+    "fastSecondsPerHour": 60,
+    "slowSecondsPerHour": 240
+  },
   "startHour": 12,
   "hoursToWin": 6,
   "normalLevel": 0,
   "levels": [
     0,
-    9
-  ],
-  "sanity": null
+    10
+  ]
 }

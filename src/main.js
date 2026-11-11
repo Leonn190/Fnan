@@ -2,7 +2,7 @@
 'use strict';
 const {
   CAMERAS, OFFICE, makeCameraMap, SoundEngine, createMovement, createNightMenu,
-  cameraStateKey, cameraFrame, characterStateImages, officeCharacterImage, corridorSlots, loadConfig
+  cameraActorFrame, characterStateImages, officeCharacterImage, corridorSlots, loadConfig
 } = window.NathGame;
 const shopCamera = CAMERAS.find(cam => cam.id === 'CAM01');
 const receptionCamera = CAMERAS.find(cam => cam.id === 'CAM02');
@@ -35,6 +35,7 @@ const dom = {
   playfield: $('#playfield'), scareArt: $('#jumpscare-art'),
   gameOver: $('#game-over'), returnToMenu: $('#return-to-menu'), scareSound: $('#jumpscare-sound'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
+  officePower: $('#office-power'), shutdownDesktop: $('#shutdown-desktop'),
   officeCharacters: $('#office-characters'), corridorCharacters: $('#corridor-characters'),
   officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
   clownPeek: $('#clown-peek'), officeGate: $('#office-gate'), officeLight: $('#office-light'),
@@ -50,6 +51,9 @@ const dom = {
   closeDesktop: $('#close-desktop'), openStart: $('#open-start'), startMenu: $('#start-menu'),
   taskTime: $('#task-time'), taskDate: $('#task-date'),
   clock: $('#clock-label'),
+  resourceHud: $('#resource-hud'), sanityMeter: $('#sanity-meter'), sanityValue: $('#sanity-value'),
+  energyMeter: $('#energy-meter'), energyValue: $('#energy-value'),
+  shadowManifest: $('#shadow-manifest'), shadowFeed: $('#shadow-feed'), shadowSprite: $('#shadow-sprite'),
   hint: $('#initial-hint'),
   toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift'),
   debug: $('#movement-debug')
@@ -68,6 +72,7 @@ let lastDesktopMinute;
 
 const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
 const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
+const SHADOW_IMAGE = config.shadow.jumpscare;
 const CLOWN_PHASES = [
   { art: 'office/closet/seated-clown.png', alt: 'Palhaça dormindo no fundo do armário' },
   { art: 'office/closet/seated-clown-alternate.png', alt: 'Palhaça sentada com os olhos acesos' },
@@ -308,6 +313,7 @@ const movement = createMovement(config, {
       announce('Sabotagem detectada. Consulte o Painel Geral.');
     } else if (event === 'loss') {
       if (value === 'ventilacao') beginVentilationDefeat();
+      else if (value === 'shadow') beginJumpscare(SHADOW_IMAGE);
       else if (value === 'palhaca') {
         beginJumpscare(movement.snapshot().hidden ? CLOWN_BOTTOM_IMAGE : CLOWN_RIGHT_IMAGE);
       } else {
@@ -386,12 +392,7 @@ function showTechnical(cam) {
 }
 
 function currentCameraFrame(cam) {
-  const actors = movement.cameraActors(cam.id).filter(actor => !controls.unillustratedCameraPositions.includes(actor.position));
-  if (!state.characterPreviews.has(cam.id) && cam.id === 'CAM09' && actors.some(actor => actor.stage > 0)) {
-    return { key: 'maid-saindo', source: './public/images/cameras/CAM09/states/02-maid-saindo.webp' };
-  }
-  const key = state.characterPreviews.get(cam.id) ?? cameraStateKey(cam, actors, config.map.stage);
-  return cameraFrame(cam, key, map.isGateClosed);
+  return cameraActorFrame(cam, movement.cameraActors(cam.id), config, map.isGateClosed, state.characterPreviews.get(cam.id));
 }
 
 function cameraImage(cam) {
@@ -494,6 +495,9 @@ function changeCamera(id, withSound = false) {
 
 function setMode(mode, withSound = true) {
   if (state.complete || state.mode === mode) return;
+  if (Object.hasOwn(desktopApps, mode) || mode === 'desktop') {
+    if (!movement.snapshot().computerOn) return;
+  }
   const watching = mode === 'cameras';
   const hiding = mode === 'closet';
   state.mode = mode;
@@ -529,7 +533,14 @@ function openComputer() {
 function closeComputer() {
   if (dom.desktop.hidden || state.complete) return;
   setMode('office');
+  advanceGame(performance.now(), { type: 'returnToOffice', source: 'computer' });
   dom.officeMonitor.focus({ preventScroll: true });
+}
+
+function toggleComputerPower() {
+  if (state.complete || state.closetTransition) return;
+  advanceGame(performance.now(), { type: 'computerPower' });
+  if (!movement.snapshot().computerOn && !dom.desktop.hidden) closeComputer();
 }
 
 function updateDesktopClock() {
@@ -621,6 +632,7 @@ function stopRadio() {
 
 function toggleRadio() {
   if (state.complete || state.closetTransition || state.mode !== 'office') return;
+  if (!movement.snapshot().radioAvailable) return;
   if (!systemOnline('audio')) {
     announce('Sistema de áudio indisponível.');
     return;
@@ -643,16 +655,20 @@ function toggleRadio() {
 
 function setClownPhase(index) {
   if (state.clownPhase === index) return;
-  const { art, alt } = CLOWN_PHASES[index];
   state.clownPhase = index;
+  dom.clownPeek.hidden = index !== CLOWN_PHASES.length - 1;
+  if (index < 0) {
+    dom.closetBeam.hidden = true;
+    return;
+  }
+  const { art, alt } = CLOWN_PHASES[index];
   const source = `./public/images/${art}`;
   if (dom.closetBeam.getAttribute('src') !== source) dom.closetBeam.src = source;
   dom.closetBeam.alt = alt;
-  dom.clownPeek.hidden = index !== CLOWN_PHASES.length - 1;
 }
 
 function setClosetLight(on) {
-  dom.closetBeam.hidden = !on;
+  dom.closetBeam.hidden = !on || state.clownPhase < 0;
   dom.closetLight.setAttribute('aria-pressed', String(on));
 }
 
@@ -735,7 +751,10 @@ function advanceClosetTransition(now) {
         break;
     }
   }
-  if (now >= transition.endAt) clearClosetTransition();
+  if (now >= transition.endAt) {
+    clearClosetTransition();
+    if (transition.kind === 'exit') return { type: 'returnToOffice', source: 'closet' };
+  }
 }
 
 function playCameraAudio() {
@@ -757,8 +776,8 @@ function clockHour(elapsedHours) {
   return (night.startHour + elapsedHours) % 12 || 12;
 }
 
-function updateClockUI(now) {
-  const hours = Math.min(night.hoursToWin, Math.floor(now / night.secondsPerHour));
+function updateClockUI(progress) {
+  const hours = Math.min(night.hoursToWin, Math.floor(progress + 1e-12));
   const label = clockHour(hours);
   if (clockLabel === label) return;
   clockLabel = label;
@@ -766,25 +785,33 @@ function updateClockUI(now) {
 }
 
 function finishShift() {
-  state.complete = true;
-  clearFlashlight();
-  clearClosetTransition();
-  stopRadio();
-  sound.stopLure();
-  updateClockUI(night.hoursToWin * night.secondsPerHour);
+  stopShift();
+  updateClockUI(night.hoursToWin);
   $('#shift-time').innerHTML = `${clockHour(night.hoursToWin)}:00 <small>AM</small>`;
   dom.complete.hidden = false;
   dom.restart.focus();
   playSound('finish');
 }
 
-function prepareDefeat() {
+function stopShift() {
   state.complete = true;
+  movement.stop();
+  state.restarts.clear();
+  clearTimeout(toastTimeout);
+  clearTimeout(flashTimeout);
+  dom.toast.classList.remove('show');
+  dom.flash.classList.remove('active');
+  dom.resourceHud.hidden = dom.shadowManifest.hidden = dom.shadowFeed.hidden = true;
+  delete dom.shadowFeed.dataset.phase;
   clearFlashlight();
   stopRadio();
   sound.stopLure();
   state.dragging = false;
   clearClosetTransition();
+}
+
+function prepareDefeat() {
+  stopShift();
   dom.playfield.inert = true;
 }
 
@@ -795,7 +822,9 @@ function beginVentilationDefeat() {
 }
 
 function beginJumpscare(source) {
-  if (source === CLOWN_BOTTOM_IMAGE) {
+  if (source === SHADOW_IMAGE) {
+    dom.game.dataset.scare = 'shadow';
+  } else if (source === CLOWN_BOTTOM_IMAGE) {
     dom.game.dataset.scare = 'clown-bottom';
     setClosetLight(false);
   } else if (source === CLOWN_RIGHT_IMAGE) {
@@ -824,7 +853,8 @@ function advanceDefeat(now) {
       // Give a cold load time to arrive, but always reach Game Over.
       if (!dom.scareArt.complete && now < defeatDeadline + imageLoadWaitMs) return;
       if (dom.scareArt.naturalWidth > 0) {
-        const cycle = dom.game.dataset.scare === 'clown-bottom' ? clownBottomCycleMs : cycleMs;
+        const cycle = dom.game.dataset.scare === 'shadow' ? config.shadow.jumpscareMs
+          : dom.game.dataset.scare === 'clown-bottom' ? clownBottomCycleMs : cycleMs;
         setDefeatPhase('scare', now + cycle + finalHoldMs);
         break;
       }
@@ -861,6 +891,8 @@ function resetShift() {
   state.computerMode = 'desktop';
   for (const app of Object.values(desktopApps)) resetApp(app);
   movement.reset(state.levels);
+  dom.resourceHud.hidden = false;
+  renderResources(movement.snapshot());
   movementChanged = true;
   gateChanged = false;
   changedCameras.clear();
@@ -916,9 +948,23 @@ function corridorInView() {
 
 function gameInput() {
   const office = state.mode === 'office' && !state.closetTransition;
+  const closet = state.mode === 'closet';
+  const camera = state.mode === 'cameras' && systemOnline('cameras') ? CAMERAS[state.cameraIndex].id : null;
+  const officeWidth = Math.max(dom.game.clientWidth, dom.game.clientHeight * 3);
+  const officeHalf = 1086 * dom.game.clientWidth / (officeWidth || 1);
+  const officeCenter = 1086 - 2172 * state.pan / (officeWidth || 1);
+  const closetHalf = Math.min(835.5, 941 * dom.game.clientWidth / (2 * dom.game.clientHeight || 1));
   return {
     gates: map.closedGateIds(),
-    camera: state.mode === 'cameras' && systemOnline('cameras') ? CAMERAS[state.cameraIndex].id : null,
+    camera,
+    cameraPreview: state.characterPreviews.get(camera),
+    visibleCameraSource: camera && !dom.feedArt.hidden && dom.feedArt.complete && dom.feedArt.naturalWidth
+      ? dom.feedArt.getAttribute('src') : null,
+    findShadow: !document.hidden,
+    view: office ? 'office' : closet && !state.closetTransition ? `closet-${dom.closet.dataset.view}` : state.mode === 'cameras' ? 'cameras' : null,
+    closet,
+    officeBounds: [officeCenter - officeHalf, officeCenter + officeHalf],
+    closetBounds: [835.5 - closetHalf, 835.5 + closetHalf],
     leftLook: office && state.pan > maxPanShift() * controls.observation.leftPanFraction,
     corridorLight: office && state.flashlight && !map.isGateClosed(OFFICE.gate) && corridorInView(),
     clownLight: state.mode === 'closet' && dom.closet.dataset.view === 'back' && !dom.closetBeam.hidden,
@@ -943,8 +989,15 @@ function advanceGame(now, action) {
   const frame = movement.snapshot();
   syncMovement();
   dom.static.hidden = !frame.static || !systemOnline('cameras');
-  updateClockUI(frame.now);
   if (state.complete) return accepted;
+  updateClockUI(frame.hours);
+  renderResources(frame);
+  if (!frame.radioAvailable && radioPlayback) stopRadio();
+  if (frame.blackout && !dom.desktop.hidden) {
+    setMode('office');
+    dom.officePower.focus({ preventScroll: true });
+  }
+  renderShadow(frame.shadow);
   setClownPhase(frame.clownStage);
   const warnings = [];
   if (state.officeRoom.size) warnings.push(frame.hidden ? 'AGUARDE NO ARMÁRIO' : 'INVASÃO · ENTRE NO ARMÁRIO');
@@ -955,9 +1008,40 @@ function advanceGame(now, action) {
   return accepted;
 }
 
+function renderResources({ sanity, energy, blackout, computerOn, radioAvailable }) {
+  for (const [meter, label, value] of [[dom.sanityMeter, dom.sanityValue, sanity], [dom.energyMeter, dom.energyValue, energy]]) {
+    const rounded = Math.round(value * 10) / 10;
+    const text = value > 0 && rounded === 0 ? '<0,1%' : `${String(rounded).replace('.', ',')}%`;
+    if (label.textContent !== text) label.textContent = text;
+    meter.value = value;
+    meter.style.setProperty('--meter-fill', `${value}%`);
+  }
+  dom.sanityMeter.style.setProperty('--meter-hue', 338 - sanity * .62);
+  dom.energyMeter.classList.toggle('low', energy <= config.power.warningBelow);
+  dom.game.toggleAttribute('data-blackout', blackout);
+  dom.game.toggleAttribute('data-computer-off', !computerOn);
+  dom.officeMonitor.disabled = !computerOn;
+  dom.officePower.disabled = blackout;
+  dom.officePower.setAttribute('aria-pressed', String(computerOn));
+  dom.officeRadio.disabled = !radioAvailable;
+}
+
+function renderShadow({ phase, camera }) {
+  dom.shadowManifest.hidden = phase !== 'manifested' || state.mode !== 'office';
+  dom.shadowFeed.hidden = phase !== 'found' || state.mode !== 'cameras' || CAMERAS[state.cameraIndex].id !== camera;
+  if (!dom.shadowFeed.hidden) dom.shadowFeed.dataset.phase = phase;
+  else delete dom.shadowFeed.dataset.phase;
+}
+
 let gameFrame;
+let backgroundFrame;
 function requestGameFrame() {
-  gameFrame ??= requestAnimationFrame(tick);
+  if (document.hidden) {
+    backgroundFrame ??= setTimeout(() => {
+      backgroundFrame = undefined;
+      tick(performance.now());
+    }, 1000);
+  } else gameFrame ??= requestAnimationFrame(tick);
 }
 
 function tick(now) {
@@ -965,10 +1049,11 @@ function tick(now) {
   const delta = Math.min(100, Math.max(0, now - state.lastFrame));
   state.lastFrame = now;
   if (!state.complete) {
-    advanceRestarts(now);
-    advanceClosetTransition(now);
+    const time = performance.now();
+    advanceRestarts(time);
+    const action = advanceClosetTransition(time);
     if (state.mode === 'office') moveCamera(delta);
-    advanceGame(performance.now());
+    advanceGame(time, action);
     if (state.flashlight && dom.office.dataset.flashlight !== String(corridorInView())) updateOfficeView();
     updateRadioMix();
     if (now >= nextHudUpdate) {
@@ -988,10 +1073,20 @@ function tick(now) {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clearFlashlight();
+  if (document.hidden) {
+    if (gameFrame !== undefined) cancelAnimationFrame(gameFrame);
+    gameFrame = undefined;
+    clearFlashlight();
+  } else {
+    clearTimeout(backgroundFrame);
+    backgroundFrame = undefined;
+  }
   advanceGame(performance.now());
+  if (!state.complete || (dom.game.dataset.defeat && dom.game.dataset.defeat !== 'over')) requestGameFrame();
 });
 dom.officeMonitor.addEventListener('click', openComputer);
+dom.officePower.addEventListener('click', toggleComputerPower);
+dom.shutdownDesktop.addEventListener('click', toggleComputerPower);
 $('#monitor-exit').addEventListener('click', closeComputer);
 document.addEventListener('click', event => {
   if (event.target === document.body) closeComputer();
@@ -999,6 +1094,7 @@ document.addEventListener('click', event => {
 dom.officeCloset.addEventListener('click', () => beginClosetTransition('enter'));
 dom.officeRadio.addEventListener('click', toggleRadio);
 function setRadioPlaying(on) {
+  if (state.radioPlaying === on) return;
   state.radioPlaying = on;
   advanceGame(performance.now());
 }
@@ -1192,7 +1288,7 @@ dom.office.addEventListener('pointermove', event => {
     state.targetPan = Math.max(-maxPanShift(), Math.min(maxPanShift(), state.targetPan + change));
     return;
   }
-  if ([dom.officeRadio, dom.officeGate, dom.officeLight].includes(event.target)) {
+  if ([dom.officeRadio, dom.officeGate, dom.officeLight, dom.officePower].includes(event.target)) {
     state.targetPan = state.pan;
     return;
   }
@@ -1297,7 +1393,11 @@ function startShift(levels, custom) {
   dom.game.hidden = false;
   resetShift();
   preloadImages(Object.values(OFFICE.images));
-  preloadImages(CLOWN_PHASES.map(({ art }) => `./public/images/${art}`));
+  if (levels.palhaca > 0) preloadImages(CLOWN_PHASES.map(({ art }) => `./public/images/${art}`));
+  if (levels.shadow > 0) {
+    dom.shadowSprite.src = config.shadow.sprite;
+    preloadImages([config.shadow.sprite, SHADOW_IMAGE]);
+  }
   // Load state variants before the player starts toggling their gates.
   for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
 }
@@ -1306,6 +1406,8 @@ const menu = createNightMenu(config, {
   startShift,
   onEnter: () => preloadImages([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE])
 });
+dom.game.style.setProperty('--shadow-manifest-duration', `${config.shadow.manifestSeconds}s`);
+dom.game.style.setProperty('--shadow-found-duration', `${config.shadow.foundSeconds}s`);
 dom.restartAllSystems.querySelector('small').textContent = `${controls.restarts.allSystems}s`;
 dom.restartAllLocators.querySelector('small').textContent = `${controls.restarts.allLocators}s`;
 

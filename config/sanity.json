@@ -1,0 +1,15 @@
+{
+  "initial": 100,
+  "loss": {
+    "camera": 0.15,
+    "direct": 0.35,
+    "centralGate": 0.10,
+    "closet": 0.50,
+    "invasion": 2
+  },
+  "recovery": {
+    "music": 0.20,
+    "passive": 0.05
+  },
+  "blackoutLossMultiplier": 2
+}
