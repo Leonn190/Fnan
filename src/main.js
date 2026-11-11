@@ -18,9 +18,9 @@ const corridorCamera = CAMERAS.find(cam => cam.id === 'CAM12');
 
 // A primeira versão funciona como site estático: sem build, sem servidor de jogo e sem backend.
 const $ = selector => document.querySelector(selector);
-let config, enterImmediately;
+let config;
 try {
-  ({ config, enterImmediately } = await loadConfig());
+  config = await loadConfig();
 } catch (error) {
   const message = $('#config-error');
   message.textContent = error.message;
@@ -37,7 +37,7 @@ const dom = {
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
   officeCharacters: $('#office-characters'), corridorCharacters: $('#corridor-characters'),
   officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
-  clownPeek: $('#clown-peek'), leftDoor: $('#left-door'), officeLight: $('#office-light'),
+  clownPeek: $('#clown-peek'), officeGate: $('#office-gate'), officeLight: $('#office-light'),
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
   closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
   closetExtra: $('#closet-extra'),
@@ -102,9 +102,9 @@ function playSound(effect, ...args) {
 }
 
 const state = {
-  mode: 'office', cameraIndex: 0, characterPreviews: new Map(), startedAt: 0,
+  mode: 'office', computerMode: 'desktop', cameraIndex: 0, characterPreviews: new Map(), startedAt: 0,
   officeRoom: new Set(), officeDoorway: null,
-  complete: true, flashlight: false, leftClosed: false, pan: 0, targetPan: 0,
+  complete: true, flashlight: false, flashlightKey: false, flashlightPointer: null, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now(),
   closetTransition: null, closetMouseAtEdge: true, closetTouchX: null,
   clownPhase: -1, radioPlaying: false,
@@ -302,8 +302,7 @@ const movement = createMovement(config, {
         }
       }
     } else if (event === 'openGate') {
-      if (value === 'leftDoor') state.leftClosed = false;
-      else map.openGate(value);
+      map.openGate(value);
       gateChanged = true;
     } else if (event === 'sabotage') {
       announce('Sabotagem detectada. Consulte o Painel Geral.');
@@ -322,16 +321,19 @@ const movement = createMovement(config, {
 
 function updateOfficeView() {
   const closed = map.isGateClosed(OFFICE.gate);
-  if (closed || state.officeRoom.size) state.flashlight = false;
+  const lightBlocked = closed || state.officeRoom.size > 0;
+  if (lightBlocked && state.flashlight) {
+    state.flashlight = state.flashlightKey = false;
+    state.flashlightPointer = null;
+  }
   const illuminated = state.flashlight && corridorInView();
   const view = closed ? 'closed' : illuminated ? 'lit' : 'dark';
   dom.office.dataset.gate = closed ? 'closed' : 'open';
   dom.office.dataset.flashlight = String(illuminated);
-  dom.leftDoor.setAttribute('aria-pressed', String(state.leftClosed));
-  dom.leftDoor.textContent = `PORTA ESQUERDA · ${state.leftClosed ? 'FECHADA' : 'ABERTA'}`;
-  dom.leftDoor.disabled = !systemOnline('doors');
+  dom.officeGate.setAttribute('aria-pressed', String(closed));
+  dom.officeGate.disabled = !systemOnline('doors');
   dom.officeLight.setAttribute('aria-pressed', String(state.flashlight));
-  dom.officeLight.disabled = closed || Boolean(state.officeRoom.size);
+  dom.officeLight.disabled = lightBlocked;
   dom.corridorCharacters.hidden = !illuminated;
   const source = OFFICE.images[view];
   if (dom.officeArt.getAttribute('src') !== source) dom.officeArt.src = source;
@@ -500,17 +502,15 @@ function setMode(mode, withSound = true) {
   dom.closet.hidden = !hiding;
   dom.desktop.hidden = mode !== 'desktop' && !Object.hasOwn(desktopApps, mode);
   setStartMenu(false);
-  if (dom.desktop.hidden) {
-    for (const app of Object.values(desktopApps)) resetApp(app);
-  } else {
+  if (!dom.desktop.hidden) {
+    state.computerMode = mode;
     updateDesktopClock();
   }
   renderDesktopApps();
   dom.hint.hidden = true;
   state.dragging = false;
   state.pointerX = null;
-  state.flashlight = false;
-  updateOfficeView();
+  clearFlashlight();
   updateRadioMix();
   if (withSound) playSound('monitor');
   if (watching) {
@@ -523,7 +523,7 @@ function setMode(mode, withSound = true) {
 }
 
 function openComputer() {
-  if (state.mode === 'office' && !state.closetTransition) setMode('desktop');
+  if (state.mode === 'office' && !state.closetTransition) setMode(state.computerMode);
 }
 
 function closeComputer() {
@@ -664,9 +664,25 @@ function setClosetView(view) {
   if (state.mode === 'closet') dom.closet.focus({ preventScroll: true });
 }
 
-function toggleClosetLight() {
-  if (state.complete || state.closetTransition || state.mode !== 'closet' || dom.closet.dataset.view !== 'back') return;
-  setClosetLight(dom.closetBeam.hidden);
+function flashlightTarget() {
+  if (state.complete || state.closetTransition) return null;
+  if (state.mode === 'office' && !dom.officeLight.disabled) return dom.officeLight;
+  if (state.mode === 'closet' && !dom.closetLight.hidden) return dom.closetLight;
+  return null;
+}
+
+function updateFlashlight() {
+  const held = state.flashlightKey || state.flashlightPointer !== null;
+  const target = flashlightTarget();
+  state.flashlight = held && target === dom.officeLight;
+  setClosetLight(held && target === dom.closetLight);
+  updateOfficeView();
+}
+
+function clearFlashlight() {
+  state.flashlightKey = false;
+  state.flashlightPointer = null;
+  updateFlashlight();
 }
 
 function beginClosetTransition(kind) {
@@ -681,6 +697,7 @@ function beginClosetTransition(kind) {
   }
   const { swap, duration } = controls.closetTransitionsMs[kind];
   state.closetTransition = { kind, swapAt: now + swap, endAt: now + duration };
+  clearFlashlight();
   state.closetTouchX = null;
   state.dragging = false;
   state.targetPan = state.pan;
@@ -749,6 +766,7 @@ function updateClockUI(now) {
 
 function finishShift() {
   state.complete = true;
+  clearFlashlight();
   clearClosetTransition();
   stopRadio();
   sound.stopLure();
@@ -761,6 +779,7 @@ function finishShift() {
 
 function prepareDefeat() {
   state.complete = true;
+  clearFlashlight();
   stopRadio();
   sound.stopLure();
   state.dragging = false;
@@ -838,13 +857,13 @@ function resetShift() {
   dom.threatAlert.hidden = true;
   dom.static.hidden = true;
   sound.stopLure();
-  state.leftClosed = false;
+  state.computerMode = 'desktop';
+  for (const app of Object.values(desktopApps)) resetApp(app);
   movement.reset(state.levels);
   movementChanged = true;
   gateChanged = false;
   changedCameras.clear();
   state.characterPreviews.clear();
-  state.flashlight = false;
   state.systems = Object.fromEntries(SYSTEMS.map(({ id }) => [id, 'online']));
   state.locators = Object.fromEntries(LOCATORS.map(({ id }) => [id, 'online']));
   state.restarts.clear();
@@ -891,15 +910,13 @@ function moveCamera(dt) {
 }
 
 function corridorInView() {
-  return Math.abs(state.pan) <= maxPanShift() * controls.observation.corridorPanFraction;
+  return state.flashlightPointer !== null || Math.abs(state.pan) <= maxPanShift() * controls.observation.corridorPanFraction;
 }
 
 function gameInput() {
   const office = state.mode === 'office' && !state.closetTransition;
-  const gates = map.closedGateIds();
-  if (state.leftClosed) gates.push('leftDoor');
   return {
-    gates,
+    gates: map.closedGateIds(),
     camera: state.mode === 'cameras' && systemOnline('cameras') ? CAMERAS[state.cameraIndex].id : null,
     leftLook: office && state.pan > maxPanShift() * controls.observation.leftPanFraction,
     corridorLight: office && state.flashlight && !map.isGateClosed(OFFICE.gate) && corridorInView(),
@@ -969,7 +986,10 @@ function tick(now) {
   if (!state.complete || (dom.game.dataset.defeat && dom.game.dataset.defeat !== 'over')) requestGameFrame();
 }
 
-document.addEventListener('visibilitychange', () => advanceGame(performance.now()));
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearFlashlight();
+  advanceGame(performance.now());
+});
 dom.officeMonitor.addEventListener('click', openComputer);
 $('#monitor-exit').addEventListener('click', closeComputer);
 document.addEventListener('click', event => {
@@ -986,9 +1006,26 @@ radioMusic.addEventListener('waiting', () => setRadioPlaying(false));
 radioMusic.addEventListener('pause', () => { if (radioMusic.paused) setRadioPlaying(false); });
 radioMusic.addEventListener('error', stopRadio);
 dom.closetExit.addEventListener('click', () => beginClosetTransition('exit'));
-dom.closetLight.addEventListener('click', toggleClosetLight);
-dom.leftDoor.addEventListener('click', toggleLeftDoor);
-dom.officeLight.addEventListener('click', toggleFlashlight);
+dom.officeGate.addEventListener('click', () => {
+  if (state.complete || state.mode !== 'office' || state.closetTransition || !systemOnline('doors')) return;
+  map.toggleGate(OFFICE.gate);
+});
+for (const button of [dom.officeLight, dom.closetLight]) {
+  button.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || state.flashlightPointer !== null || flashlightTarget() !== button) return;
+    button.setPointerCapture(event.pointerId);
+    state.flashlightPointer = event.pointerId;
+    updateFlashlight();
+    advanceGame(performance.now());
+  });
+  const release = event => {
+    if (event.pointerId !== state.flashlightPointer) return;
+    state.flashlightPointer = null;
+    updateFlashlight();
+    advanceGame(performance.now());
+  };
+  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, release);
+}
 for (const [id, app] of Object.entries(desktopApps)) {
   $('#open-' + id).addEventListener('click', () => showApp(id));
   $('#start-' + id).addEventListener('click', () => showApp(id));
@@ -1128,7 +1165,7 @@ dom.office.addEventListener('pointermove', event => {
     state.targetPan = Math.max(-maxPanShift(), Math.min(maxPanShift(), state.targetPan + change));
     return;
   }
-  if (event.target === dom.officeRadio) {
+  if ([dom.officeRadio, dom.officeGate, dom.officeLight].includes(event.target)) {
     state.targetPan = state.pan;
     return;
   }
@@ -1167,20 +1204,6 @@ dom.closet.addEventListener('pointerup', event => {
 });
 dom.closet.addEventListener('pointercancel', () => { state.closetTouchX = null; });
 
-function toggleLeftDoor() {
-  if (state.complete || state.mode !== 'office' || state.closetTransition || !systemOnline('doors')) return;
-  state.leftClosed = !state.leftClosed;
-  advanceGame(performance.now(), { type: 'gate', id: 'leftDoor', closed: state.leftClosed });
-  updateOfficeView();
-}
-
-function toggleFlashlight() {
-  if (state.complete || state.mode !== 'office' || state.closetTransition
-      || state.officeRoom.size || map.isGateClosed(OFFICE.gate)) return;
-  state.flashlight = !state.flashlight;
-  updateOfficeView();
-}
-
 document.addEventListener('keydown', event => {
   if (dom.game.hidden || state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
   const key = event.key.toLowerCase();
@@ -1194,22 +1217,28 @@ document.addEventListener('keydown', event => {
     return;
   }
   if (state.closetTransition || event.repeat) return;
+  if (key === 'w' && flashlightTarget()) {
+    state.flashlightKey = true;
+    updateFlashlight();
+    return;
+  }
   if (state.mode === 'office') {
-    if (key === 'w') toggleFlashlight();
-    else if (key === 's') openComputer();
+    if (key === 's') openComputer();
     else if (key === 'a' || key === 'd') state.targetPan = maxPanShift() * (key === 'a' ? 1 : -1);
   } else if (state.mode === 'closet') {
-    if (key === 'w') toggleClosetLight();
-    else if ((key === 'a' && dom.closet.dataset.view === 'back')
+    if ((key === 'a' && dom.closet.dataset.view === 'back')
       || (key === 'd' && dom.closet.dataset.view === 'door')) beginClosetTransition('turn');
   }
 });
+document.addEventListener('keyup', event => {
+  if (event.key.toLowerCase() !== 'w' || !state.flashlightKey) return;
+  state.flashlightKey = false;
+  updateFlashlight();
+});
 window.addEventListener('blur', () => {
   state.targetPan = 0;
-  state.flashlight = false;
   state.closetTouchX = null;
-  setClosetLight(false);
-  updateOfficeView();
+  clearFlashlight();
   advanceGame(performance.now());
 });
 for (const event of ['click', 'keydown', 'keyup', 'focusin']) {
@@ -1247,7 +1276,7 @@ function startShift(levels, custom) {
 }
 
 const menu = createNightMenu(config, {
-  startShift, enterImmediately,
+  startShift,
   onEnter: () => preloadImages([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE])
 });
 dom.restartAllSystems.querySelector('small').textContent = `${controls.restarts.allSystems}s`;

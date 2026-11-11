@@ -23,13 +23,6 @@
 <body>
   <main class="entry-screen" id="entry-screen" aria-label="Entrada do jogo">
     <button class="entry-button" id="enter-game" type="button" disabled>Jogar Nine Nights at Nath's</button>
-    <div class="entry-config" id="local-config" hidden>
-      <label class="entry-config-picker">
-        Carregar pasta config
-        <input id="local-config-files" type="file" webkitdirectory>
-      </label>
-      <p id="local-config-status" role="status">Configuração padrão local.</p>
-    </div>
     <p id="config-error" role="alert" hidden></p>
   </main>
 
@@ -41,7 +34,7 @@
     <audio id="menu-music" src="./public/audio/menu/fnaf-sister-location-trailer.mp3" preload="metadata" loop></audio>
     <div class="feed-noise" aria-hidden="true"></div>
     <div class="title-content" lang="en">
-      <h1 id="game-title">Nine<br>Nights<br>at Nath's</h1>
+      <h1 id="game-title">Nine<br>Nights at<br>Nath's</h1>
       <nav class="title-actions" aria-label="Modos de jogo">
         <button class="title-start" id="start-game" type="button"><span aria-hidden="true">&gt;&gt;</span> New Game</button>
         <button class="title-start" id="open-custom" type="button"><span aria-hidden="true">&gt;&gt;</span> Custom Night</button>
@@ -72,18 +65,14 @@
           <div class="corridor-characters" id="corridor-characters" aria-hidden="true"></div>
           <img class="clown-peek" id="clown-peek" src="./public/images/Palhaça Espiando no Armário Técnico.png" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
-          <button class="monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa" aria-keyshortcuts="S">
-            <span class="hotspot-corner top-left"></span><span class="hotspot-corner top-right"></span>
-            <span class="hotspot-corner bottom-left"></span><span class="hotspot-corner bottom-right"></span>
-            <span class="hotspot-label">USAR COMPUTADOR <span aria-hidden="true">↗</span></span>
-          </button>
-          <button class="radio-hotspot" id="office-radio" type="button" aria-label="Rádio da mesa" aria-pressed="false"></button>
-          <button class="closet-hotspot" id="office-closet" type="button" aria-label="Entrar no armário técnico"></button>
+          <button class="scene-hotspot monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa" aria-keyshortcuts="S"></button>
+          <button class="scene-hotspot gate-light-hotspot" id="office-light" type="button" aria-label="Segurar para iluminar o corredor" aria-keyshortcuts="W" aria-pressed="false"></button>
+          <button class="scene-hotspot gate-button-hotspot" id="office-gate" type="button" aria-label="Portão principal" aria-pressed="false"></button>
+          <button class="scene-hotspot radio-hotspot" id="office-radio" type="button" aria-label="Rádio da mesa" aria-pressed="false"></button>
+          <button class="scene-hotspot" id="office-closet" type="button" aria-label="Entrar no armário técnico"></button>
         </div>
         <div class="office-shading" aria-hidden="true"></div>
         <span class="office-reticle" aria-hidden="true"></span>
-        <button class="left-door-control" id="left-door" type="button" aria-pressed="false">PORTA ESQUERDA · ABERTA</button>
-        <button class="office-light-control" id="office-light" type="button" aria-keyshortcuts="W" aria-pressed="false">LANTERNA</button>
         <div class="office-location"><span class="location-dot"></span> ESCRITÓRIO DE SEGURANÇA <span class="location-sub">/ CONTROLE</span></div>
       </section>
 
@@ -91,8 +80,8 @@
         <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
         <div id="closet-extra" aria-hidden="true"></div>
         <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/seated-clown.png" alt="Palhaça dormindo no fundo do armário" fetchpriority="low" draggable="false" hidden>
-        <button class="closet-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
-        <button class="closet-light-toggle" id="closet-light" type="button" aria-label="Lanterna do armário" aria-keyshortcuts="W" aria-pressed="false" hidden>LANTERNA</button>
+        <button class="scene-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
+        <button class="scene-hotspot closet-light-hotspot" id="closet-light" type="button" aria-label="Segurar para iluminar a Palhaça" aria-keyshortcuts="W" aria-pressed="false" hidden></button>
       </section>
 
       <section class="computer-view" id="computer-desktop" aria-label="Monitor do escritório" hidden>

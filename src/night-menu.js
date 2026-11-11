@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-function createNightMenu(config, { startShift, onEnter, enterImmediately }) {
+function createNightMenu(config, { startShift, onEnter }) {
   const $ = selector => document.querySelector(selector);
   const entry = $('#entry-screen');
   const entryButton = $('#enter-game');
@@ -72,11 +72,8 @@ function createNightMenu(config, { startShift, onEnter, enterImmediately }) {
     const levels = Object.fromEntries([...inputs].map(([id, select]) => [id, Number(select.value)]));
     begin(levels, true);
   });
-  if (enterImmediately) enter();
-  else {
-    entryButton.disabled = false;
-    entryButton.addEventListener('click', enter, { once: true });
-  }
+  entryButton.disabled = false;
+  entryButton.addEventListener('click', enter, { once: true });
   return { show };
 }
 

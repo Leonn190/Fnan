@@ -25,6 +25,7 @@ class Element {
   replaceChildren(...items) { this.children = items; }
   querySelector() { return new Element(); }
   focus() {}
+  setPointerCapture() {}
   addEventListener(event, action) { (this.events[event] ??= []).push(action); }
   closest() { return this.attrs.role === 'button' ? this : null; }
   fire(event, details) { for (const action of this.events[event] ?? []) action({ target: this, preventDefault() {}, ...details }); }
@@ -88,6 +89,7 @@ for (const [, src] of html.matchAll(/<script defer src="([^"]+)"/g)) {
   await vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
 }
 assert.equal(nodes['entry-screen'].hidden, false);
+assert(!nodes['local-config-files']);
 assert.equal(nodes['title-screen'].hidden, true);
 assert.equal(nodes.game.hidden, true);
 document.fire('keydown', { key: 'm' });
@@ -124,6 +126,13 @@ const gates = svg.children.find(node => node.attrs['aria-label'] === 'Portões')
 const camera = id => cameras.find(node => node.attrs['data-cam'] === id).fire('click');
 const gate = id => gates.find(node => node.attrs['data-gate'] === id).fire('click');
 const isClosed = id => gates.find(node => node.attrs['data-gate'] === id).attrs['aria-pressed'] === 'true';
+const tracking = svg.children.find(node => node.attrs.class === 'map-tracking').children;
+const stageDots = tracking.filter(node => node.attrs['data-position'] === '1');
+assert.equal(stageDots.length, 3);
+assert.equal(new Set(stageDots.map(node => node.attrs['data-actor'])).size, 3);
+assert.equal(new Set(stageDots.map(node => node.attrs.cy)).size, 1);
+const centers = stageDots.map(node => Number(node.attrs.cx)).sort((a, b) => a - b);
+assert(centers.slice(1).every((center, i) => center - centers[i] > 2 * Number(stageDots[i].attrs.r)));
 const check = expected => {
   const src = nodes['feed-art'].src;
   assert.equal(src, expected === 'closed-closed'
@@ -146,15 +155,27 @@ const office = view => {
   assert(fs.existsSync(path.join(root, nodes['office-art'].src)));
 };
 const pressW = details => document.fire('keydown', { key: 'w', ...details });
+const releaseW = () => document.fire('keyup', { key: 'w' });
+const pointer = { button: 0, pointerId: 1 };
+const officeLight = nodes['office-light'];
+const officeGate = nodes['office-gate'];
 office('dark');
 document.fire('keydown', { key: 'f' }); office('dark');
-document.fire('keydown', { key: 'q' });
-assert.equal(nodes['left-door'].getAttribute('aria-pressed'), 'false');
+assert(!nodes['left-door']);
 pressW(); office('lit');
 pressW({ repeat: true }); office('lit');
-pressW(); office('dark');
+officeLight.fire('pointerdown', pointer); office('lit');
+releaseW(); office('lit');
+officeLight.fire('pointerup', pointer); office('dark');
 pressW({ key: 'W' }); office('lit');
 window.fire('blur'); office('dark');
+officeLight.fire('pointerdown', pointer); office('lit');
+officeLight.fire('pointercancel', pointer); office('dark');
+officeGate.fire('click'); office('closed');
+assert(isClosed('G01'));
+officeLight.fire('pointerdown', pointer); office('closed');
+officeGate.fire('click'); office('dark');
+assert(!isClosed('G01'));
 pressW(); office('lit');
 document.fire('keydown', { key: 's' });
 assert.equal(nodes['computer-desktop'].hidden, false);
@@ -175,7 +196,19 @@ nodes['maximize-cameras'].fire('click');
 nodes['open-systems'].fire('click');
 assert.equal(nodes['cameras-view'].hidden, false);
 assert.equal(nodes['taskbar-systems'].attrs['aria-pressed'], 'true');
+camera('CAM08');
+nodes['monitor-exit'].fire('click');
+nodes['office-monitor'].fire('click');
+assert.equal(nodes['taskbar-systems'].attrs['aria-pressed'], 'true');
+assert.equal(nodes['cameras-view'].hidden, false);
+assert(Object.hasOwn(nodes['cameras-view'].dataset, 'maximized'));
+assert.equal(nodes['cam-number'].textContent, 'CAM 08');
 nodes['minimize-systems'].fire('click');
+assert.equal(nodes['systems-view'].hidden, true);
+assert(Object.hasOwn(nodes['taskbar-systems'].dataset, 'open'));
+assert.equal(nodes['taskbar-cameras'].attrs['aria-pressed'], 'true');
+nodes['monitor-exit'].fire('click');
+nodes['office-monitor'].fire('click');
 assert.equal(nodes['systems-view'].hidden, true);
 assert(Object.hasOwn(nodes['taskbar-systems'].dataset, 'open'));
 assert.equal(nodes['taskbar-cameras'].attrs['aria-pressed'], 'true');
@@ -359,7 +392,7 @@ for (const doorway of officeCharacters) {
   office('lit');
   closetFrame('open', [], doorway === 'maid' ? null : doorway);
   assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', doorway)]);
-  pressW(); office('dark');
+  releaseW(); office('dark');
   pressW(); office('lit');
 }
 assert(setOfficeCharacterState(['original'], 'maid'));
@@ -378,6 +411,7 @@ const closetStart = now;
 const closet = nodes['closet-view'];
 const closetExit = nodes['closet-exit'];
 const closetBeam = nodes['closet-beam'];
+const closetLight = nodes['closet-light'];
 const press = (key, details) => document.fire('keydown', { key, ...details });
 nodes['office-closet'].fire('click');
 assert.equal(nodes.game.dataset.closetTransition, 'enter');
@@ -404,6 +438,14 @@ assert.equal(nodes.game.dataset.closetTransition, undefined);
 press('W');
 assert.equal(closetBeam.hidden, false);
 press('w', { repeat: true });
+assert.equal(closetBeam.hidden, false);
+releaseW();
+assert.equal(closetBeam.hidden, true);
+closetLight.fire('pointerdown', pointer);
+assert.equal(closetBeam.hidden, false);
+closetLight.fire('lostpointercapture', pointer);
+assert.equal(closetBeam.hidden, true);
+closetLight.fire('pointerdown', pointer);
 assert.equal(closetBeam.hidden, false);
 press('d');
 assert.equal(nodes.game.dataset.closetTransition, undefined);

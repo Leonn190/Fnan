@@ -195,7 +195,6 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         accepted = effects.startAudio(now, input.camera);
         break;
       case 'gate':
-        if (action.id === 'leftDoor') effects.addNoiseEvent('workshopDoor');
         if (action.closed && action.visible && random() * 100 < config.effects.static.gateClosingChance) {
           effects.triggerStatic(now);
         }

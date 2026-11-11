@@ -61,7 +61,7 @@ Também funciona com a opção clássica **Deploy from a branch → main → /(r
 
 ## Testar localmente e enquadramento
 
-Abra `index.html` diretamente para jogar com a configuração padrão incluída. Para testar alterações locais nos JSONs, use **Carregar pasta config** na tela de entrada e selecione a pasta `config/` antes de clicar em **Jogar**.
+Abra `index.html` diretamente para jogar com a cópia local gerada a partir de `config/`.
 
 Em HTTP(S), inclusive no GitHub Pages, o jogo carrega `config/` diretamente. Para testar assim no computador, execute `python -m http.server 8000` na raiz e abra [localhost:8000](http://localhost:8000/). Recarregue a página após editar um JSON.
 
@@ -71,12 +71,12 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 
 ## Como jogar
 
-- Pressione **S** ou clique no monitor para abrir o computador. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela do monitor para voltar ao escritório.
-- No escritório, pressione **A** ou **D** para ir até a extremidade esquerda ou direita. Também é possível usar as bordas do panorama ou arrastar no touch. Olhar para a porta esquerda impede travessias na aproximação. Clique em **Porta esquerda** para fechar ou abrir o acesso lateral.
-- **W** ou **Lanterna** ilumina o corredor quando o G01 está aberto e a sala está vazia. A luz impede movimentos pelo corredor enquanto apontada para ele e afeta os pesos de Gótica, Yandere e Gatinha. A planta controla o G01, G02 e G06. O limite de três portões fechados no mapa preserva a reabertura automática do último a ter sido fechado.
+- Pressione **S** ou clique no monitor para abrir o computador. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela do monitor para voltar ao escritório. As janelas e a câmera selecionada são preservadas ao reabrir o PC.
+- No escritório, pressione **A** ou **D** para ir até a extremidade esquerda ou direita. Também é possível usar as bordas do panorama ou arrastar no touch. A porta esquerda fica sempre aberta. Olhar para ela impede travessias na aproximação.
+- Clique no botão rosa à direita do portão principal para fechar ou abrir o G01. Segure **W** ou pressione e segure no breu do portão para iluminar o corredor quando ele está aberto e a sala está vazia. A luz impede movimentos pelo corredor enquanto apontada para ele e afeta os pesos de Gótica, Yandere e Gatinha. A planta também controla o G01. O limite de três portões fechados no mapa preserva a reabertura automática do último a ter sido fechado.
 - Use o botão **Reproduzir som nesta câmera** para atrair ou repelir personagens. O som dura 7 s na câmera de origem, inclusive depois de mudar de câmera, com recarga de 12 s desde o acionamento.
-- Se houver uma invasão, vire para a direita e clique na porta do armário técnico dentro do prazo. A proteção começa no clique. Espere as invasoras saírem antes de voltar ao escritório. No armário, pressione **D** para olhar o fundo ou **A** para voltar às frestas. As bordas da visão e o gesto horizontal também viram a câmera. **W** ou **Lanterna** ilumina a Palhaça e congela seu contador. Clique nas frestas para sair.
-- O botão redondo do rádio toca uma das três faixas e reduz o contador da Palhaça. Cada entrada no armário registra um possível piso. O piso passa a valer se o contador cruzar o limiar para cima após o registro. O rádio, o computador, o movimento da visão, a porta lateral e as viagens ao armário contribuem para o barulho.
+- Se houver uma invasão, vire para a direita e clique na porta do armário técnico dentro do prazo. A proteção começa no clique. Espere as invasoras saírem antes de voltar ao escritório. No armário, pressione **D** para olhar o fundo ou **A** para voltar às frestas. As bordas da visão e o gesto horizontal também viram a câmera. Segure **W** ou pressione e segure sobre a Palhaça para iluminá-la e congelar seu contador. Clique nas frestas para sair.
+- O botão redondo do rádio toca uma das três faixas e reduz o contador da Palhaça. Cada entrada no armário registra um possível piso. O piso passa a valer se o contador cruzar o limiar para cima após o registro. O rádio, o computador, o movimento da visão e as viagens ao armário contribuem para o barulho.
 - Abra `?debug=1` para acompanhar posições, dificuldades, bloqueios, contadores e o estado da câmera. Nesse modo, **J** testa os sustos.
 
 ## Configuração
@@ -93,7 +93,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 
 O grafo lógico funciona independentemente da planta desenhada e da disponibilidade de arte. Um destino atrás de portão fechado entra no sorteio. Ao ser bloqueada, a tentativa mantém o destino por até 3 s. Se o impedimento continuar, o próximo intervalo usa metade do tempo normal sorteado. A Gótica pode causar estática compartilhada. A Padrão pode abrir portões físicos e é a única que percorre as saídas externas. A Maid avança os estágios iniciais usando seu próprio relógio e sai de Serviço uma única vez. A Gatinha usa três esconderijos fora das câmeras.
 
-O G06 controla 2↔19. O G02 controla 7↔14 e 25↔14. O G01 existente controla 14↔13. O controle lateral **Q** opera 12↔13 e representa a porta da oficina para o evento de barulho. O retorno especial desloca diretamente para o destino sorteado. Quando já há uma invasora no escritório, a próxima que chegaria à porta esquerda pode entrar diretamente, sujeita aos bloqueios aplicáveis.
+O G06 controla 2↔19. O G02 controla 7↔14 e 25↔14. O G01 controla 14↔13. O retorno especial desloca diretamente para o destino sorteado. Quando já há uma invasora no escritório, a próxima que chegaria à porta esquerda pode entrar diretamente, sujeita aos bloqueios aplicáveis.
 
 O temporizador de permanência de cada invasora conta desde a entrada dela no controle. O clique no armário decide se a permanência usa o tempo normal ou tardio. Em caso de eventos simultâneos, as ações registradas do jogador precedem a resolução das tentativas e dos ataques. O relógio usa tempo real transcorrido, inclusive com a aba oculta.
 

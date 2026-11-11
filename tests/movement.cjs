@@ -40,7 +40,7 @@ assert.equal(routes.gate(14, 25), 'G02');
 assert.equal(routes.gate(25, 7), undefined);
 assert.equal(routes.gate(3, 5), undefined);
 assert.equal(routes.gate(13, 14), 'G01');
-assert.equal(routes.gate(13, 12), 'leftDoor');
+assert.equal(routes.gate(13, 12), undefined);
 
 {
   const { game } = scenario(base.characters, { levels: { gatinha: 9, yandere: 1, maid: 4, gotica: 6 } });
@@ -160,7 +160,7 @@ for (const [level, opens] of [[3, false], [4, true]]) {
     gotica: { start: 10, interval: 11, positions: [10, 12, 13, 7] }
   });
   at(10);
-  at(11, { gates: ['leftDoor'] });
+  at(11, { leftLook: true });
   assert.equal(actor('gotica').position, 10);
   at(12);
   assert.deepEqual(game.officeState().room, ['original', 'gotica']);
@@ -227,9 +227,8 @@ for (const [level, opens] of [[3, false], [4, true]]) {
   fx.integrate(40, { radio: true, computer: true, viewMoving: true });
   assert.equal(actor.noise, 188); // No invented cap.
   fx.integrate(2, {});
-  fx.addNoiseEvent('workshopDoor');
   fx.addNoiseEvent('closetRoundTrip');
-  assert.equal(actor.noise, 209);
+  assert.equal(actor.noise, 199);
   actor.position = 14;
   fx.integrate(30, { corridorLight: true });
   assert.deepEqual(actor.light, { advance: -90, retreat: 90 });

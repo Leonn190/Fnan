@@ -316,8 +316,7 @@ window.NathGame.localConfig = {
         "viewMoving": 0.2
       },
       "events": {
-        "closetRoundTrip": 15,
-        "workshopDoor": 10
+        "closetRoundTrip": 15
       },
       "decay": 2,
       "max": null
@@ -658,12 +657,6 @@ window.NathGame.localConfig = {
       "G01": [
         [
           14,
-          13
-        ]
-      ],
-      "leftDoor": [
-        [
-          12,
           13
         ]
       ]
