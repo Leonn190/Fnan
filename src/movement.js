@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const { factor, uniform, weighted, createRoutes, createEffects, createThreats,
+const { factor, uniform, weighted, createRoutes, createEffects, createThreats, createSmores,
   createResources, createShadow, shadowDifficulty, CAMERAS } = window.NathGame;
 
 function createMovement(config, { random = Math.random, emit = () => {} } = {}) {
@@ -10,7 +10,9 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   const { difficulty, retreat } = movement;
   const routes = createRoutes(map);
   const cameraIds = CAMERAS.map(cam => cam.id);
-  let actors, effects, threats, resources, shadow, input, now, outcome;
+  let actors, effects, threats, resources, shadow, smores, input, now, outcome;
+
+  const moveDue = actor => actor.due - smores.intervalReduction();
 
   function interval(actor) {
     const initial = actor.rule.initialStationaryAttempts !== undefined && actor.position === actor.rule.start;
@@ -44,7 +46,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     });
     for (const actor of actors) actor.due = interval(actor);
     effects = createEffects(config, routes, actors);
-    threats = createThreats(config, { palhaca: levelFor('palhaca') }, random, emit);
+    smores = createSmores(config.threats.smores, levelFor('smores'), random, emit);
+    threats = createThreats(config, { palhaca: levelFor('palhaca') }, random, emit, smores.reactionReduction);
     resources = createResources(config);
     shadow = createShadow(config.shadow, shadowDifficulty(config.shadow, levelFor('shadow'), night.levels[1]),
       cameraIds, random);
@@ -70,7 +73,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const nearest = Math.min(...choices.map(distance));
     const to = weighted(random, choices, id => movement.weight
       * (id === actor.previous ? movement.backtrackFactor : 1)
-      * (distance(id) === nearest && Number.isFinite(nearest) ? factor(actor.targetBonus) : 1)
+      * (distance(id) === nearest && Number.isFinite(nearest) ? factor(actor.targetBonus * smores.targetBonusMultiplier()) : 1)
       * effects.weight(actor, id, now));
     return { to };
   }
@@ -134,14 +137,18 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     emit(result, source);
   }
 
-  function settle() {
-    const { blackout, computerOn } = resources.snapshot(now);
+  function settle(action) {
+    const { blackout, computerOn, radioAvailable } = resources.snapshot(now);
+    const ventOpportunity = !input.smoresLooking
+      && (input.leftLook || (input.computer && computerOn) || action?.type === 'closetExit');
+    smores.resolve(input, input.radio && radioAvailable && !threats.audioFault(), ventOpportunity);
+    if (action?.type === 'closetEnter') threats.enterCloset(now);
     if (shadow.update(now, computerOn && input.findShadow !== false ? input.camera : null, blackout)) {
       finish('loss', 'shadow');
       return;
     }
     for (const actor of actors) {
-      if (actor.pending || actor.due > now) continue;
+      if (actor.pending || moveDue(actor) > now) continue;
       const choice = choose(actor);
       if (choice.to === undefined) {
         actor.due = now + interval(actor);
@@ -181,6 +188,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const activeInput = { ...input, radio, computer: computerOn && input.computer };
     effects.integrate(end - now, activeInput);
     threats.integrate(end - now, activeInput);
+    smores.integrate(end - now, radio && !threats.audioFault());
     now = end;
     if (won) finish('win');
   }
@@ -192,7 +200,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       const radio = input.radio && resources.snapshot(now).radioAvailable;
       const due = Math.min(until, shadow.nextDeadline(), effects.staticDeadline(now),
         threats.nextDeadline(now, { ...input, radio }),
-        ...actors.map(actor => actor.pending?.expires ?? actor.due));
+        smores.nextDeadline(now, radio && !threats.audioFault()),
+        ...actors.map(actor => actor.pending?.expires ?? moveDue(actor)));
       integrate(due);
       if (outcome) return;
       if (now < until) settle();
@@ -203,7 +212,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     let accepted = false;
     switch (action?.type) {
       case 'closetEnter':
-        threats.enterCloset(now);
+        input.smoresLooking = false;
         break;
       case 'closetExit':
         threats.exitCloset();
@@ -226,7 +235,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         }
         break;
     }
-    settle();
+    settle(action);
     return accepted;
   }
 
@@ -243,7 +252,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         camera: position.cameras.join('/') || 'sem câmera',
         previous: routes.positions.get(actor.previous)?.name,
         destination: routes.positions.get(actor.pending?.to)?.name,
-        remaining: Math.max(0, (actor.pending?.expires ?? actor.due) - now),
+        remaining: Math.max(0, (actor.pending?.expires ?? moveDue(actor)) - now),
         stopped: actor.pending?.reason ?? (actor.position === office ? 'invasão' : 'intervalo'),
         light: { ...actor.light }, noise: actor.noise, audioRetention: actor.audioRetention
       };
@@ -254,6 +263,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   return {
     reset, advance, cameraActors, diagnostics, stop: () => shadow.stop(),
     officeState: () => ({
+      smores: smores.phase(),
       room: occupants(office).map(actor => actor.rule.artId),
       doorway: occupants(left)[0]?.rule.artId ?? null,
       front: occupants(front).map(actor => actor.rule.artId),

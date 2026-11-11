@@ -60,12 +60,29 @@ const window = new Element();
 window.location = { search: '?debug=1' };
 let frame;
 let now = 0;
+let characterRules;
 const math = Object.create(Math);
 let randomValue = () => 0;
 math.random = () => randomValue();
 const warnings = [];
+const samples = new Map();
+const playedSamples = [];
 const context = vm.createContext({
   window, document, Element, URLSearchParams, URL, Math: math, performance: { now: () => now },
+  Audio: class {
+    paused = true;
+    constructor(source) {
+      assert(fs.existsSync(path.join(root, source)), source);
+      this.file = source.replace('./public/', '');
+      samples.set(this.file, this);
+    }
+    play() {
+      playedSamples.push(this.file);
+      this.paused = false;
+      return Promise.resolve();
+    }
+    pause() { this.paused = true; }
+  },
   Image: class {
     complete = true;
     set src(value) {
@@ -79,6 +96,7 @@ const context = vm.createContext({
     // Keep the layout and controls tests independent of random movement.
     if (url.pathname.endsWith('/characters.json')) {
       for (const actor of Object.values(data)) actor.interval = 1000;
+      characterRules = data;
     }
     if (url.pathname.endsWith('/threats.json')) data.clown.growthIncreasePerLevel = 0;
     return { ok: true, json: async () => data };
@@ -178,8 +196,11 @@ office('dark');
 document.fire('keydown', { key: 'f' }); office('dark');
 assert(!nodes['left-door']);
 pressW(); office('lit');
+assert.equal(playedSamples.at(-1), '07_FNAF4_Flashlight.mp3');
+const flashlightSampleCount = playedSamples.length;
 pressW({ repeat: true }); office('lit');
 officeLight.fire('pointerdown', pointer); office('lit');
+assert.equal(playedSamples.length, flashlightSampleCount);
 releaseW(); office('lit');
 officeLight.fire('pointerup', pointer); office('dark');
 pressW({ key: 'W' }); office('lit');
@@ -272,7 +293,10 @@ nodes['open-cameras'].fire('click'); check('closed-open');
 for (let time = nightStart + 200; time <= nightStart + 360_000; time += 100) step(time);
 assert.equal(nodes['shift-complete'].hidden, false);
 assert.equal(radio.paused, true);
+const chimes = samples.get('11_FNAF2_Chimes.mp3');
+assert.equal(chimes.paused, false);
 nodes['restart-shift'].fire('click');
+assert.equal(chimes.paused, true);
 assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
 nodes['office-monitor'].fire('click'); nodes['open-cameras'].fire('click'); camera('CAM05'); check('open-open'); office('dark');
 // G01 controls the office, and the flashlight cannot reveal a closed gate.
@@ -430,11 +454,17 @@ const closetLight = nodes['closet-light'];
 const press = (key, details) => document.fire('keydown', { key, ...details });
 nodes['office-closet'].fire('click');
 assert.equal(nodes.game.dataset.closetTransition, 'enter');
+assert.equal(playedSamples.at(-1), '06_FNAF4_Player_Running.mp3');
 press('s');
 assert.equal(nodes.game.dataset.mode, 'office');
 step(closetStart + 1000);
 assert.equal(nodes.game.dataset.mode, 'closet');
 assert.equal(closet.dataset.view, 'door');
+assert.deepEqual(playedSamples.slice(-2), ['06_FNAF4_Player_Running.mp3', '01_FNAF2_Music_Box.mp3']);
+const musicBox = samples.get('01_FNAF2_Music_Box.mp3');
+assert.equal(musicBox.loop, true);
+const doorVolume = musicBox.volume;
+musicBox.currentTime = .5;
 assert(setOfficeCharacterState(['gotica', 'original'], 'yandere'));
 closetFrame('open', ['original', 'gotica'], 'yandere');
 assert.equal(nodes['computer-desktop'].hidden, true);
@@ -447,11 +477,14 @@ assert.equal(nodes.game.dataset.closetTransition, undefined);
 press('d');
 step(closetStart + 2150);
 assert.equal(closet.dataset.view, 'back');
+assert(musicBox.volume > doorVolume && musicBox.volume < .1);
+assert.equal(musicBox.currentTime, .5);
 assert.equal(closetExit.hidden, true);
 closetExit.fire('click');
 assert.equal(nodes.game.dataset.closetTransition, undefined);
 press('W');
 assert.equal(closetBeam.hidden, false);
+assert.equal(playedSamples.at(-1), '07_FNAF4_Flashlight.mp3');
 press('w', { repeat: true });
 assert.equal(closetBeam.hidden, false);
 releaseW();
@@ -472,9 +505,52 @@ closetExit.fire('click');
 step(closetStart + 3900);
 assert.equal(nodes.game.dataset.mode, 'office');
 assert.equal(closet.hidden, true);
+assert.equal(musicBox.paused, true);
 assert.equal(nodes['computer-desktop'].hidden, true);
 office('dark');
 console.log('PASS: closet entry, blocked monitor, both views, flashlight and slatted-door exit.');
+
+customStart({ smores: 1 });
+const smoresStart = now;
+const ventArt = nodes['smores-vent'];
+const roomArt = nodes['smores-room'];
+assert(nodes['custom-levels'].children.some(label => label.children[1].name === 'smores'));
+radioButton.fire('click');
+radio.fire('playing');
+step(smoresStart + 15_010);
+assert.equal(ventArt.hidden, true);
+const afterRadio = playedSamples.length;
+nodes['office-monitor'].fire('click');
+step(smoresStart + 15_020);
+assert.equal(ventArt.hidden, false);
+assert.equal(roomArt.hidden, true);
+assert.equal(playedSamples.slice(afterRadio).filter(file => file === '02_FNAF2_Vent.mp3').length, 1);
+nodes['monitor-exit'].fire('click');
+officeGate.fire('click');
+office('closed');
+assert.equal(ventArt.hidden, false);
+assert.equal(playedSamples.at(-1), 'SFXBible_12478.ogg');
+officeGate.fire('click');
+office('dark');
+nodes['office-monitor'].fire('click');
+step(smoresStart + 15_030);
+nodes['open-cameras'].fire('click');
+const beforeMapGate = playedSamples.length;
+gate('G01');
+assert(!playedSamples.slice(beforeMapGate).includes('SFXBible_12478.ogg'));
+nodes['monitor-exit'].fire('click');
+assert.equal(ventArt.hidden, true);
+assert.equal(roomArt.hidden, false);
+nodes['office-closet'].fire('click');
+step(smoresStart + 16_500);
+assert.match(closetArt.src, /Smores nas Frestas/);
+assert.equal(nodes['closet-extra'].hidden, true);
+step(smoresStart + 51_000);
+assert.equal(roomArt.hidden, true);
+assert.equal(nodes['closet-extra'].hidden, false);
+assert(!closetArt.src.includes('Smores'));
+customStart({});
+console.log('PASS: Smores custom difficulty, layered office and closet art, vent and office gate sounds.');
 
 // A defeat holds a one-shot GIF and waits for the player to return to the menu.
 const [, screamSource] = html.match(/<audio id="jumpscare-sound" src="([^"]+)"/);
@@ -613,6 +689,73 @@ assert.equal(peek.hidden, false);
 step(quiet + 123_751);
 assert.match(scare.src.split('?')[0], /palhaca-direita\.gif$/);
 console.log('PASS: three radio tracks, clown poses, music reduction, peek and automatic defeat.');
+
+nodes['return-to-menu'].fire('click');
+randomValue = () => 0;
+customStart({ shadow: 10 });
+nodes['office-monitor'].fire('click');
+nodes['open-cameras'].fire('click');
+nodes['camera-audio'].fire('click');
+assert.equal(playedSamples.at(-1), '01_camera_sinistra/01_miado_agudo_camera.wav');
+nodes['open-systems'].fire('click');
+const reboot = '10_FNAF3_Rebooting.mp3';
+const rebootStart = now;
+nodes['restart-all-locators'].fire('click');
+assert.equal(playedSamples.at(-1), reboot);
+const firstReboot = playedSamples.length;
+step(rebootStart + 500);
+assert.equal(playedSamples.length, firstReboot);
+step(rebootStart + 750);
+assert.equal(playedSamples.length, firstReboot + 1);
+nodes['restart-all-systems'].fire('click');
+step(rebootStart + 7000);
+assert.equal(samples.get(reboot).paused, false);
+step(rebootStart + 9750);
+assert.equal(samples.get(reboot).paused, true);
+nodes['monitor-exit'].fire('click');
+
+const shadowEntry = now;
+nodes['office-closet'].fire('click');
+step(shadowEntry + 1450);
+step(shadowEntry + 107_000);
+nodes['closet-exit'].fire('click');
+step(shadowEntry + 108_040);
+const nightmare = samples.get('08_FNAF4_Nightmare_Jumpscare.mp3');
+assert.equal(nightmare.loop, true);
+assert.equal(nightmare.paused, false);
+nodes['office-monitor'].fire('click');
+nodes['open-cameras'].fire('click');
+camera('CAM02');
+randomValue = () => .99;
+nodes['camera-audio'].fire('click');
+assert.equal(playedSamples.at(-1), '02_camera_pesadelo/03_miado_curto_pesadelo.wav');
+step(shadowEntry + 110_000);
+assert.equal(nightmare.paused, false);
+camera('CAM01');
+step(shadowEntry + 110_100);
+assert.equal(nightmare.paused, true);
+nodes['monitor-exit'].fire('click');
+randomValue = () => 0;
+nodes['office-monitor'].fire('click');
+nodes['monitor-exit'].fire('click');
+assert.equal(nightmare.paused, false);
+step(shadowEntry + 117_600);
+assert.equal(nodes.game.dataset.scare, 'shadow');
+assert.equal(nightmare.paused, true);
+assert.equal(scream.paused, false);
+
+nodes['return-to-menu'].fire('click');
+Object.assign(characterRules.padrao, { start: 10, positions: [10, 12], interval: 5 });
+customStart({ padrao: 1 });
+const approachStart = now;
+const doorCreak = '04_FNAF4_Door_Creak.mp3';
+assert(!playedSamples.includes(doorCreak));
+step(approachStart + 3_500);
+assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'original')]);
+assert.equal(playedSamples.at(-1), doorCreak);
+step(approachStart + 4_000);
+assert.equal(playedSamples.filter(file => file === doorCreak).length, 1);
+console.log('PASS: samples for both meow sets, flashlight, closet travel, doorway arrival, win, overlapping restarts and Shadow attack.');
 }
 
 test().catch(error => {

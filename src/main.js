@@ -37,6 +37,7 @@ const dom = {
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
   officePower: $('#office-power'), shutdownDesktop: $('#shutdown-desktop'),
   officeCharacters: $('#office-characters'), corridorCharacters: $('#corridor-characters'),
+  smoresVent: $('#smores-vent'), smoresRoom: $('#smores-room'),
   officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
   clownPeek: $('#clown-peek'), officeGate: $('#office-gate'), officeLight: $('#office-light'),
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
@@ -75,6 +76,12 @@ const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
 const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
 const SHADOW_IMAGE = config.shadow.jumpscare;
 const CLOWN_ART = './public/images/office/closet/clown/';
+const SMORES_ART = {
+  vent: './public/images/office/characters/smores-vent.webp',
+  room: './public/images/office/characters/smores-room.webp',
+  closet: './public/images/Smores nas Frestas do Escritório.png'
+};
+const SMORES_VENT_CENTER = 1554;
 const CLOWN_PHASES = [
   { art: 'sleeping.webp', alt: 'Palhaça dormindo no fundo do armário' },
   { art: 'eyes-lit.webp', alt: 'Palhaça sentada com os olhos acesos' },
@@ -123,6 +130,7 @@ let toastTimeout;
 let flashTimeout;
 let nextHudUpdate = 0;
 let nextRestartPanelUpdate = 0;
+let nextRebootSoundAt = 0;
 let clockLabel;
 let renderedSystems;
 let renderedLocators;
@@ -222,7 +230,9 @@ function renderSystemPanel() {
 
 function beginRestart(collection, ids, duration) {
   if (state.complete || ids.some(id => state.restarts.has(`${collection}:${id}`))) return;
-  const endsAt = performance.now() + duration * 1000;
+  const now = performance.now();
+  const endsAt = now + duration * 1000;
+  if (state.restarts.size === 0) playRebootSound(now);
   for (const id of ids) {
     state.restarts.set(`${collection}:${id}`, { endsAt, collection, id });
     if (collection === 'system') state.systems[id] = 'restarting';
@@ -234,6 +244,11 @@ function beginRestart(collection, ids, duration) {
   announce(`Reiniciando ${ids.length > 1 ? 'os sistemas' : 'o sistema'}...`);
 }
 
+function playRebootSound(now) {
+  sound.playSample('reboot', .35);
+  nextRebootSoundAt = now + 750;
+}
+
 function advanceRestarts(now) {
   let changed = false;
   for (const [key, restart] of state.restarts) {
@@ -243,7 +258,9 @@ function advanceRestarts(now) {
     else state.locators[restart.id] = 'online';
     changed = true;
   }
+  if (state.restarts.size && now >= nextRebootSoundAt) playRebootSound(now);
   if (changed) {
+    if (!state.restarts.size) sound.stopSample('reboot');
     renderSystemPanel();
     refreshComputerState();
     announce('Sistema reiniciado e online.');
@@ -287,6 +304,7 @@ const map = makeCameraMap({
   maxClosedGates: config.map.maxClosedMapGates,
   canToggleGate: () => state.mode === 'cameras' && !state.complete && systemOnline('doors'),
   onGatesChange: (id, closed) => {
+    if (id === OFFICE.gate && closed && state.mode === 'office') sound.playSample('officeGateClose');
     const cam = CAMERAS[state.cameraIndex];
     const visible = cam.gateStateImages?.gates.includes(id);
     advanceGame(performance.now(), { type: 'gate', id, closed, visible });
@@ -303,11 +321,15 @@ const movement = createMovement(config, {
   emit(event, value) {
     if (event === 'move') {
       movementChanged = true;
+      if (value.to === config.map.left && value.from !== value.to) sound.playSample('doorCreak');
       for (const position of config.map.positions) {
         if (position.id === value.from || position.id === value.to) {
           for (const id of position.cameras) changedCameras.add(id);
         }
       }
+    } else if (event === 'smores') {
+      movementChanged = true;
+      if (value === 'vent') sound.playSample('vent');
     } else if (event === 'openGate') {
       map.openGate(value);
       gateChanged = true;
@@ -355,8 +377,13 @@ function updateOfficeView() {
   const room = occupants.slice(0, 3).join('-') || 'vazia';
   const doorway = OFFICE.doorwayCharacters.includes(state.officeDoorway) ? state.officeDoorway : 'vazia';
   const gate = closed ? 'closed' : 'open';
-  const closetSource = `./public/images/office/closet/states/${gate}/sala-${room}--porta-${doorway}.webp`;
+  const smoresInRoom = !dom.smoresRoom.hidden;
+  const closetSource = smoresInRoom ? SMORES_ART.closet
+    : `./public/images/office/closet/states/${gate}/sala-${room}--porta-${doorway}.webp`;
   if (dom.closetDoorArt.getAttribute('src') !== closetSource) dom.closetDoorArt.src = closetSource;
+  dom.closetDoorArt.alt = smoresInRoom ? 'Smores visto pelas frestas da porta'
+    : 'Escritório de segurança visto pelas frestas da porta';
+  dom.closetExtra.hidden = smoresInRoom;
   for (const { id, image } of closetExtras) {
     const visible = occupants.indexOf(id) >= 3;
     if (visible && !image.getAttribute('src')) image.src = `./public/images/office/closet/layers/${id}.webp`;
@@ -461,7 +488,11 @@ function syncMovement() {
   const cam = CAMERAS[state.cameraIndex];
   if (changedCameras.has(cam.id) || gateChanged) updateCameraFeed(cam);
   if (movementChanged) {
-    const { room, doorway, front, back } = movement.officeState();
+    const { room, doorway, front, back, smores } = movement.officeState();
+    for (const [phase, image] of [['vent', dom.smoresVent], ['room', dom.smoresRoom]]) {
+      if (smores === phase && !image.getAttribute('src')) image.src = SMORES_ART[phase];
+      image.hidden = smores !== phase;
+    }
     setCorridorCharacters(front, back);
     setOfficeCharacterState(room, doorway);
     map.setTracking(trackedActors());
@@ -518,6 +549,7 @@ function setMode(mode, withSound = true) {
   state.pointerX = null;
   clearFlashlight();
   updateRadioMix();
+  if (!hiding) sound.setSampleLoop('musicBox', 0);
   if (withSound) playSound('monitor');
   if (watching) {
     changeCamera(CAMERAS[state.cameraIndex].id);
@@ -680,7 +712,10 @@ function setClosetView(view) {
   dom.closetLight.hidden = view !== 'back';
   setClosetLight(false);
   updateRadioMix();
-  if (state.mode === 'closet') dom.closet.focus({ preventScroll: true });
+  if (state.mode === 'closet') {
+    sound.setSampleLoop('musicBox', view === 'back' ? .065 : .035);
+    dom.closet.focus({ preventScroll: true });
+  }
 }
 
 function flashlightTarget() {
@@ -693,8 +728,10 @@ function flashlightTarget() {
 function updateFlashlight() {
   const held = state.flashlightKey || state.flashlightPointer !== null;
   const target = flashlightTarget();
+  const wasOn = state.flashlight || dom.closetLight.getAttribute('aria-pressed') === 'true';
   state.flashlight = held && target === dom.officeLight;
   setClosetLight(held && target === dom.closetLight);
+  if (held && target && !wasOn) sound.playSample('flashlight');
   updateOfficeView();
 }
 
@@ -724,7 +761,7 @@ function beginClosetTransition(kind) {
   // Restart the CSS animation if a new action follows the previous one immediately.
   void dom.closetBlackout.offsetWidth;
   dom.game.dataset.closetTransition = kind;
-  if (kind !== 'turn') playSound('closetDoor', kind === 'enter');
+  if (kind === 'enter') sound.playSample('running');
 }
 
 function clearClosetTransition() {
@@ -747,6 +784,7 @@ function advanceClosetTransition(now) {
         setClosetView(dom.closet.dataset.view === 'door' ? 'back' : 'door');
         break;
       case 'exit':
+        sound.playSample('running');
         setMode('office', false);
         state.pan = state.targetPan = -maxPanShift() * .95;
         dom.officeCloset.focus({ preventScroll: true });
@@ -769,7 +807,7 @@ function playCameraAudio() {
     announce('Aguarde antes de reproduzir outro som.');
     return;
   }
-  playSound('lure', config.effects.cameraAudio.duration);
+  sound.cameraMeow(movement.snapshot().sanity);
   updateAudioControl();
   announce(`Som reproduzido em ${CAMERAS[state.cameraIndex].id}.`);
 }
@@ -792,7 +830,7 @@ function finishShift() {
   $('#shift-time').innerHTML = `${clockHour(night.hoursToWin)}:00 <small>AM</small>`;
   dom.complete.hidden = false;
   dom.restart.focus();
-  playSound('finish');
+  sound.playSample('chimes');
 }
 
 function stopShift() {
@@ -807,7 +845,7 @@ function stopShift() {
   delete dom.shadowFeed.dataset.phase;
   clearFlashlight();
   stopRadio();
-  sound.stopLure();
+  sound.stopSamples();
   state.dragging = false;
   clearClosetTransition();
 }
@@ -889,7 +927,8 @@ function resetShift() {
   dom.toast.classList.remove('show');
   dom.threatAlert.hidden = true;
   dom.static.hidden = true;
-  sound.stopLure();
+  sound.preloadSamples();
+  sound.stopSamples();
   state.computerMode = 'desktop';
   for (const app of Object.values(desktopApps)) resetApp(app);
   movement.reset(state.levels);
@@ -956,6 +995,7 @@ function gameInput() {
   const officeHalf = 1086 * dom.game.clientWidth / (officeWidth || 1);
   const officeCenter = 1086 - 2172 * state.pan / (officeWidth || 1);
   const closetHalf = Math.min(835.5, 941 * dom.game.clientWidth / (2 * dom.game.clientHeight || 1));
+  const officeBounds = [officeCenter - officeHalf, officeCenter + officeHalf];
   return {
     gates: map.closedGateIds(),
     camera,
@@ -965,9 +1005,10 @@ function gameInput() {
     findShadow: !document.hidden,
     view: office ? 'office' : closet && !state.closetTransition ? `closet-${dom.closet.dataset.view}` : state.mode === 'cameras' ? 'cameras' : null,
     closet,
-    officeBounds: [officeCenter - officeHalf, officeCenter + officeHalf],
+    officeBounds,
     closetBounds: [835.5 - closetHalf, 835.5 + closetHalf],
     leftLook: office && state.pan > maxPanShift() * controls.observation.leftPanFraction,
+    smoresLooking: office && officeBounds[0] <= SMORES_VENT_CENTER && SMORES_VENT_CENTER <= officeBounds[1],
     corridorLight: office && state.flashlight && !map.isGateClosed(OFFICE.gate) && corridorInView(),
     clownLight: state.mode === 'closet' && dom.closet.dataset.view === 'back' && !dom.closetBeam.hidden,
     radio: state.radioPlaying,
@@ -1030,8 +1071,10 @@ function renderResources({ sanity, energy, blackout, computerOn, radioAvailable 
 
 function renderShadow({ phase, camera }) {
   const inOffice = state.mode === 'office';
+  const attacking = phase === 'manifested' || phase === 'searching';
+  sound.setSampleLoop('nightmare', attacking ? .3 : 0);
   dom.shadowManifest.hidden = !inOffice || phase !== 'manifested';
-  dom.shadowOfficeArt.hidden = !inOffice || (phase !== 'manifested' && phase !== 'searching');
+  dom.shadowOfficeArt.hidden = !inOffice || !attacking;
   dom.shadowFeed.hidden = phase !== 'found' || state.mode !== 'cameras' || CAMERAS[state.cameraIndex].id !== camera;
   if (!dom.shadowFeed.hidden) dom.shadowFeed.dataset.phase = phase;
   else delete dom.shadowFeed.dataset.phase;
@@ -1273,6 +1316,7 @@ dom.restart.addEventListener('click', resetShift);
 $('#retry-night').addEventListener('click', resetShift);
 function returnToMenu() {
   dom.scareSound.pause();
+  sound.stopSamples();
   dom.game.hidden = true;
   dom.gameOver.hidden = true;
   dom.playfield.inert = false;
@@ -1392,11 +1436,12 @@ window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorC
 window.NathGame.setOfficeCharacterState = setOfficeCharacterState;
 
 function startShift(levels, custom) {
-  state.levels = levels;
+  state.levels = custom ? levels : { ...levels, smores: config.threats.smores.normalLevel };
   state.custom = custom;
   dom.game.hidden = false;
   resetShift();
   preloadImages(Object.values(OFFICE.images));
+  if (state.levels.smores > 0) preloadImages(Object.values(SMORES_ART));
   if (levels.palhaca > 0) preloadImages(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
   if (levels.shadow > 0) {
     dom.shadowOfficeArt.src = config.shadow.officeArt;
@@ -1409,7 +1454,10 @@ function startShift(levels, custom) {
 
 const menu = createNightMenu(config, {
   startShift,
-  onEnter: () => preloadImages([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE])
+  onEnter: () => {
+    preloadImages([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE]);
+    sound.preloadSamples();
+  }
 });
 dom.game.style.setProperty('--shadow-manifest-duration', `${config.shadow.manifestSeconds}s`);
 dom.game.style.setProperty('--shadow-found-duration', `${config.shadow.foundSeconds}s`);

@@ -208,3 +208,74 @@ assert.equal(interrupted.calls(), 2);
 for (const asset of [base.shadow.officeArt, base.shadow.sprite, base.shadow.jumpscare]) assert(fs.existsSync(asset));
 
 console.log('PASS: sanity and visibility, dynamic clock, zero and maximum levels, power and radio, Shadow deadlines and reset.');
+
+const ventLook = { radio: true, smoresLooking: true };
+const pc = { radio: true, computer: true };
+const smoresPhase = test => test.game.officeState().smores;
+const vent = scenario({ levels: { smores: 1 }, input: ventLook, draws: [.15, .1499] });
+vent.at(15, ventLook);
+assert.equal(smoresPhase(vent), 'idle');
+vent.at(30, ventLook);
+assert.equal(smoresPhase(vent), 'pre-vent');
+vent.at(31, { radio: true, closet: true }, { type: 'closetEnter' });
+assert.equal(smoresPhase(vent), 'pre-vent');
+vent.at(32, { radio: true, closet: true }, { type: 'closetExit' });
+assert.equal(smoresPhase(vent), 'vent');
+vent.at(33, {});
+assert.equal(smoresPhase(vent), 'vent');
+vent.at(34, { smoresLooking: true });
+vent.at(42.99, {});
+assert.equal(smoresPhase(vent), 'vent');
+vent.at(43, { smoresLooking: true });
+vent.at(44, {});
+assert.equal(smoresPhase(vent), 'idle');
+assert.deepEqual(vent.events, [['smores', 'pre-vent'], ['smores', 'vent'], ['smores', 'idle']]);
+
+const interruptedRadio = scenario({ levels: { smores: 1 }, input: ventLook });
+interruptedRadio.at(14, {});
+interruptedRadio.at(15, ventLook);
+interruptedRadio.at(29.99, ventLook);
+assert.equal(smoresPhase(interruptedRadio), 'idle');
+interruptedRadio.at(30, { radio: true, leftLook: true });
+assert.equal(smoresPhase(interruptedRadio), 'vent');
+
+for (const [level, ticket, duration] of [[1, .1499, 35], [10, .1999, 50]]) {
+  const test = scenario({ levels: { smores: level }, input: pc, draws: [ticket] });
+  test.at(15, pc);
+  test.at(16, pc);
+  assert.equal(smoresPhase(test), 'vent');
+  test.at(17, ventLook);
+  test.at(18, pc);
+  assert.equal(smoresPhase(test), 'room');
+  test.at(23, {});
+  const end = 23 + (duration - 5) / 2;
+  test.at(end - .01);
+  assert.equal(smoresPhase(test), 'room');
+  test.at(end);
+  assert.equal(smoresPhase(test), 'idle');
+  test.game.reset({ smores: 0 }, pc);
+  test.at(30, pc);
+  assert.equal(smoresPhase(test), 'idle');
+}
+
+const boosted = scenario({
+  levels: { smores: 1, padrao: 1 }, input: pc,
+  tune(config) {
+    config.characters.padrao.start = config.map.left;
+    config.characters.padrao.interval = 25;
+    config.movement.jitter = { min: 0, max: 0 };
+  }
+});
+boosted.at(15, pc);
+boosted.at(16, ventLook);
+boosted.at(17, pc);
+near(boosted.game.diagnostics()[0].remaining, 5);
+boosted.at(21.99, pc);
+assert.deepEqual(boosted.game.officeState().room, []);
+boosted.at(22, pc);
+assert.deepEqual(boosted.game.officeState().room, ['original']);
+boosted.at(25.19, pc);
+assert.equal(boosted.state().outcome, null);
+boosted.at(25.2, pc);
+assert.equal(boosted.state().outcome, 'loss');
+console.log('PASS: Smores radio rolls, vent timing, silence, room duration and movement/reaction reductions.');

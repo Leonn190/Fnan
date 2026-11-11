@@ -769,6 +769,26 @@ window.NathGame.localConfig = {
     "jumpscare": "./public/images/jumpscares/shadow.webp"
   },
   "threats": {
+    "smores": {
+      "name": "Smores",
+      "normalLevel": 1,
+      "radioSeconds": 15,
+      "silenceSeconds": 10,
+      "quietRoomSpeed": 2,
+      "targetBonusMultiplier": 2,
+      "level1": {
+        "ventChance": 15,
+        "roomSeconds": 35,
+        "intervalReduction": 1,
+        "reactionReduction": 0.3
+      },
+      "level10": {
+        "ventChance": 20,
+        "roomSeconds": 50,
+        "intervalReduction": 1.5,
+        "reactionReduction": 0.4
+      }
+    },
     "attack": {
       "stay": 5.5,
       "lateStay": 8.5,

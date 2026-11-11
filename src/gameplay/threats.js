@@ -3,7 +3,86 @@
 
 const { factor, uniform, weighted } = window.NathGame;
 
-function createThreats(config, levels, random, emit) {
+function createSmores(rules, level, random, emit) {
+  if (!rules || level <= 0) return {
+    integrate() {}, resolve() {}, nextDeadline: () => Infinity, phase: () => 'idle',
+    intervalReduction: () => 0, reactionReduction: () => 0, targetBonusMultiplier: () => 1
+  };
+
+  const progress = (level - 1) / 9;
+  const { ventChance, roomSeconds, intervalReduction, reactionReduction } = Object.fromEntries(
+    Object.entries(rules.level1).map(([key, value]) => [key, value + progress * (rules.level10[key] - value)])
+  );
+  const tolerance = 1e-9;
+  const roomSpeed = radio => radio ? 1 : rules.quietRoomSpeed;
+  let phase = 'idle';
+  let radioTime = 0;
+  let silenceTime = 0;
+  let retreatReady = false;
+  let looking = false;
+  let roomRemaining = 0;
+
+  function setPhase(next) {
+    phase = next;
+    emit('smores', phase);
+  }
+
+  function integrate(dt, radio) {
+    if (phase === 'idle') radioTime = radio ? radioTime + dt : 0;
+    if (phase === 'vent' && !retreatReady) {
+      silenceTime = radio ? 0 : silenceTime + dt;
+      retreatReady = silenceTime >= rules.silenceSeconds - tolerance;
+    }
+    if (phase === 'room') roomRemaining -= dt * roomSpeed(radio);
+  }
+
+  function nextDeadline(now, radio) {
+    if (phase === 'idle' && radio) return now + (rules.radioSeconds - radioTime);
+    if (phase === 'room') return now + roomRemaining / roomSpeed(radio);
+    return Infinity;
+  }
+
+  function resolve(input, radio, ventOpportunity) {
+    if (phase === 'idle') {
+      if (radioTime >= rules.radioSeconds - tolerance) {
+        radioTime = 0;
+        if (random() * 100 < ventChance) setPhase('pre-vent');
+      }
+      if (!radio) radioTime = 0;
+    }
+    if (phase === 'pre-vent') {
+      if (ventOpportunity) {
+        looking = Boolean(input.smoresLooking);
+        silenceTime = 0;
+        retreatReady = false;
+        setPhase('vent');
+      }
+      return;
+    }
+    if (phase === 'vent') {
+      if (radio) silenceTime = 0;
+      if (looking && !input.smoresLooking) {
+        if (retreatReady) setPhase('idle');
+        else if (radio) {
+          roomRemaining = roomSeconds;
+          setPhase('room');
+        }
+      }
+      looking = Boolean(input.smoresLooking);
+    } else if (phase === 'room' && roomRemaining <= tolerance) {
+      setPhase('idle');
+    }
+  }
+
+  return {
+    integrate, nextDeadline, resolve, phase: () => phase,
+    intervalReduction: () => phase === 'room' ? intervalReduction : 0,
+    reactionReduction: () => phase === 'room' ? reactionReduction : 0,
+    targetBonusMultiplier: () => phase === 'room' ? rules.targetBonusMultiplier : 1
+  };
+}
+
+function createThreats(config, levels, random, emit, reactionReduction = () => 0) {
   const { attack, clown, sabotage } = config.threats;
   const clownEnabled = levels.palhaca > 0;
   const growth = clown.growth * factor(clown.growthIncreasePerLevel * levels.palhaca);
@@ -17,7 +96,7 @@ function createThreats(config, levels, random, emit) {
   let clownDeath = false;
 
   function protect(invasion, now) {
-    const late = invasion.reactionEnds - now <= attack.lateThreshold;
+    const late = invasion.reactionEnds - reactionReduction() - now <= attack.lateThreshold;
     const stay = late ? attack.lateStay : attack.stay;
     invasion.leaveAt = Math.max(now, invasion.arrived + stay + uniform(random, attack.jitter));
   }
@@ -82,7 +161,7 @@ function createThreats(config, levels, random, emit) {
     const rate = clownEnabled ? clownRate(input) : 0;
     const deathAt = rate > 0 ? now + (clown.max - counter) / rate : Infinity;
     return Math.min(deathAt, ventilationDeadline(), ...[...invasions.values()].map(invasion =>
-      hidden ? invasion.leaveAt : invasion.reactionEnds
+      hidden ? invasion.leaveAt : invasion.reactionEnds - reactionReduction()
     ));
   }
 
@@ -90,7 +169,7 @@ function createThreats(config, levels, random, emit) {
     if (clownEnabled && (clownDeath || clown.max - counter <= Number.EPSILON * clown.max)) return lose('palhaca');
     if (now >= ventilationDeadline()) return lose('ventilacao');
     for (const [actor, invasion] of invasions) {
-      if (!hidden && now >= invasion.reactionEnds) return lose(actor.key);
+      if (!hidden && now >= invasion.reactionEnds - reactionReduction()) return lose(actor.key);
       if (hidden && now >= invasion.leaveAt) {
         invasions.delete(actor);
         retreat(actor);
@@ -101,6 +180,7 @@ function createThreats(config, levels, random, emit) {
   const clownStage = () => clownEnabled ? clown.stages.findLastIndex(threshold => counter >= threshold) : -1;
   return {
     enterCloset, exitCloset: () => { hidden = false; },
+    audioFault: () => faults.has('audio'),
     invade, triggerSabotage, integrate, nextDeadline, resolve, clownStage,
     snapshot: now => ({
       hidden, counter, floor, faults: [...faults.keys()],
@@ -110,5 +190,5 @@ function createThreats(config, levels, random, emit) {
   };
 }
 
-window.NathGame.createThreats = createThreats;
+Object.assign(window.NathGame, { createThreats, createSmores });
 })();
