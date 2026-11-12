@@ -3,8 +3,6 @@
 
 const factor = percent => 1 + percent / 100;
 const uniform = (random, { min, max }) => min + random() * (max - min);
-const edgeKey = (a, b) => a < b ? a + ':' + b : b + ':' + a;
-
 function weighted(random, items, weight) {
   const weights = items.map(item => Math.max(0, weight(item)));
   const total = weights.reduce((sum, value) => sum + value, 0);
@@ -16,23 +14,31 @@ function weighted(random, items, weight) {
 function createRoutes(map) {
   const positions = new Map(map.positions.map(position => [position.id, position]));
   const neighbors = new Map(map.positions.map(({ id }) => [id, []]));
-  for (const [from, to] of map.edges) {
+  const incoming = new Map(map.positions.map(({ id }) => [id, []]));
+  const edges = new Map();
+  const connection = (from, to) => edges.get(from)?.get(to);
+  function link(from, to, edge) {
+    if (!positions.has(from) || !positions.has(to) || from === to || connection(from, to)) {
+      throw new Error(`Ligação física inválida: ${from} → ${to}.`);
+    }
+    if (!edges.has(from)) edges.set(from, new Map());
+    edges.get(from).set(to, edge);
     neighbors.get(from).push(to);
-    neighbors.get(to).push(from);
+    incoming.get(to).push(from);
   }
-  const gates = new Map();
-  for (const [id, edges] of Object.entries({ ...map.gateEdges, ...map.otherGateEdges })) {
-    for (const [from, to] of edges) gates.set(edgeKey(from, to), id);
+  for (const edge of map.edges) {
+    link(edge.from, edge.to, edge);
+    if (!edge.oneWay) link(edge.to, edge.from, edge);
   }
 
-  function distances(origins, allowed, max = Infinity) {
-    const queue = origins.filter(allowed);
+  function distances(origins, allowed, max = Infinity, passable = () => true, towardOrigins = false) {
+    const queue = origins.filter(id => positions.has(id) && allowed(id));
     const result = new Map(queue.map(id => [id, 0]));
     for (const from of queue) {
       const distance = result.get(from) + 1;
       if (distance > max) continue;
-      for (const to of neighbors.get(from)) {
-        if (!allowed(to) || result.has(to)) continue;
+      for (const to of (towardOrigins ? incoming : neighbors).get(from)) {
+        if (!allowed(to) || result.has(to) || !passable(towardOrigins ? connection(to, from) : connection(from, to))) continue;
         result.set(to, distance);
         queue.push(to);
       }
@@ -40,7 +46,7 @@ function createRoutes(map) {
     return result;
   }
 
-  return { positions, neighbors, distances, gate: (a, b) => gates.get(edgeKey(a, b)) };
+  return { positions, neighbors, distances, connection, gate: (a, b) => connection(a, b)?.gateId };
 }
 
 Object.assign(window.NathGame, { factor, uniform, weighted, createRoutes });

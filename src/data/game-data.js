@@ -1197,31 +1197,6 @@ const OFFICE = {
 
 // Posições internas de config/map.json, em metros na mesma planta de VENUE.
 // 8, 11 e 22 ligam as rotas pelo lado de fora do restaurante.
-const TRACKING_POINTS = {
-  1: [19.7, 20.3], // Palco
-  2: [19, 14.8], // Meio do salão
-  3: [24.2, 8.2], // Fundo do salão
-  4: [30.3, 6], // Fliperama
-  5: [15.8, 2.6], // Recepção
-  6: [10.6, 18.5], // VIP 1
-  7: [10.2, 11.2], // VIP 2
-  9: [6, 2.5], // Lojinha
-  10: [2.45, 12.9], // Estoque
-  12: [3.1, 8.05], // Lado de fora da porta esquerda da sala de controle
-  13: [6.05, 7.9], // Sala de controle
-  14: [5.75, 11.1], // Corredor central — frente
-  15: [5.65, 19.1], // Corredor central — fundo
-  16: [2.15, 19], // Serviço
-  17: [6.8, 26.2], // Cozinha
-  18: [16.6, 26.65], // Retirada
-  19: [23.8, 23.3], // Corredor da CAM 12
-  20: [21.5, 26.2], // Sala da Nath
-  21: [27.5, 26.2], // Elétrica
-  23: [25.9, 19], // Ponto cego do salão
-  24: [29.1, 16.7], // Banheiro
-  25: [10.2, 15.1], // Esconderijo na VIP 2
-};
-
-window.NathGame = { CAMERAS, VENUE, OFFICE, TRACKING_POINTS };
+window.NathGame = { CAMERAS, VENUE, OFFICE };
 
 })();

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 
 global.window = {};
 for (const file of ['data/game-data', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
-  'gameplay/resources', 'gameplay/shadow', 'scene-art', 'movement']) {
+  'gameplay/gates', 'gameplay/electrical', 'gameplay/resources', 'gameplay/shadow', 'scene-art', 'movement']) {
   require('../src/' + file + '.js');
 }
 const { createMovement, sanityRate, hourDuration, shadowDifficulty, CAMERAS } = window.NathGame;
@@ -138,7 +138,8 @@ for (const key of [...Object.keys(base.characters), 'palhaca']) {
 const power = scenario({ input: { radio: true, corridorLight: true } });
 power.at(10, { radio: true, corridorLight: true }, { type: 'computerPower' });
 near(power.state().energy, 99.82);
-power.at(20, { gates: ['G01', 'G06'] });
+power.at(20, {}, { type: 'gate', id: 'G01' });
+power.at(20, {}, { type: 'gate', id: 'G06' });
 near(power.state().energy, 99.82);
 power.at(30, {}, { type: 'computerPower' });
 near(power.state().energy, 99.26);
@@ -148,16 +149,16 @@ near(power.state().sanity, 99);
 const outage = scenario({ input: { gates: ['G01'], closet: true, radio: true }, tune(config) {
   config.power.initial = .46;
 } });
-outage.at(10, { gates: ['G01'], closet: true });
+outage.at(10, { closet: true });
 assert.equal(outage.state().blackout, true);
 assert.equal(outage.state().computerOn, false);
 near(outage.state().sanity, 96);
-outage.at(15, { gates: ['G01'], closet: true, radio: true }, { type: 'computerPower' });
+outage.at(15, { closet: true, radio: true }, { type: 'computerPower' });
 assert.equal(outage.state().computerOn, false);
 near(outage.state().sanity, 90);
-outage.at(34.99, { gates: ['G01'], closet: true, radio: true });
+outage.at(34.99, { closet: true, radio: true });
 assert.equal(outage.state().radioAvailable, true);
-outage.at(36, { gates: ['G01'], closet: true, radio: true });
+outage.at(36, { closet: true, radio: true });
 assert.equal(outage.state().radioAvailable, false);
 near(outage.state().sanity, 68.8);
 outage.game.reset();
@@ -296,3 +297,96 @@ assert.equal(boosted.state().outcome, null);
 boosted.at(25.2, pc);
 assert.equal(boosted.state().outcome, 'loss');
 console.log('PASS: Smores radio rolls, vent timing, silence, room duration and movement/reaction reductions.');
+
+function tuneElectrical(config) {
+  Object.assign(config.characters.yandere, { start: 19, positions: [19, 21], interval: 5 });
+  config.movement.jitter = { min: 0, max: 0 };
+}
+
+const disabled = scenario({ levels: { yandere: 0 }, tune: tuneElectrical });
+disabled.at(120);
+assert.equal(disabled.game.diagnostics().length, 0);
+assert.equal(disabled.state().electricalFault, false);
+
+for (const level of [1, 4]) {
+  const run = scenario({ levels: { yandere: level }, tune: tuneElectrical, input: { gates: ['G01', 'G09'] } });
+  const first = run.game.diagnostics()[0].remaining;
+  run.at(0, { camera: 'CAM12' });
+  run.at(first, { camera: 'CAM12' });
+  assert.equal(run.state().electricalFault, false); // The attempt is still observed.
+  const arrival = first + .5;
+  run.at(arrival, { radio: true });
+  assert.deepEqual(run.events.map(([type]) => type), ['electricalFault', 'move']);
+  assert.equal(run.game.diagnostics()[0].position, 21);
+  assert.equal(run.state().computerOn, true);
+  assert.equal(run.state().radioAvailable, true);
+  assert.equal(run.game.camerasAvailable(), false);
+  assert(!run.at(arrival, { camera: 'CAM01', radio: true }, { type: 'cameraAudio' }));
+  assert(run.game.isGateClosed('G01') && run.game.isGateClosed('G09'));
+  for (const { id, type } of window.NathGame.VENUE.openings) {
+    if (type === 'portao') assert(!run.at(arrival, { camera: 'CAM01', radio: true }, { type: 'gate', id }));
+  }
+  assert(run.game.isGateClosed('G01') && run.game.isGateClosed('G09'));
+  assert(!run.game.isGateClosed('G06'));
+  run.at(arrival + .5, {}, { type: 'computerPower' });
+  assert.equal(run.state().computerOn, false);
+  assert.equal(run.state().electricalFault, true);
+  run.at(arrival + 1, {}, { type: 'computerPower' });
+  assert.equal(run.game.camerasAvailable(), true);
+  assert.equal(run.state().electricalFault, false);
+  assert.equal(run.game.diagnostics()[0].position, 21);
+  assert(run.at(arrival + 1, { camera: 'CAM01' }, { type: 'cameraAudio' }));
+  assert.equal(run.events.filter(([type]) => type === 'electricalFault').length, 1);
+  const next = run.game.diagnostics()[0].remaining;
+  run.at(arrival + 1 + next + .001, { camera: 'CAM12' });
+  assert.equal(run.game.diagnostics()[0].position, 19);
+  // Release the new attempt from observation.
+  run.at(arrival + 1 + next * 2 + 2, { radio: true });
+  assert.equal(run.state().electricalFault, true);
+  assert.equal(run.events.filter(([type]) => type === 'electricalFault').length, 2);
+}
+
+const offBeforeFault = scenario({ levels: { yandere: 1 }, tune: tuneElectrical });
+offBeforeFault.at(0, {}, { type: 'computerPower' });
+offBeforeFault.at(5);
+assert.equal(offBeforeFault.state().electricalFault, true);
+assert.equal(offBeforeFault.game.diagnostics()[0].position, 21);
+offBeforeFault.at(6, {}, { type: 'computerPower' });
+assert.equal(offBeforeFault.state().electricalFault, true);
+offBeforeFault.at(6, {}, { type: 'computerPower' });
+offBeforeFault.at(6, {}, { type: 'computerPower' });
+assert.equal(offBeforeFault.state().electricalFault, false);
+
+const faultDuringBlackout = scenario({ levels: { yandere: 1 }, tune(config) {
+  tuneElectrical(config);
+  config.power.initial = .12;
+} });
+faultDuringBlackout.at(8);
+assert.equal(faultDuringBlackout.state().blackout, true);
+faultDuringBlackout.at(8, {}, { type: 'computerPower' });
+assert.equal(faultDuringBlackout.state().electricalFault, true);
+assert.equal(faultDuringBlackout.state().computerOn, false);
+
+for (const find of [true, false]) {
+  const run = scenario({
+    levels: { shadow: 1, yandere: 1 },
+    draws: [0, 0, .99, 0, ...Array(100).fill(.99)],
+    tune(config) { tuneElectrical(config); config.sanity.initial = 20; }
+  });
+  run.returnAt(0);
+  assert.deepEqual(run.state().shadow, { phase: 'manifested', camera: 'CAM12' });
+  const arrival = run.game.diagnostics()[0].remaining;
+  run.at(30, { camera: 'CAM12', radio: true });
+  assert.equal(run.state().electricalFault, true);
+  assert.equal(run.state().shadow.phase, 'searching');
+  assert.equal(run.state().outcome, null);
+  run.at(31, {}, { type: 'computerPower' });
+  run.at(33, {}, { type: 'computerPower' });
+  const deadline = 33 + base.shadow.firstLevel.searchSeconds - arrival;
+  run.at(deadline - .01, find ? { camera: 'CAM12' } : {});
+  assert.equal(run.state().outcome, null);
+  if (find) assert.equal(run.state().shadow.phase, 'found');
+  run.at(deadline + .01);
+  assert.equal(run.state().outcome, find ? null : 'loss');
+}
+console.log('PASS: electrical entry, gate and camera controls, manual power cycle, repeat faults, blackout and paused Shadow search.');

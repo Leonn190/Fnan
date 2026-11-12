@@ -17,7 +17,7 @@ function createCameraInterference(overlay, band, feed, reducedMotion) {
   }
 
   function play(kind, start, now, { durationMs, intensity }) {
-    if (now >= start + durationMs) return;
+    if (current?.kind === 'electrical' || now >= start + durationMs) return;
     if (current && now < current.end && priority[current.kind] > priority[kind]) {
       if (kind !== 'gate') return;
       // A gate adds a fresh pulse to the existing interference using the same layers.
@@ -50,8 +50,16 @@ function createCameraInterference(overlay, band, feed, reducedMotion) {
 
   return {
     play, clear,
-    update(now) { if (current && now >= current.end) clear(); },
-    clearTransient() { if (current?.kind !== 'gotica') clear(); }
+    setElectrical(active) {
+      if (active === (current?.kind === 'electrical')) return;
+      clear();
+      if (!active) return;
+      current = { kind: 'electrical' };
+      overlay.dataset.kind = current.kind;
+      overlay.hidden = false;
+    },
+    update(now) { if (current && current.kind !== 'electrical' && now >= current.end) clear(); },
+    clearTransient() { if (current?.kind === 'switch' || current?.kind === 'gate') clear(); }
   };
 }
 

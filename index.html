@@ -15,6 +15,8 @@
   <script defer src="./src/gameplay/threats.js"></script>
   <script defer src="./src/gameplay/resources.js"></script>
   <script defer src="./src/gameplay/shadow.js"></script>
+  <script defer src="./src/gameplay/gates.js"></script>
+  <script defer src="./src/gameplay/electrical.js"></script>
   <script defer src="./src/movement.js"></script>
   <script defer src="./src/scene-art.js"></script>
   <script defer src="./src/map.js"></script>
@@ -108,12 +110,6 @@
                 <circle cx="19.5" cy="25" r="5" fill="#e1f6ff"/>
                 <circle cx="21" cy="23.5" r="2" fill="#65bdec"/>
               </symbol>
-              <symbol id="icon-systems" viewBox="0 0 48 48">
-                <rect x="4" y="8" width="40" height="29" rx="2" fill="#555ca8"/>
-                <path fill="#dee4ff" d="M7 11h34v22H7z"/>
-                <path fill="#8792e1" d="M20 37h8v4h7v3H13v-3h7z"/>
-                <path d="M11 25h7l4-8 5 12 3-7h7" fill="none" stroke="#505bc6" stroke-width="2" stroke-linejoin="round"/>
-              </symbol>
               <symbol id="icon-power" viewBox="0 0 16 16">
                 <path d="M8 1v7m-3.4-5a6 6 0 1 0 6.8 0" fill="none" stroke="currentColor"/>
               </symbol>
@@ -123,10 +119,6 @@
                 <button class="desktop-shortcut" id="open-cameras" type="button">
                   <span class="shortcut-image"><svg aria-hidden="true"><use href="#icon-cameras"/></svg></span>
                   Câmeras
-                </button>
-                <button class="desktop-shortcut" id="open-systems" type="button">
-                  <span class="shortcut-image"><svg aria-hidden="true"><use href="#icon-systems"/></svg></span>
-                  Painel Geral
                 </button>
               </div>
 
@@ -158,7 +150,7 @@
                   <div class="shadow-feed" id="shadow-feed" hidden>
                     <img id="shadow-sprite" alt="Nathzinha Shadow" draggable="false">
                   </div>
-                  <div class="camera-offline" id="camera-offline" hidden><span>▣</span><strong>CÂMERAS INDISPONÍVEIS</strong><small>REINICIE O SISTEMA DE CÂMERAS NO PAINEL GERAL</small></div>
+                  <div class="camera-offline" id="camera-offline" role="status" hidden><strong>SEM SINAL</strong><small>Desligue e ligue o computador para restaurar o sinal e o controle dos portões.</small></div>
                 </div>
                 <div class="feed-heading">
                   <div class="feed-heading-first"><span class="rec-light"></span> <span>REC</span><span class="feed-divider"></span><strong id="cam-number">CAM 01</strong></div>
@@ -167,27 +159,11 @@
                 <button class="camera-audio" id="camera-audio" type="button">▸ REPRODUZIR SOM NESTA CÂMERA</button>
               </section>
 
-              <section class="desktop-window systems-view" id="systems-view" aria-labelledby="systems-title" hidden>
-                <header class="window-titlebar" id="systems-titlebar">
-                  <svg aria-hidden="true"><use href="#icon-systems"/></svg>
-                  <span id="systems-title">Painel Geral</span>
-                  <button class="window-minimize" id="minimize-systems" type="button" aria-label="Minimizar Painel Geral" title="Minimizar"></button>
-                  <button class="window-maximize" id="maximize-systems" type="button" aria-label="Maximizar Painel Geral" title="Maximizar"></button>
-                  <button class="window-close" id="close-systems" type="button" aria-label="Fechar Painel Geral" title="Fechar"></button>
-                </header>
-                <div class="systems-content">
-                  <div class="systems-title"><p>DIAGNÓSTICO DO RESTAURANTE</p><h2>Sistemas</h2><button class="restart-all" id="restart-all-systems" type="button">REINICIAR TODOS <small>9s</small></button></div>
-                  <div class="systems-grid" id="systems-grid"></div>
-                  <div class="locator-heading"><div><p>RASTREAMENTO PASSIVO</p><h2>Localização das animatrônicas</h2><small>Maid e Palhaça não podem ser localizadas.</small></div><button class="restart-all" id="restart-all-locators" type="button">REINICIAR LOCALIZAÇÕES <small>7s</small></button></div>
-                  <div class="locator-grid" id="locator-grid"></div>
-                </div>
-              </section>
             </div>
 
             <div class="desktop-start-menu" id="start-menu" aria-label="Menu Iniciar" hidden>
               <span class="start-heading">Iniciar</span>
               <button id="start-cameras" type="button"><svg aria-hidden="true"><use href="#icon-cameras"/></svg>Câmeras</button>
-              <button id="start-systems" type="button"><svg aria-hidden="true"><use href="#icon-systems"/></svg>Painel Geral</button>
               <button id="shutdown-desktop" type="button"><svg aria-hidden="true"><use href="#icon-power"/></svg>Desligar computador</button>
               <button class="start-power" id="close-desktop" type="button"><svg aria-hidden="true"><use href="#icon-power"/></svg>Voltar ao escritório</button>
             </div>
@@ -196,7 +172,6 @@
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M1 4l7-1v6H1zm8-1.2L19 1v8H9zM1 10h7v6L1 15zm8 0h10v9L9 17z"/></svg>
               </button>
               <button class="task-app" id="taskbar-cameras" type="button" aria-label="Câmeras" aria-controls="cameras-view" aria-pressed="false" title="Câmeras"><svg aria-hidden="true"><use href="#icon-cameras"/></svg></button>
-              <button class="task-app" id="taskbar-systems" type="button" aria-label="Painel Geral" aria-controls="systems-view" aria-pressed="false" title="Painel Geral"><svg aria-hidden="true"><use href="#icon-systems"/></svg></button>
               <div class="task-tray">
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.5h13v8h-13zM8 12v2m-3.5.5h7" fill="none" stroke="currentColor"/></svg>
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2zm9-1q3 3 0 6m1-8q5 5 0 10" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>

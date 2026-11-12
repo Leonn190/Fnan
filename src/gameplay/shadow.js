@@ -14,12 +14,14 @@ function createShadow(rules, difficulty, cameras, random) {
   let camera = null;
   let attackAt = Infinity;
   let phaseEnds = Infinity;
+  let pausedAt;
   let suppressComputerReturn = false;
 
   function clear() {
     phase = 'inactive';
     camera = null;
     attackAt = phaseEnds = Infinity;
+    pausedAt = undefined;
   }
 
   function returnToOffice(now, source, sanity, blackout) {
@@ -37,10 +39,21 @@ function createShadow(rules, difficulty, cameras, random) {
     phase = 'manifested';
   }
 
-  function update(now, viewedCamera, blackout) {
+  function update(now, viewedCamera, blackout, camerasAvailable = true) {
     if (blackout) {
       stop();
       return false;
+    }
+    if (phase === 'manifested' || phase === 'searching') {
+      if (!camerasAvailable) {
+        pausedAt ??= now;
+        return false;
+      }
+      if (pausedAt !== undefined) {
+        attackAt += now - pausedAt;
+        phaseEnds += now - pausedAt;
+        pausedAt = undefined;
+      }
     }
     if (now >= attackAt) {
       clear();
@@ -67,7 +80,7 @@ function createShadow(rules, difficulty, cameras, random) {
     suppressComputerReturn = false;
   }
 
-  return { update, returnToOffice, stop, nextDeadline: () => Math.min(attackAt, phaseEnds),
+  return { update, returnToOffice, stop, nextDeadline: () => pausedAt === undefined ? Math.min(attackAt, phaseEnds) : Infinity,
     snapshot: () => ({ phase, camera }) };
 }
 

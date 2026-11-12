@@ -16,12 +16,7 @@
       6,
       7
     ],
-    "previous": {
-      "6": 15,
-      "7": 14,
-      "9": 10,
-      "11": 10
-    },
+    "stepSeconds": 1,
     "intervalFactor": 1.5
   },
   "difficulty": {

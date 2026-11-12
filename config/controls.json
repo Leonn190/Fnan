@@ -1,10 +1,4 @@
 {
-  "restarts": {
-    "system": 5,
-    "allSystems": 9,
-    "locator": 4,
-    "allLocators": 7
-  },
   "closetTransitionsMs": {
     "enter": { "swap": 980, "duration": 1450 },
     "turn": { "swap": 320, "duration": 640 },

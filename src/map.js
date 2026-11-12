@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const { CAMERAS, VENUE, TRACKING_POINTS } = window.NathGame;
+const { CAMERAS, VENUE } = window.NathGame;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCALE = 10.5;
@@ -30,7 +30,7 @@ function setGateClosed(gate, closed) {
   gate.setAttribute('aria-pressed', String(closed));
 }
 
-function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGatesChange = () => {} }) {
+function makeCameraMap({ canvas, onSelect, onToggleGate }) {
   const svg = makeSvg('svg', {
     viewBox: '0 0 380 332',
     role: 'group',
@@ -53,30 +53,6 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
 
   const gateLayer = makeSvg('g', { role: 'group', 'aria-label': 'Portões' });
   const gateNodes = new Map();
-  const closedGates = new Set();
-
-  function toggleGate(id) {
-    const gate = gateNodes.get(id);
-    if (!gate) return;
-    const closed = !closedGates.has(id);
-    const changes = [];
-    if (closed) {
-      if (maxClosedGates <= 0) return;
-      if (closedGates.size === maxClosedGates) {
-        const reopened = Array.from(closedGates).at(-1);
-        closedGates.delete(reopened);
-        setGateClosed(gateNodes.get(reopened), false);
-        changes.push({ id: reopened, closed: false });
-      }
-      closedGates.add(id);
-    } else {
-      closedGates.delete(id);
-    }
-    setGateClosed(gate, closed);
-    changes.push({ id, closed });
-    onGatesChange(changes);
-  }
-
   for (const {id,axis,at,start,end,type} of VENUE.openings) {
     const horizontal = axis === 'H';
     const coords = {
@@ -94,7 +70,7 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
       gate.append(makeSvg('title', {}, label));
       gate.append(makeSvg('line', {...coords, class: 'gate-hit-area'}));
       gate.append(makeSvg('line', {...coords, class: 'gate-line'}));
-      bindMapButton(gate, () => { if (canToggleGate()) toggleGate(id); });
+      bindMapButton(gate, () => { if (gate.getAttribute('aria-disabled') !== 'true') onToggleGate(id); });
       gateNodes.set(id, gate);
       gateLayer.append(gate);
       continue;
@@ -105,8 +81,6 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
       'stroke-dasharray': type==='livre'?'3 2':'none',
     }));
   }
-
-  const trackingLayer = makeSvg('g', { class: 'map-tracking', 'aria-hidden': 'true' });
 
   const cameraNodes = new Map();
   for (const cam of CAMERAS) {
@@ -136,22 +110,16 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
   }
 
   // The gate targets sit above camera halos where their coordinates are close.
-  svg.append(gateLayer, trackingLayer);
+  svg.append(gateLayer);
   canvas.append(svg);
   let activeCamera;
-  let trackingKey;
   return {
-    toggleGate,
-    isGateClosed: id => closedGates.has(id),
-    openGate(id) {
-      if (!closedGates.delete(id)) return;
-      setGateClosed(gateNodes.get(id), false);
-      onGatesChange([{ id, closed: false }], true);
-    },
-    closedGateIds: () => Array.from(closedGates),
-    resetGates() {
-      for (const id of closedGates) setGateClosed(gateNodes.get(id), false);
-      closedGates.clear();
+    setGate(id, closed) { setGateClosed(gateNodes.get(id), closed); },
+    setGateControls(enabled) {
+      for (const gate of gateNodes.values()) {
+        gate.setAttribute('aria-disabled', String(!enabled));
+        gate.setAttribute('tabindex', enabled ? '0' : '-1');
+      }
     },
     setActive(camera) {
       if (activeCamera === camera) return;
@@ -161,33 +129,6 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
         node.setAttribute('aria-pressed',String(id===camera.id));
       }
       for (const [id,polygon] of polygons) polygon.classList.toggle('highlight',id===camera.room);
-    },
-    setTracking(actors) {
-      const key = actors.map(({ id, position }) => `${id}:${position}`).join('|');
-      if (key === trackingKey) return;
-      trackingKey = key;
-      const byPosition = new Map();
-      for (const actor of actors) {
-        if (!Object.hasOwn(TRACKING_POINTS, actor.position)) continue;
-        const list = byPosition.get(actor.position) ?? [];
-        list.push(actor);
-        byPosition.set(actor.position, list);
-      }
-
-      const markers = [];
-      for (const [position, occupants] of byPosition) {
-        const [x, y] = TRACKING_POINTS[position];
-        occupants.forEach(({ id, name, color }, index) => {
-          const offset = (index - (occupants.length - 1) / 2) * 11;
-          const dot = makeSvg('circle', {
-            cx: X(x) + offset, cy: Y(y), r: 4.3, class: 'animatronic-marker',
-            'data-position': position, 'data-actor': id, fill: color,
-          });
-          dot.append(makeSvg('title', {}, name));
-          markers.push(dot);
-        });
-      }
-      trackingLayer.replaceChildren(...markers);
     },
   };
 }

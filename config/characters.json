@@ -23,7 +23,8 @@
       18,
       19,
       20,
-      22
+      22,
+      26
     ],
     "cameras": [
       "CAM01",
@@ -38,7 +39,6 @@
       "CAM11",
       "CAM12"
     ],
-    "trackable": true,
     "interval": 24,
     "reaction": 3.5,
     "target": 10,
@@ -73,7 +73,8 @@
       17,
       18,
       19,
-      20
+      20,
+      26
     ],
     "cameras": [
       "CAM01",
@@ -88,7 +89,6 @@
       "CAM11",
       "CAM12"
     ],
-    "trackable": true,
     "interval": 26,
     "reaction": 4.5,
     "target": 10,
@@ -121,7 +121,8 @@
       18,
       19,
       20,
-      21
+      21,
+      26
     ],
     "cameras": [
       "CAM01",
@@ -136,12 +137,12 @@
       "CAM11",
       "CAM12"
     ],
-    "trackable": true,
     "interval": 21,
     "reaction": 4.5,
     "target": 21,
     "targetBonus": 20,
-    "audioModifier": 50
+    "audioModifier": 50,
+    "firstIntervalFactor": 0.6
   },
   "gatinha": {
     "name": "Nathzinha Gatinha",
@@ -160,7 +161,8 @@
       15,
       23,
       24,
-      25
+      25,
+      26
     ],
     "cameras": [
       "CAM01",
@@ -170,7 +172,6 @@
       "CAM07",
       "CAM08"
     ],
-    "trackable": true,
     "interval": 19,
     "reaction": 4.5,
     "target": 10,
@@ -206,7 +207,6 @@
       "CAM10",
       "CAM11"
     ],
-    "trackable": false,
     "interval": 29,
     "reaction": 2.5,
     "target": 13,

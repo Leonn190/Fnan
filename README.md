@@ -70,9 +70,9 @@ Abra `index.html` diretamente para jogar com a cópia local gerada a partir de `
 
 Em HTTP(S), inclusive no GitHub Pages, o jogo carrega `config/` diretamente. Para testar assim no computador, execute `python -m http.server 8000` na raiz e abra [localhost:8000](http://localhost:8000/). Recarregue a página após editar um JSON.
 
-Ao alterar os padrões que serão distribuídos para abertura direta, atualize a cópia local com `node scripts/sync-local-config.cjs`. Confira a sincronização com `node scripts/sync-local-config.cjs --check`. Abrir o jogo e publicar no Pages dispensam essa etapa.
+Ao alterar os JSONs, rode `node scripts/sync-local-config.cjs` para atualizar a cópia usada por `file://` e o mapa de referência `NNN_mapa_posicoes_22.json`. Confira ambos com `node scripts/sync-local-config.cjs --check`. Abrir o jogo e publicar no Pages dispensam essa etapa.
 
-Execute `node tests/night-systems.cjs`, `node tests/movement.cjs` e `node tests/camera-gates.cjs` para validar as regras e os controles. Os testes de arte `tests/test_cam05_images.py` e `tests/test_office_images.py` rodam diretamente com Python e Pillow.
+Execute `node tests/night-systems.cjs`, `node tests/movement.cjs` e `node tests/camera-gates.cjs` para validar as regras e os controles. Execute `node tests/image-cache.cjs` para conferir o cache. Os testes de arte `tests/test_cam05_images.py` e `tests/test_office_images.py` rodam diretamente com Python e Pillow.
 
 A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Monitores ultrawide, incluindo modelos curvos, recebem bordas pretas nas laterais: escritório, câmeras, mapa e HUD usam a mesma área útil. A curvatura física não é detectável pelo navegador; a proporção da tela define as bordas. O movimento do panorama usa as bordas da área do jogo.
 
@@ -86,6 +86,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - O botão redondo do rádio toca uma das três faixas e reduz o contador da Palhaça. Cada entrada no armário registra um possível piso. O piso passa a valer se o contador cruzar o limiar para cima após o registro. O rádio, o computador, o movimento da visão e as viagens ao armário contribuem para o barulho.
 - Observe as barras no canto inferior esquerdo. Ver animatrônicas, ficar no armário e fechar o portão central reduzem a sanidade. A música ajuda a recuperá-la. Sanidade baixa desacelera o relógio e favorece a Shadow.
 - Ao ver **FIND ME**, abra as câmeras e encontre a Shadow antes do fim do prazo. Ela escolhe uma câmera por aparição e só pode se manifestar no retorno ao escritório.
+- Ao entrar na elétrica, a Yandere derruba os feeds e bloqueia os controles dos nove portões. Cada portão mantém sua posição física no momento da falha, e a Padrão ainda pode abri-lo. Quando a tela mostrar **SEM SINAL**, desligue o computador pelo botão ⏻ e volte a ligá-lo pelo botão de energia no escritório. O rádio, a lanterna e o armário continuam disponíveis conforme suas próprias regras. O prazo de busca da Shadow pausa enquanto as câmeras estão indisponíveis.
 - O computador ligado e os portões fechados consomem energia. No apagão, o computador para, o rádio ainda pode funcionar por 25 s e as perdas de sanidade dobram. O armário e a lanterna continuam disponíveis.
 - Abra `?debug=1` para acompanhar posições, dificuldades, bloqueios, contadores e o estado da câmera. Nesse modo, **J** testa os sustos.
 
@@ -97,26 +98,45 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | `sanity.json` | Perdas, recuperação e multiplicador do apagão |
 | `power.json` | Energia inicial, consumo, aviso e prazo do rádio |
 | `shadow.json` | Dificuldade, chance, prazos e recursos visuais da Shadow |
-| `map.json` | 25 posições, 36 ligações, câmeras, capacidade e arestas de portões |
-| `characters.json` | Posições permitidas, partida, IA, rastreamento, reação e habilidades individuais |
+| `map.json` | 26 posições, 35 ligações físicas, câmeras, capacidades e aberturas da planta |
+| `characters.json` | Posições permitidas, partida, IA, reação e habilidades individuais |
 | `movement.json` | Sorteio, variação dos intervalos, efeitos dos níveis, bloqueios e recuo |
 | `effects.json` | Alcance e recarga do áudio, estática, lanterna, fontes e dissipação do barulho |
-| `threats.json` | Permanência, contador e estágios da Palhaça, distribuição e prazo de sabotagem |
-| `controls.json` | Integração com os controles, transições, localização e recursos audiovisuais |
+| `threats.json` | Permanência no escritório, Palhaça, Smores e posição da elétrica |
+| `controls.json` | Controles, transições e recursos audiovisuais |
 
-O grafo lógico funciona independentemente da planta desenhada e da disponibilidade de arte. Um destino atrás de portão fechado entra no sorteio. Ao ser bloqueada, a tentativa mantém o destino por até 3 s. Se o impedimento continuar, o próximo intervalo usa metade do tempo normal sorteado. A Gótica pode causar estática compartilhada. A Padrão pode abrir portões físicos e é a única que percorre as saídas externas. A Maid avança os estágios iniciais usando seu próprio relógio e sai de Serviço uma única vez. A Gatinha usa três esconderijos fora das câmeras.
+As posições têm sala e coordenadas na planta. Cada ligação em `config/map.json` representa circulação interna, passagem livre, portão ou saída externa. As 35 ligações atuais funcionam nos dois sentidos. A IA usa as passagens abertas para ponderar a distância até seu alvo. A permanência tem metade do peso base de uma ligação vizinha e uma porta fechada ainda pode ser tentada. A tentativa aguarda até 3 s. Se falhar, o próximo intervalo usa metade do valor aplicável, com a retenção configurada dos modificadores.
 
-O G06 controla 2↔19. O G02 controla 7↔14 e 25↔14. O G01 controla 14↔13. O retorno especial desloca diretamente para o destino sorteado. Quando já há uma invasora no escritório, a próxima que chegaria à porta esquerda pode entrar diretamente, sujeita aos bloqueios aplicáveis.
+### Portões e circulação
+
+| Portão | Passagem | Posições |
+|---|---|---|
+| G01 | Escritório e corredor central | 14 ↔ 13 |
+| G02 | Entrada oeste da VIP 2 | 7 ↔ 14 |
+| G03 | Entrada leste da VIP 2 | 2 ↔ 7 e 3 ↔ 7 |
+| G04 | Entrada oeste da VIP 1 | 6 ↔ 15 |
+| G05 | Entrada leste da VIP 1 | 2 ↔ 6 |
+| G06 | Bastidores do palco e corredor da CAM12 | 2 ↔ 19 |
+| G07 | Salão e circulação dos banheiros | 3 ↔ 26 |
+| G08 | Salão e recepção | 3 ↔ 5 |
+| G09 | Lojinha e estoque | 9 ↔ 10 |
+
+A circulação 26 fica fora do enquadramento da CAM07. A passagem P14 liga 26 ao fliperama (4), e P15 liga 26 ao esconderijo 24, no banheiro masculino. Foram removidas as ligações diretas 3 ↔ 4, 3 ↔ 24 e 4 ↔ 24. O esconderijo 25 fica dentro da VIP 2 e se liga a 7. O trajeto até o corredor oeste passa por 7 e G02.
+
+O estoque (10) leva à aproximação da porta esquerda (12), e P02 liga 12 ao escritório (13). Uma invasora no escritório faz quem estiver no estoque esperar antes de ocupar 12. A Maid usa G01 e o corredor central. As saídas externas conectam 8, 11 e 22 pelo perímetro e são exclusivas da Padrão. O acesso à elétrica (21) passa por P12 e é exclusivo da Yandere.
+
+A Padrão tenta abrir o portão quando a observação permite. As chances são 70% e 94%, conforme a habilidade. Após abrir, ela só cruza se as demais condições forem atendidas. A Gótica mantém sua estática temporária. A Maid avança seus estágios iniciais e sai de Serviço uma vez. Recuos percorrem uma ligação por vez com intervalo próprio e respeitam portões, observação e capacidade.
+
+A vantagem avançada da Yandere começa em `movement.difficulty.abilityLevel` (nível 4). O campo `yandere.firstIntervalFactor` vale 0,60 e incide uma vez, após o cálculo do primeiro intervalo. Os intervalos seguintes continuam sujeitos à dificuldade normal. Uma nova entrada na elétrica pode causar outra falha após a recuperação.
 
 O temporizador de permanência de cada invasora conta desde a entrada dela no controle. O clique no armário decide se a permanência usa o tempo normal ou tardio. Em caso de eventos simultâneos, as ações registradas do jogador precedem a resolução das tentativas e dos ataques. O relógio usa tempo real transcorrido, inclusive com a aba oculta.
 
 ### Pendências da especificação e da arte
 
 - **P04** deixa o teto do barulho em `null`. O acúmulo segue as taxas confirmadas e o peso não fica negativo.
-- **P06** define a roleta de sabotagens e a morte após 25 s de ventilação sabotada. Faltam o procedimento de conserto, as durações e os efeitos técnicos de câmeras, portas e áudio. O Painel Geral sinaliza as falhas sorteadas. Os reinícios manuais já existentes no painel continuam separados da sabotagem.
-- **P08** deixa os demais vínculos entre portões e arestas pendentes. Os controles e as variantes visuais existentes desses portões continuam disponíveis.
 - **P11** mantém em aberto limites gerais de acúmulo e um piso quantitativo para os pesos. O teto de magnitude da lanterna e os empates seguem as regras confirmadas.
 - As posições 8 e 11 ainda aguardam retratos próprios. As demais posições sem câmera continuam fora dos feeds.
+- O escritório e as câmeras CAM04, CAM05 e CAM12 têm variantes para G01, G08, G04/G05 e G06, respectivamente. G02, G03, G07 e G09 usam a arte original de cada cena. O mapa mostra a posição física desses quatro portões.
 
 ## Câmeras e imagens disponíveis
 

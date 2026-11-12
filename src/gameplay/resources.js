@@ -78,6 +78,7 @@ function createResources({ night, sanity: sanityRules, power }) {
 
   return {
     segment,
+    computerOn: () => computerOn,
     toggleComputer() { if (energy > 0) computerOn = !computerOn; },
     snapshot: now => ({ sanity, energy, hours, computerOn, blackout: energy === 0,
       radioAvailable: now < blackoutAt + power.radioGraceSeconds })

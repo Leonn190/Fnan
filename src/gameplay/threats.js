@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const { factor, uniform, weighted } = window.NathGame;
+const { factor, uniform } = window.NathGame;
 
 function createSmores(rules, level, random, emit) {
   if (!rules || level <= 0) return {
@@ -83,11 +83,10 @@ function createSmores(rules, level, random, emit) {
 }
 
 function createThreats(config, levels, random, emit, reactionReduction = () => 0) {
-  const { attack, clown, sabotage } = config.threats;
+  const { attack, clown } = config.threats;
   const clownEnabled = levels.palhaca > 0;
   const growth = clown.growth * factor(clown.growthIncreasePerLevel * levels.palhaca);
   const invasions = new Map();
-  const faults = new Map();
   const thresholds = [];
   let hidden = false;
   let counter = clownEnabled ? clown.initial : 0;
@@ -121,22 +120,6 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
     emit('invasion', actor);
   }
 
-  function triggerSabotage(actor, now) {
-    const counts = sabotage.countWeights[actor.abilityTier];
-    const systems = Object.keys(sabotage.systems);
-    const count = Number(weighted(random, Object.keys(counts), id => counts[id]));
-    const selected = [];
-    while (selected.length < count && systems.length) {
-      const id = weighted(random, systems, system => sabotage.systems[system]);
-      if (id === undefined) break;
-      systems.splice(systems.indexOf(id), 1);
-      selected.push(id);
-      // A new hit cannot extend a fault that is already active.
-      if (!faults.has(id)) faults.set(id, now);
-    }
-    emit('sabotage', selected);
-  }
-
   function clownRate(input) {
     if (hidden && input.clownLight) return 0;
     if (input.radio) return -clown.musicReduction;
@@ -152,22 +135,16 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
     counter = next;
   }
 
-  function ventilationDeadline() {
-    const started = faults.get('ventilacao');
-    return started === undefined ? Infinity : started + sabotage.effects.ventilacao.deadline;
-  }
-
   function nextDeadline(now, input) {
     const rate = clownEnabled ? clownRate(input) : 0;
     const deathAt = rate > 0 ? now + (clown.max - counter) / rate : Infinity;
-    return Math.min(deathAt, ventilationDeadline(), ...[...invasions.values()].map(invasion =>
+    return Math.min(deathAt, ...[...invasions.values()].map(invasion =>
       hidden ? invasion.leaveAt : invasion.reactionEnds - reactionReduction()
     ));
   }
 
   function resolve(now, retreat, lose) {
     if (clownEnabled && (clownDeath || clown.max - counter <= Number.EPSILON * clown.max)) return lose('palhaca');
-    if (now >= ventilationDeadline()) return lose('ventilacao');
     for (const [actor, invasion] of invasions) {
       if (!hidden && now >= invasion.reactionEnds - reactionReduction()) return lose(actor.key);
       if (hidden && now >= invasion.leaveAt) {
@@ -180,13 +157,8 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
   const clownStage = () => clownEnabled ? clown.stages.findLastIndex(threshold => counter >= threshold) : -1;
   return {
     enterCloset, exitCloset: () => { hidden = false; },
-    audioFault: () => faults.has('audio'),
-    invade, triggerSabotage, integrate, nextDeadline, resolve, clownStage,
-    snapshot: now => ({
-      hidden, counter, floor, faults: [...faults.keys()],
-      ventilationRemaining: faults.has('ventilacao') ? Math.max(0, ventilationDeadline() - now) : null,
-      clownStage: clownStage()
-    })
+    invade, integrate, nextDeadline, resolve, clownStage,
+    snapshot: () => ({ hidden, counter, floor, clownStage: clownStage() })
   };
 }
 

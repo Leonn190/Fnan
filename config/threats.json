@@ -36,35 +36,5 @@
     "musicReduction": 2,
     "growthIncreasePerLevel": 10
   },
-  "sabotage": {
-    "position": 21,
-    "systems": {
-      "cameras": 1,
-      "portas": 1,
-      "audio": 1,
-      "ventilacao": 1
-    },
-    "countWeights": [
-      {
-        "1": 75,
-        "2": 25
-      },
-      {
-        "1": 51,
-        "2": 39,
-        "3": 10
-      }
-    ],
-    "duration": null,
-    "effects": {
-      "cameras": null,
-      "portas": null,
-      "audio": null,
-      "ventilacao": {
-        "deadline": 25,
-        "repair": null,
-        "autoEnd": null
-      }
-    }
-  }
+  "electrical": { "position": 21 }
 }
