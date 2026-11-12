@@ -54,12 +54,17 @@
     </section>
   </main>
 
+  <div class="game night-intro" id="night-intro" hidden>
+    <img src="./public/images/Anúncio Vintage de Contratação Animatrônica.png" width="1448" height="1086" alt="Anúncio de jornal para a vaga de segurança noturno no restaurante da Nathzinha" draggable="false">
+  </div>
+
   <main class="game" id="game" data-mode="office" hidden>
     <div class="playfield" id="playfield">
       <section class="office-view" id="office-view" aria-label="Escritório de segurança do restaurante">
         <div class="office-scene" id="office-scene">
           <img class="office-art" id="office-art" src="./public/images/office/states/open-dark.webp" alt="Escritório de segurança, portão principal aberto e corredor escuro" draggable="false">
           <img class="office-art shadow-office-art" id="shadow-office-art" alt="Nathzinha Shadow no escritório" draggable="false" hidden>
+          <img class="office-art office-monitor-off" src="./public/images/office/NNN_escritorio_monitor_desligado.png" width="2048" height="682" alt="" draggable="false">
           <img class="office-character" id="smores-vent" alt="Smores espiando pela ventilação" draggable="false" hidden>
           <div class="office-lighting" aria-hidden="true">
             <span class="office-glow office-glow--gate"></span>
@@ -72,7 +77,7 @@
           <img class="office-character" id="smores-room" alt="Smores sentado sobre a mesa" draggable="false" hidden>
           <div class="office-blackout" aria-hidden="true"></div>
           <button class="scene-hotspot monitor-hotspot" id="office-monitor" type="button" aria-label="Usar o monitor da mesa" aria-keyshortcuts="S"></button>
-          <button class="scene-hotspot monitor-power" id="office-power" type="button" aria-label="Energia do computador" title="Energia do computador" aria-pressed="true">⏻</button>
+          <button class="scene-hotspot office-power" id="office-power" type="button" aria-label="Energia do computador" aria-pressed="true"></button>
           <button class="scene-hotspot gate-light-hotspot" id="office-light" type="button" aria-label="Segurar para iluminar o corredor" aria-keyshortcuts="W" aria-pressed="false"></button>
           <button class="scene-hotspot gate-button-hotspot" id="office-gate" type="button" aria-label="Portão principal" aria-pressed="false"></button>
           <button class="scene-hotspot radio-hotspot" id="office-radio" type="button" aria-label="Rádio da mesa" aria-pressed="false"></button>
@@ -95,6 +100,7 @@
         <button class="monitor-exit" id="monitor-exit" type="button" aria-label="Sair do monitor e voltar ao escritório"></button>
         <div class="monitor-frame">
           <img class="monitor-art" src="./public/images/computer/monitor-frame.webp" width="1672" height="941" alt="" draggable="false">
+          <button class="scene-hotspot desktop-power" id="desktop-power" type="button" aria-label="Energia do computador" aria-pressed="true"></button>
           <div class="computer-screen" role="group" aria-label="Área de trabalho do computador">
             <svg class="desktop-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <symbol id="icon-cameras" viewBox="0 0 48 48">

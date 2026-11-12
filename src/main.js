@@ -35,7 +35,7 @@ const dom = {
   playfield: $('#playfield'), scareArt: $('#jumpscare-art'),
   gameOver: $('#game-over'), returnToMenu: $('#return-to-menu'), scareSound: $('#jumpscare-sound'),
   officeScene: $('#office-scene'), officeMonitor: $('#office-monitor'), officeArt: $('#office-art'),
-  officePower: $('#office-power'), shutdownDesktop: $('#shutdown-desktop'),
+  officePower: $('#office-power'), desktopPower: $('#desktop-power'), shutdownDesktop: $('#shutdown-desktop'),
   officeCharacters: $('#office-characters'), corridorCharacters: $('#corridor-characters'),
   smoresVent: $('#smores-vent'), smoresRoom: $('#smores-room'),
   officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
@@ -568,7 +568,8 @@ function closeComputer() {
   if (dom.desktop.hidden || state.complete) return;
   setMode('office');
   advanceGame(performance.now(), { type: 'returnToOffice', source: 'computer' });
-  dom.officeMonitor.focus({ preventScroll: true });
+  const target = movement.snapshot().computerOn ? dom.officeMonitor : dom.officePower;
+  target.focus({ preventScroll: true });
 }
 
 function toggleComputerPower() {
@@ -1065,7 +1066,9 @@ function renderResources({ sanity, energy, blackout, computerOn, radioAvailable 
   dom.game.toggleAttribute('data-computer-off', !computerOn);
   dom.officeMonitor.disabled = !computerOn;
   dom.officePower.disabled = blackout;
-  dom.officePower.setAttribute('aria-pressed', String(computerOn));
+  for (const button of [dom.officePower, dom.desktopPower]) {
+    button.setAttribute('aria-pressed', String(computerOn));
+  }
   dom.officeRadio.disabled = !radioAvailable;
 }
 
@@ -1133,6 +1136,7 @@ document.addEventListener('visibilitychange', () => {
 });
 dom.officeMonitor.addEventListener('click', openComputer);
 dom.officePower.addEventListener('click', toggleComputerPower);
+dom.desktopPower.addEventListener('click', toggleComputerPower);
 dom.shutdownDesktop.addEventListener('click', toggleComputerPower);
 $('#monitor-exit').addEventListener('click', closeComputer);
 document.addEventListener('click', event => {

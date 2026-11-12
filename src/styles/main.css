@@ -54,6 +54,29 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   .title-content h1{font-size:clamp(34px,min(15.5cqw,13cqh),96px)}
 }
 @media(prefers-reduced-motion:reduce){.title-glitch{display:none}}
+.night-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+.night-intro img { width: 100%; height: 100%; object-fit: contain; }
+.night-intro[data-phase="newspaper"] { animation: night-intro 7s linear both; }
+.night-intro[data-phase="newspaper"] img { animation: newspaper-fade 7s ease-in-out both; }
+.night-intro[data-phase="reveal"] { animation: night-reveal .85s ease-out both; pointer-events: none; }
+.night-intro[data-phase="reveal"] img { visibility: hidden; }
+@keyframes night-intro { from { opacity: 0; } 10%, to { opacity: 1; } }
+@keyframes newspaper-fade { 0%, 10%, 93%, 100% { opacity: 0; } 24%, 79% { opacity: 1; } }
+@keyframes newspaper-zoom { from { scale: 1; } to { scale: 1.06; } }
+@keyframes night-reveal { from { opacity: 1; } to { opacity: 0; } }
+@media(prefers-reduced-motion:no-preference) {
+  .night-intro[data-phase="newspaper"] img {
+    animation: newspaper-fade 7s ease-in-out both, newspaper-zoom 7s linear both;
+  }
+}
 .office-view,.computer-view{position:absolute;inset:0;overflow:hidden}
 .office-view{z-index:1;background:#09050d;touch-action:pan-y}
 .office-scene{position:absolute;left:50%;top:0;width:max(100cqw,300cqh);height:100%;transform:translateX(calc(-50% + var(--pan-shift,0px)));will-change:transform}
@@ -115,12 +138,22 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .scene-hotspot{position:absolute;border:0;background:transparent}
 .scene-hotspot:focus-visible{outline:none}
 .monitor-hotspot{left:22.3%;top:51.5%;width:16.1%;height:30.7%}
-.monitor-power{left:36.1%;top:77.5%;width:clamp(24px,4.5cqh,35px);aspect-ratio:1;min-height:24px;display:grid;place-items:center;border:1px solid #efc1df85;border-radius:50%;background:#201225e8;color:#ffc9eb;box-shadow:0 0 9px #e58bba55;font-size:14px}
-.monitor-power[aria-pressed="false"]{color:#c9a8c4;box-shadow:none}
-.monitor-power:focus-visible{outline:2px solid #ffe2f4;outline-offset:2px}
-.monitor-power:disabled{opacity:.48}
+.office-power {
+  left: calc(100% * 806 / 2172);
+  top: calc(100% * 562 / 724);
+  width: calc(100% * 26 / 2172);
+  height: calc(100% * 21 / 724);
+}
+:is(.office-power, .desktop-power):focus-visible { outline: 2px solid #ffe2f4; }
+.office-monitor-off {
+  display: none;
+  position: absolute;
+  inset: 0;
+  /* Contorno da tela no panorama, seguindo a moldura e o laço. */
+  clip-path: polygon(22.76% 53.5%, 23.35% 53.5%, 23.63% 52.62%, 24.48% 52.35%, 37.94% 52.65%, 38.14% 78.72%, 22.76% 80.66%);
+}
+.game[data-computer-off] .office-monitor-off { display: block; }
 .game[data-computer-off] .office-glow--monitor{visibility:hidden}
-.game[data-computer-off] .office-scene::after{content:"";position:absolute;left:22.9%;top:52.7%;width:15.1%;height:26.5%;clip-path:polygon(2% 0,100% 1%,100% 94%,0 100%);background:#08050cf5;pointer-events:none}
 .office-blackout{display:none;position:absolute;inset:0;pointer-events:none;background:#030208eb}
 .game[data-blackout] .office-blackout{display:block}
 .game[data-blackout] .office-view[data-flashlight="true"] .office-blackout{
@@ -185,6 +218,13 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   pointer-events: none;
 }
 .monitor-art { display: block; width: 100%; height: 100%; }
+.desktop-power {
+  left: calc(100% * 1520 / 1672);
+  top: calc(100% * 859 / 941);
+  width: calc(100% * 62 / 1672);
+  height: calc(100% * 58 / 941);
+  pointer-events: auto;
+}
 .computer-screen {
   --taskbar-height: clamp(28px, 10cqh, 40px);
   position: absolute;

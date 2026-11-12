@@ -6,6 +6,7 @@ function createNightMenu(config, { startShift, onEnter }) {
   const entry = $('#entry-screen');
   const entryButton = $('#enter-game');
   const title = $('#title-screen');
+  const intro = $('#night-intro');
   const music = $('#menu-music');
   const titleContent = $('.title-content');
   const start = $('#start-game');
@@ -40,7 +41,7 @@ function createNightMenu(config, { startShift, onEnter }) {
   }
 
   function fadeMusic() {
-    if (title.hidden) return;
+    if (title.hidden || title.inert) return;
     const progress = Math.min(1, Math.max(0, (music.currentTime - settings.startSeconds) / settings.fadeSeconds));
     music.volume = settings.initialVolume + (settings.volume - settings.initialVolume) * progress;
     if (progress < 1) requestAnimationFrame(fadeMusic);
@@ -55,11 +56,35 @@ function createNightMenu(config, { startShift, onEnter }) {
     music.play().catch(() => {});
   }
 
-  function begin(levels, custom) {
+  function launch(levels, custom) {
     title.hidden = true;
+    title.inert = false;
     music.pause();
     startShift(levels, custom);
   }
+
+  function begin(levels, custom) {
+    if (intro.dataset.phase === 'newspaper') return;
+    if (custom) {
+      launch(levels, true);
+      return;
+    }
+    title.inert = true;
+    music.pause();
+    intro.dataset.phase = 'newspaper';
+    intro.hidden = false;
+  }
+
+  intro.addEventListener('animationend', event => {
+    if (event.target !== intro) return;
+    if (event.animationName === 'night-intro') {
+      intro.dataset.phase = 'reveal';
+      launch({}, false);
+    } else if (event.animationName === 'night-reveal') {
+      intro.hidden = true;
+      delete intro.dataset.phase;
+    }
+  });
 
   function enter() {
     entry.hidden = true;
