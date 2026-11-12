@@ -32,12 +32,16 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .title-screen::before{background:linear-gradient(90deg,#030203c9,transparent 63%),linear-gradient(0deg,#030203a8,transparent 28%)}
 .title-screen::after{background:repeating-linear-gradient(180deg,#0004 0 1px,transparent 1px 4px)}
 .title-screen .feed-noise{opacity:.035}
-.title-content{position:absolute;z-index:1;inset:0;display:flex;flex-direction:column;align-items:flex-start;gap:clamp(16px,7cqh,64px);padding:clamp(16px,12cqh,100px) clamp(24px,8cqw,120px);text-shadow:0 2px 14px #000}
+.title-content{position:absolute;z-index:1;inset:0;display:flex;flex-direction:column;align-items:flex-start;gap:clamp(16px,7cqh,64px);padding:clamp(16px,12cqh,100px) clamp(24px,8cqw,120px);overflow:auto;text-shadow:0 2px 14px #000}
 .title-content h1{margin:0;font:400 clamp(34px,min(10.3cqw,20cqh),144px)/.94 Arial,sans-serif;letter-spacing:-.045em}
 .title-start{min-height:44px;padding:4px 0;border:0;background:none;font:700 clamp(22px,3.2cqw,40px)/1.2 var(--mono);text-shadow:inherit}
-.title-start span{margin-right:.25em}
+.title-start span[aria-hidden]{margin-right:.25em}
 .title-start:hover,.title-start:focus-visible{color:#ffbfdc}
 .title-actions{display:grid;justify-items:start;gap:4px}
+@container(max-height:680px){
+  .title-content{padding-block:clamp(12px,5cqh,28px);gap:clamp(8px,4cqh,22px)}
+  .title-content h1{font-size:clamp(34px,min(10.3cqw,15cqh),80px)}
+}
 .custom-night{position:absolute;inset:0;z-index:2;overflow:auto;padding:clamp(16px,7cqh,60px) 8cqw;background:#100b18e8}
 .custom-night h2{margin:0 0 18px;font:700 clamp(26px,5cqw,46px) var(--mono)}
 .custom-night form{max-width:650px}
@@ -64,13 +68,25 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   background: #000;
 }
 .night-intro img { width: 100%; height: 100%; object-fit: contain; }
+.night-intro:not([data-phase="newspaper"]) img,
+.night-intro:not([data-phase="card"]) p { display: none; }
+.night-intro p {
+  margin: 0;
+  color: #f1f1f1;
+  font: 400 clamp(24px, 6cqw, 56px)/1.2 var(--mono);
+  letter-spacing: .18em;
+  text-align: center;
+}
 .night-intro[data-phase="newspaper"] { animation: night-intro 7s linear both; }
 .night-intro[data-phase="newspaper"] img { animation: newspaper-fade 7s ease-in-out both; }
-.night-intro[data-phase="reveal"] { animation: night-reveal .85s ease-out both; pointer-events: none; }
-.night-intro[data-phase="reveal"] img { visibility: hidden; }
+.night-intro[data-phase="cover"] { animation: night-cover .55s ease-in both; }
+.night-intro[data-phase="card"] p { animation: night-card 2.4s ease-in-out both; }
+.night-intro[data-phase="reveal"] { animation: night-reveal .85s ease-out both; }
 @keyframes night-intro { from { opacity: 0; } 10%, to { opacity: 1; } }
 @keyframes newspaper-fade { 0%, 10%, 93%, 100% { opacity: 0; } 24%, 79% { opacity: 1; } }
 @keyframes newspaper-zoom { from { scale: 1; } to { scale: 1.06; } }
+@keyframes night-cover { from { opacity: 0; } to { opacity: 1; } }
+@keyframes night-card { 0%, 100% { opacity: 0; } 24%, 74% { opacity: 1; } }
 @keyframes night-reveal { from { opacity: 1; } to { opacity: 0; } }
 @media(prefers-reduced-motion:no-preference) {
   .night-intro[data-phase="newspaper"] img {
@@ -509,7 +525,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   .game[data-mode="cameras"] .cameras-view[data-maximized] .camera-audio{left:auto;right:16px}
 }
 .resource-hud label{display:flex;justify-content:space-between}
-.resource-hud label:nth-of-type(2){margin-top:2px}
+#sanity-meter:not([hidden]) + #energy-label{margin-top:2px}
 .resource-hud meter{display:block;width:100%;height:6px;appearance:none;border:1px solid #c998c073;border-radius:6px;background:linear-gradient(to right,var(--meter-color,#b999ee) var(--meter-fill,100%),#1d1229 var(--meter-fill,100%))}
 .resource-hud meter::-webkit-meter-bar{opacity:0}
 .resource-hud meter::-moz-meter-bar{opacity:0}
@@ -541,7 +557,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .shift-time small{font-size:.4em;letter-spacing:-.06em}
 .shift-complete h2{font-size:27px;margin:4px 0}
 .shift-complete p{font-size:13px;line-height:1.5;color:#e9d6e1;max-width:350px}
-.shift-complete button{width:auto;margin-top:22px}
+.shift-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
+.shift-complete button{width:auto}
 
 .jumpscare,.death-flash,.game-over{position:absolute;inset:0;z-index:50}
 .jumpscare,.death-flash{display:none;pointer-events:none}

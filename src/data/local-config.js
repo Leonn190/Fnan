@@ -913,10 +913,149 @@ window.NathGame.localConfig = {
     },
     "startHour": 12,
     "hoursToWin": 6,
-    "normalLevel": 0,
+    "powerEnabled": true,
+    "sanityEnabled": true,
+    "defaultLevel": 0,
     "levels": [
       0,
       10
+    ],
+    "campaign": [
+      {
+        "hoursToWin": 6,
+        "powerEnabled": false,
+        "sanityEnabled": false,
+        "levels": {
+          "gotica": 5,
+          "yandere": 3,
+          "palhaca": 0,
+          "padrao": 0,
+          "gatinha": 0,
+          "maid": 0,
+          "smores": 0,
+          "shadow": 0
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": false,
+        "sanityEnabled": false,
+        "levels": {
+          "gotica": 5,
+          "yandere": 7,
+          "palhaca": 2,
+          "padrao": 0,
+          "gatinha": 0,
+          "maid": 0,
+          "smores": 0,
+          "shadow": 0
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": true,
+        "sanityEnabled": false,
+        "levels": {
+          "gotica": 3,
+          "yandere": 5,
+          "palhaca": 1,
+          "padrao": 1,
+          "gatinha": 0,
+          "maid": 0,
+          "smores": 0,
+          "shadow": 0
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": true,
+        "sanityEnabled": true,
+        "levels": {
+          "gotica": 3,
+          "yandere": 4,
+          "palhaca": 2,
+          "padrao": 2,
+          "gatinha": 1,
+          "maid": 0,
+          "smores": 0,
+          "shadow": 0
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": true,
+        "sanityEnabled": true,
+        "levels": {
+          "gotica": 3,
+          "yandere": 4,
+          "palhaca": 5,
+          "padrao": 3,
+          "gatinha": 2,
+          "maid": 9,
+          "smores": 0,
+          "shadow": 0
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": true,
+        "sanityEnabled": true,
+        "levels": {
+          "gotica": 4,
+          "yandere": 5,
+          "palhaca": 8,
+          "padrao": 4,
+          "gatinha": 10,
+          "maid": 2,
+          "smores": 3,
+          "shadow": 0
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": true,
+        "sanityEnabled": true,
+        "levels": {
+          "gotica": 5,
+          "yandere": 5,
+          "palhaca": 4,
+          "padrao": 8,
+          "gatinha": 7,
+          "maid": 5,
+          "smores": 2,
+          "shadow": 1
+        }
+      },
+      {
+        "hoursToWin": 6,
+        "powerEnabled": true,
+        "sanityEnabled": true,
+        "levels": {
+          "gotica": 7,
+          "yandere": 7,
+          "palhaca": 5,
+          "padrao": 9,
+          "gatinha": 7,
+          "maid": 7,
+          "smores": 5,
+          "shadow": 3
+        }
+      },
+      {
+        "hoursToWin": 7,
+        "powerEnabled": true,
+        "sanityEnabled": true,
+        "levels": {
+          "gotica": 7,
+          "yandere": 7,
+          "palhaca": 5,
+          "padrao": 10,
+          "gatinha": 7,
+          "maid": 7,
+          "smores": 6,
+          "shadow": 10
+        }
+      }
     ]
   },
   "power": {
@@ -944,12 +1083,12 @@ window.NathGame.localConfig = {
   "shadow": {
     "name": "Nathzinha Shadow",
     "firstLevel": {
-      "sanityLimit": 35,
+      "sanityLimit": 40,
       "chance": 10,
       "searchSeconds": 10
     },
     "lastLevel": {
-      "sanityLimit": 50,
+      "sanityLimit": 60,
       "chance": 15,
       "searchSeconds": 7.5
     },
@@ -964,7 +1103,6 @@ window.NathGame.localConfig = {
   "threats": {
     "smores": {
       "name": "Smores",
-      "normalLevel": 1,
       "radioSeconds": 15,
       "silenceSeconds": 10,
       "quietRoomSpeed": 2,

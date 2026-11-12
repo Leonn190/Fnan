@@ -11,16 +11,66 @@ const base = Object.fromEntries(['night', 'map', 'movement', 'characters', 'effe
   'controls', 'sanity', 'power', 'shadow'].map(name => [name, require('../config/' + name + '.json')]));
 const near = (actual, expected, tolerance = 1e-8) => assert(Math.abs(actual - expected) < tolerance, `${actual} != ${expected}`);
 
-function scenario({ levels, input, draws = [], tune = () => {} } = {}) {
+function scenario({ levels, input, draws = [], tune = () => {}, nightNumber } = {}) {
   const config = structuredClone(base);
   tune(config);
   const events = [];
   let calls = 0;
   const game = createMovement(config, { random: () => { calls++; return draws.shift() ?? 0; },
     emit: (...args) => events.push(args) });
-  game.reset(levels, input);
+  if (nightNumber) {
+    const { levels: campaignLevels, ...rules } = config.night.campaign[nightNumber - 1];
+    game.reset(campaignLevels, input, { ...config.night, ...rules });
+  } else game.reset(levels, input);
   return { game, events, calls: () => calls, state: game.snapshot, at: (time, next = {}, action) => game.advance(time, next, action),
     returnAt: (time, source = 'computer') => game.advance(time, { view: 'office' }, { type: 'returnToOffice', source }) };
+}
+
+const campaignLevels = {
+  gotica:  [5, 5, 3, 3, 3, 4, 5, 7, 7],
+  yandere: [3, 7, 5, 4, 4, 5, 5, 7, 7],
+  palhaca: [0, 2, 1, 2, 5, 8, 4, 5, 5],
+  padrao:  [0, 0, 1, 2, 3, 4, 8, 9, 10],
+  gatinha: [0, 0, 0, 1, 2, 10, 7, 7, 7],
+  maid:    [0, 0, 0, 0, 9, 2, 5, 7, 7],
+  smores:  [0, 0, 0, 0, 0, 3, 2, 5, 6],
+  shadow:  [0, 0, 0, 0, 0, 0, 1, 3, 10]
+};
+assert.equal(base.night.campaign.length, 9);
+for (const [index, entry] of base.night.campaign.entries()) {
+  const nightNumber = index + 1;
+  assert.deepEqual(entry.levels, Object.fromEntries(Object.entries(campaignLevels).map(([id, row]) => [id, row[index]])));
+  const input = { closet: true, radio: true, computer: true, gates: ['G01'] };
+  const test = scenario({ nightNumber, input, tune(config) { config.power.initial = .2; } });
+  const expectedActors = Object.entries(entry.levels).filter(([id, level]) => level > 0 && id in base.characters);
+  assert.deepEqual(test.game.diagnostics().map(({ key, level }) => [key, level]).sort(), expectedActors.sort());
+  assert.equal(test.state().sanity, 100);
+  assert.equal(test.state().clownStage >= 0, nightNumber >= 2);
+  test.at(1, input);
+  assert.equal(test.state().sanity < 100, nightNumber >= 4);
+  near(test.state().hours, 1 / 60);
+  near(test.state().energy, nightNumber >= 3 ? .2 - .018 - .028 : 100);
+  test.at(10, input);
+  assert.equal(test.state().blackout, nightNumber >= 3);
+  assert.equal(test.state().computerOn, nightNumber <= 2);
+  if (nightNumber <= 2) {
+    assert.equal(test.state().sanity, 100);
+    assert(test.game.camerasAvailable());
+    assert(test.game.isGateClosed('G01'));
+    test.at(10, input, { type: 'computerPower' });
+    assert.equal(test.state().computerOn, false);
+    test.at(10, input, { type: 'computerPower' });
+    assert.equal(test.state().computerOn, true);
+    assert.equal(test.state().radioAvailable, true);
+  }
+  const encounter = scenario({ nightNumber, input: { computer: true, radio: true }, tune(config) {
+    config.sanity.initial = 20;
+    for (const actor of Object.values(config.characters)) actor.interval = 1000;
+  } });
+  encounter.at(15, { computer: true, radio: true });
+  assert.equal(encounter.game.officeState().smores, nightNumber >= 6 ? 'vent' : 'idle');
+  encounter.returnAt(15);
+  assert.equal(encounter.state().shadow.phase, nightNumber >= 7 ? 'manifested' : 'inactive');
 }
 
 // Constant inputs should yield the same resources and discrete events at any frame cadence.
@@ -168,16 +218,25 @@ const shadowTest = (level, sanity, draws = [0, .99], tune = () => {}) => scenari
   levels: { shadow: level }, draws, tune(config) { config.sanity.initial = sanity; tune(config); }
 });
 assert.equal(shadowDifficulty(base.shadow, 0, 10), null);
-assert.deepEqual(shadowDifficulty(base.shadow, 1, 10), { sanityLimit: 35, chance: 10, searchSeconds: 10 });
-assert.deepEqual(shadowDifficulty(base.shadow, 10, 10), { sanityLimit: 50, chance: 15, searchSeconds: 7.5 });
-near(shadowDifficulty(base.shadow, 5, 10).searchSeconds, 10 - 10 / 9);
-for (const [level, sanity] of [[0, 0], [1, 35], [10, 50]]) {
-  const test = shadowTest(level, sanity);
-  test.returnAt(0);
-  assert.equal(test.calls(), 0);
-  assert.equal(test.state().shadow.phase, 'inactive');
+const disabledShadow = shadowTest(0, 0);
+disabledShadow.returnAt(0);
+assert.equal(disabledShadow.state().shadow.phase, 'inactive');
+assert.equal(disabledShadow.calls(), 0);
+for (let level = 1; level <= 10; level++) {
+  const { sanityLimit, chance, searchSeconds } = shadowDifficulty(base.shadow, level, 10);
+  const fraction = (level - 1) / 9;
+  near(sanityLimit, 40 + 20 * fraction, 1e-12);
+  near(chance, 10 + 5 * fraction);
+  near(searchSeconds, 10 - 2.5 * fraction);
+  const below = shadowTest(level, sanityLimit - 1e-6);
+  below.returnAt(0);
+  assert.equal(below.state().shadow.phase, 'manifested');
+  const atLimit = shadowTest(level, sanityLimit);
+  atLimit.returnAt(0);
+  assert.equal(atLimit.state().shadow.phase, 'inactive');
+  assert.equal(atLimit.calls(), 0);
 }
-for (const [sanity, draw, expected] of [[34, .109, 'manifested'], [34, .111, 'inactive'], [20, .249, 'manifested'], [20, .251, 'inactive']]) {
+for (const [sanity, draw, expected] of [[39, .109, 'manifested'], [39, .111, 'inactive'], [20, .299, 'manifested'], [20, .301, 'inactive']]) {
   const test = shadowTest(1, sanity, [draw, 0]);
   test.at(0);
   assert.equal(test.state().shadow.phase, 'inactive');

@@ -71,14 +71,22 @@ let frame;
 let frameId = 0;
 let now = 0;
 let characterRules;
+let startingCharacterRules;
+let movement;
 const math = Object.create(Math);
 let randomValue = () => 0;
 math.random = () => randomValue();
 const warnings = [];
 const samples = new Map();
 const playedSamples = [];
+const storage = new Map();
+const progressKey = 'nnn.campaign.completed';
 const context = vm.createContext({
   window, document, Element, URLSearchParams, URL, Math: math, performance: { now: () => now },
+  localStorage: {
+    getItem: key => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, value)
+  },
   Audio: class {
     paused = true;
     constructor(source) {
@@ -103,11 +111,13 @@ const context = vm.createContext({
   },
   console: { warn: message => warnings.push(message), info() {}, error: console.error },
   async fetch(url) {
-    const data = JSON.parse(fs.readFileSync(path.join(root, url.pathname), 'utf8'));
+    assert(url.pathname.startsWith('/NNN/config/'));
+    const data = JSON.parse(fs.readFileSync(path.join(root, url.pathname.slice('/NNN/'.length)), 'utf8'));
     // Keep the layout and controls tests independent of random movement.
     if (url.pathname.endsWith('/characters.json')) {
       for (const actor of Object.values(data)) actor.interval = 1000;
       characterRules = data;
+      startingCharacterRules = structuredClone(data);
     }
     if (url.pathname.endsWith('/threats.json')) data.clown.growthIncreasePerLevel = 0;
     return { ok: true, json: async () => data };
@@ -119,8 +129,12 @@ const context = vm.createContext({
 });
 const step = time => { now = time; const callback = frame; frame = undefined; callback?.(now); };
 for (const [, src] of html.matchAll(/<script defer src="([^"]+)"/g)) {
-  document.currentScript = { src: new URL(src, 'https://test.invalid/').href };
+  document.currentScript = { src: new URL(src, 'https://test.invalid/NNN/').href };
   await vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
+  if (src === './src/movement.js') {
+    const { createMovement } = window.NathGame;
+    window.NathGame.createMovement = (...args) => movement = createMovement(...args);
+  }
 }
 assert.equal(nodes['entry-screen'].hidden, false);
 assert(!nodes['local-config-files']);
@@ -147,26 +161,52 @@ step(2_000);
 assert.equal(music.volume, .58);
 now = 600_000;
 const intro = nodes['night-intro'];
+const introTitle = nodes['night-intro-title'];
+const finishIntro = (label, phase = 'cover') => {
+  assert.equal(intro.hidden, false);
+  assert.equal(nodes.game.inert, true);
+  assert.equal(intro.dataset.phase, phase);
+  assert.equal(introTitle.textContent, label);
+  const beforeCard = movement.snapshot();
+  const wasHidden = nodes.game.hidden;
+  intro.fire('animationend', { target: new Element(), animationName: 'newspaper-fade' });
+  assert.equal(nodes.game.hidden, wasHidden);
+  step(now + (phase === 'newspaper' ? 7000 : 550));
+  intro.fire('animationend', { animationName: phase === 'newspaper' ? 'night-intro' : 'night-cover' });
+  assert.equal(intro.dataset.phase, 'card');
+  step(now + 2400);
+  assert.deepEqual(movement.snapshot(), beforeCard);
+  introTitle.fire('animationend', { animationName: 'night-card' });
+  assert.equal(nodes.game.hidden, false);
+  assert.equal(nodes.game.inert, true);
+  assert.equal(nodes['title-screen'].hidden, true);
+  assert.equal(intro.dataset.phase, 'reveal');
+  const prepared = movement.snapshot();
+  const actors = movement.diagnostics();
+  assert.equal(prepared.now, 0);
+  assert.equal(prepared.hours, 0);
+  document.fire('keydown', { key: 'j' });
+  step(now + 850);
+  assert.equal(frame, undefined);
+  assert.deepEqual(movement.snapshot(), prepared);
+  assert.deepEqual(movement.diagnostics(), actors);
+  intro.fire('animationend', { animationName: 'night-reveal' });
+  assert.equal(intro.hidden, true);
+  assert.equal(nodes.game.inert, false);
+  assert.equal(nodes['night-mode'].textContent, label);
+  assert.equal(movement.snapshot().now, 0);
+};
 const startNewGame = () => {
   nodes['start-game'].fire('click');
   assert.equal(nodes.game.hidden, true);
   assert.equal(nodes['title-screen'].inert, true);
-  assert.equal(intro.hidden, false);
-  assert.equal(intro.dataset.phase, 'newspaper');
-  intro.fire('animationend', { target: new Element(), animationName: 'newspaper-fade' });
-  assert.equal(nodes.game.hidden, true);
-  now += 7_000;
-  intro.fire('animationend', { animationName: 'night-intro' });
-  assert.equal(nodes.game.hidden, false);
-  assert.equal(nodes['title-screen'].hidden, true);
-  assert.equal(intro.dataset.phase, 'reveal');
-  intro.fire('animationend', { animationName: 'night-reveal' });
-  assert.equal(intro.hidden, true);
+  finishIntro('NOITE 1', 'newspaper');
 };
 startNewGame();
 assert.deepEqual(nodes['office-characters'].children.filter(image => !image.hidden), []);
 assert.match(nodes['movement-debug'].textContent, /Palhaça · 0\.0/);
 const customStart = levels => {
+  if (!nodes.game.hidden) nodes['complete-menu'].fire('click');
   nodes['open-custom'].fire('click');
   const selectors = nodes['custom-levels'].children.map(label => label.children[1]);
   for (const select of selectors) {
@@ -174,7 +214,7 @@ const customStart = levels => {
     select.value = String(levels[select.name] ?? 0);
   }
   nodes['custom-form'].fire('submit');
-  assert.equal(intro.hidden, true);
+  finishIntro('CUSTOM NIGHT');
 };
 customStart({ padrao: 1, gotica: 1, yandere: 1, maid: 1, gatinha: 1 });
 const nightStart = now;
@@ -343,12 +383,15 @@ nodes['open-cameras'].fire('click'); check('closed-open');
 // Resetting the night restores both the map and the default open-open image.
 for (let time = nightStart + 200; time <= nightStart + 360_000; time += 100) step(time);
 assert.equal(nodes['shift-complete'].hidden, false);
+assert.equal(nodes['next-shift'].hidden, true);
+assert.equal(storage.has(progressKey), false);
 assert.equal(frame, undefined);
 assert.equal(runningAnimations.size, 0);
 assert.equal(radio.paused, true);
 const chimes = samples.get('11_FNAF2_Chimes.mp3');
 assert.equal(chimes.paused, false);
 nodes['restart-shift'].fire('click');
+finishIntro('CUSTOM NIGHT');
 assert.equal(chimes.paused, true);
 assert(gates.every(node => node.attrs['aria-pressed'] === 'false'));
 nodes['office-monitor'].fire('click'); nodes['open-cameras'].fire('click'); camera('CAM05'); check('open-open'); office('dark');
@@ -906,6 +949,72 @@ customStart({});
 assert.equal(nodes['camera-offline'].hidden, true);
 assert.equal(signal.hidden, true);
 console.log('PASS: persistent electrical interference, disabled controls, physical gate opening, radio and manual reboot.');
+
+nodes['complete-menu'].fire('click');
+assert.equal(nodes['continue-game'].hidden, true);
+Object.assign(characterRules, startingCharacterRules);
+randomValue = () => 0;
+startNewGame();
+const firstActors = movement.diagnostics();
+pressJ();
+const failedAt = now;
+for (const elapsed of [110, 1320, 1550, 2000]) step(failedAt + elapsed);
+assert.equal(nodes['game-over'].hidden, false);
+assert.equal(storage.has(progressKey), false);
+nodes['retry-night'].fire('click');
+finishIntro('NOITE 1');
+assert.deepEqual(movement.diagnostics(), firstActors);
+
+for (let number = 1; number <= 9; number++) {
+  const start = now;
+  const sanityVisible = number >= 4;
+  const energyVisible = number >= 3;
+  assert.equal(nodes['sanity-meter'].hidden, !sanityVisible);
+  assert.equal(nodes['sanity-label'].hidden, !sanityVisible);
+  assert.equal(nodes['energy-meter'].hidden, !energyVisible);
+  assert.equal(nodes['energy-label'].hidden, !energyVisible);
+  assert.equal(nodes['resource-hud'].hidden, !energyVisible && !sanityVisible);
+  assert.equal(movement.snapshot().energy, 100);
+  assert.equal(movement.snapshot().sanity, 100);
+  radioButton.fire('click');
+  radio.fire('playing');
+  step(start + 1);
+  const winAfter = number === 9 ? 420_000 : 360_000;
+  if (number === 9) {
+    step(start + 360_000);
+    assert.equal(nodes['shift-complete'].hidden, true);
+    assert.match(nodes['clock-label'].innerHTML, /^6 /);
+  }
+  step(start + winAfter - 1);
+  assert.equal(nodes['shift-complete'].hidden, true);
+  step(start + winAfter);
+  const hour = number === 9 ? 7 : 6;
+  assert.equal(nodes['shift-complete'].hidden, false);
+  assert.equal(nodes['clock-label'].innerHTML, `${hour} <small>AM</small>`);
+  assert.equal(nodes['shift-time'].innerHTML, `${hour}:00 <small>AM</small>`);
+  assert.equal(nodes['next-shift'].hidden, number === 9);
+  assert.equal(storage.get(progressKey), String(number));
+  if (number === 1) {
+    nodes['complete-menu'].fire('click');
+    assert.equal(nodes['continue-game'].hidden, false);
+    assert.equal(nodes['continue-game-label'].textContent, 'Continuar · Noite 2');
+    nodes['continue-game'].fire('click');
+  } else if (number < 9) nodes['next-shift'].fire('click');
+  if (number < 9) finishIntro(`NOITE ${number + 1}`);
+}
+assert.equal(nodes['shift-result'].textContent, 'Campanha concluída.');
+nodes['restart-shift'].fire('click');
+finishIntro('NOITE 9');
+assert.equal(storage.get(progressKey), '9');
+nodes['complete-menu'].fire('click');
+assert.equal(nodes['continue-game-label'].textContent, 'Rejogar noite 9');
+startNewGame();
+assert.equal(storage.get(progressKey), '9');
+customStart({ maid: 10 });
+assert.deepEqual(Array.from(movement.diagnostics(), ({ key, level }) => [key, level]), [['maid', 10]]);
+assert.equal(nodes['energy-meter'].hidden, false);
+assert.equal(nodes['sanity-meter'].hidden, false);
+console.log('PASS: nine campaign intros and wins, fixed start time, retry, continue, replay and independent custom settings.');
 }
 
 test().catch(error => {

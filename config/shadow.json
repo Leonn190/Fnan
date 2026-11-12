@@ -1,7 +1,7 @@
 {
   "name": "Nathzinha Shadow",
-  "firstLevel": { "sanityLimit": 35, "chance": 10, "searchSeconds": 10 },
-  "lastLevel": { "sanityLimit": 50, "chance": 15, "searchSeconds": 7.5 },
+  "firstLevel": { "sanityLimit": 40, "chance": 10, "searchSeconds": 10 },
+  "lastLevel": { "sanityLimit": 60, "chance": 15, "searchSeconds": 7.5 },
   "chancePerSanityPoint": 1,
   "manifestSeconds": 1.15,
   "foundSeconds": 0.65,

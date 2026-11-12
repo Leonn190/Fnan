@@ -29,7 +29,7 @@ try {
   console.error(error);
   return;
 }
-const { night, controls } = config;
+const { controls } = config;
 const radioMusic = $('#radio-music');
 const dom = {
   game: $('#game'), office: $('#office-view'), cameras: $('#cameras-view'), desktop: $('#computer-desktop'),
@@ -56,7 +56,7 @@ const dom = {
   shadowManifest: $('#shadow-manifest'), shadowOfficeArt: $('#shadow-office-art'),
   shadowFeed: $('#shadow-feed'), shadowSprite: $('#shadow-sprite'),
   hint: $('#initial-hint'),
-  toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift'),
+  toast: $('#toast'), complete: $('#shift-complete'), restart: $('#restart-shift'), nextShift: $('#next-shift'),
   debug: $('#movement-debug')
 };
 
@@ -109,7 +109,7 @@ const state = {
   dragging: false, pointerX: null, lastFrame: performance.now(),
   closetTransition: null, closetMouseAtEdge: true, closetTouchX: null,
   clownPhase: -1, radioPlaying: false,
-  levels: {}, custom: false
+  shift: null
 };
 let toastTimeout;
 let nextHudUpdate = 0;
@@ -437,8 +437,8 @@ function changeCamera(id, withSound = false) {
   if (withSound && changed) playSound('switch');
 }
 
-function setMode(mode, withSound = true) {
-  if (state.complete || state.mode === mode) return;
+function setMode(mode, withSound = true, force = false) {
+  if (!force && (state.complete || state.mode === mode)) return;
   if (mode === 'cameras' || mode === 'desktop') {
     if (!movement.snapshot().computerOn) return;
   }
@@ -719,11 +719,11 @@ function playCameraAudio() {
 }
 
 function clockHour(elapsedHours) {
-  return (night.startHour + elapsedHours) % 12 || 12;
+  return (state.shift.rules.startHour + elapsedHours) % 12 || 12;
 }
 
 function updateClockUI(progress) {
-  const hours = Math.min(night.hoursToWin, Math.floor(progress + 1e-12));
+  const hours = Math.min(state.shift.rules.hoursToWin, Math.floor(progress + 1e-12));
   const label = clockHour(hours);
   if (clockLabel === label) return;
   clockLabel = label;
@@ -732,10 +732,16 @@ function updateClockUI(progress) {
 
 function finishShift() {
   stopShift();
-  updateClockUI(night.hoursToWin);
-  $('#shift-time').innerHTML = `${clockHour(night.hoursToWin)}:00 <small>AM</small>`;
+  const { number, rules: { hoursToWin } } = state.shift;
+  const campaignComplete = number === config.night.campaign.length;
+  if (number) menu.recordWin(number);
+  updateClockUI(hoursToWin);
+  $('#shift-time').innerHTML = `${clockHour(hoursToWin)}:00 <small>AM</small>`;
+  $('#shift-result').textContent = campaignComplete ? 'Campanha concluída.' : 'O turno terminou.';
+  $('#shift-message').textContent = campaignComplete ? 'Você sobreviveu às nove noites.' : 'Noite concluída.';
+  dom.nextShift.hidden = !number || campaignComplete;
   dom.complete.hidden = false;
-  dom.restart.focus();
+  (dom.nextShift.hidden ? dom.restart : dom.nextShift).focus();
   sound.playSample('chimes');
 }
 
@@ -812,13 +818,16 @@ function advanceDefeat(now) {
   }
 }
 
-function resetShift({ keepWarm = false } = {}) {
+function prepareShift(shift) {
+  const keepWarm = dom.game.hidden;
+  state.shift = shift;
+  dom.game.hidden = false;
+  measureViewport();
   cancelGameFrame();
   interference.clear();
   goticaStaticAt = undefined;
   if (!keepWarm) imageCache.clear();
   resetPerformance();
-  state.startedAt = state.lastFrame = performance.now();
   nextHudUpdate = nextDebugUpdate = 0;
   renderedShadow = undefined;
   nextDesktopUpdate = 0;
@@ -829,7 +838,7 @@ function resetShift({ keepWarm = false } = {}) {
   delete dom.game.dataset.defeat;
   delete dom.game.dataset.scare;
   $('#game-over-status').textContent = 'SINAL PERDIDO';
-  $('#night-mode').textContent = state.custom ? 'CUSTOM NIGHT' : 'NOITE 01';
+  $('#night-mode').textContent = shift.label;
   clearTimeout(toastTimeout);
   dom.toast.classList.remove('show');
   dom.threatAlert.hidden = true;
@@ -837,8 +846,11 @@ function resetShift({ keepWarm = false } = {}) {
   sound.stopSamples();
   state.computerMode = 'desktop';
   resetCameraApp();
-  movement.reset(state.levels);
-  dom.resourceHud.hidden = false;
+  movement.reset(shift.levels, {}, shift.rules);
+  const { powerEnabled, sanityEnabled } = shift.rules;
+  dom.energyMeter.hidden = $('#energy-label').hidden = !powerEnabled;
+  dom.sanityMeter.hidden = $('#sanity-label').hidden = !sanityEnabled;
+  dom.resourceHud.hidden = !powerEnabled && !sanityEnabled;
   const frame = movement.snapshot();
   renderResourceState(frame);
   renderResources(frame);
@@ -857,16 +869,21 @@ function resetShift({ keepWarm = false } = {}) {
   }
   renderedElectrical = undefined;
   renderElectrical();
-  syncMovement(state.startedAt);
-  state.complete = false;
-  state.mode = 'cameras'; // Force setMode to apply the initial office state.
+  syncMovement(performance.now());
   dom.complete.hidden = true;
-  setMode('office', false);
+  setMode('office', false, true);
   changeCamera(CAMERAS[0].id);
   updateClockUI(0);
+  warmShiftImages(shift.levels);
+}
+
+function startShift() {
+  state.startedAt = state.lastFrame = performance.now();
+  state.complete = false;
+  dom.game.inert = false;
   dom.hint.hidden = false;
   dom.officeMonitor.focus({ preventScroll: true });
-  warmShiftImages();
+  updateMovementDebug();
   requestGameFrame();
 }
 
@@ -1328,8 +1345,10 @@ $('#show-desktop').addEventListener('click', () => {
 });
 dom.cameraAudio.addEventListener('click', playCameraAudio);
 dom.closeDesktop.addEventListener('click', closeComputer);
-dom.restart.addEventListener('click', resetShift);
-$('#retry-night').addEventListener('click', resetShift);
+const replayShift = () => menu.play(state.shift);
+dom.restart.addEventListener('click', replayShift);
+$('#retry-night').addEventListener('click', replayShift);
+dom.nextShift.addEventListener('click', () => menu.playCampaign(state.shift.number + 1));
 function returnToMenu() {
   stopShift();
   dom.scareSound.pause();
@@ -1455,20 +1474,11 @@ window.NathGame.setOfficeCharacterState = (...args) => {
   return accepted;
 };
 
-function startShift(levels, custom) {
-  const keepWarm = dom.game.hidden;
-  state.levels = custom ? levels : { ...levels, smores: config.threats.smores.normalLevel };
-  state.custom = custom;
-  dom.game.hidden = false;
-  measureViewport();
-  resetShift({ keepWarm });
-}
-
-function warmShiftImages() {
+function warmShiftImages(levels) {
   imageCache.warm(Object.values(OFFICE.images));
-  if (state.levels.smores > 0) imageCache.warm(Object.values(SMORES_ART));
-  if (state.levels.palhaca > 0) imageCache.warm(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
-  if (state.levels.shadow > 0) {
+  if (levels.smores > 0) imageCache.warm(Object.values(SMORES_ART));
+  if (levels.palhaca > 0) imageCache.warm(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
+  if (levels.shadow > 0) {
     setImageSource(dom.shadowOfficeArt, config.shadow.officeArt);
     setImageSource(dom.shadowSprite, config.shadow.sprite);
     imageCache.warm([config.shadow.officeArt, config.shadow.sprite]);
@@ -1478,6 +1488,7 @@ function warmShiftImages() {
 }
 
 const menu = createNightMenu(config, {
+  prepareShift,
   startShift,
   onEnter: () => {
     imageCache.warm([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE], false);

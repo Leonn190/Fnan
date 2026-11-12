@@ -1,7 +1,6 @@
 {
   "smores": {
     "name": "Smores",
-    "normalLevel": 1,
     "radioSeconds": 15,
     "silenceSeconds": 10,
     "quietRoomSpeed": 2,

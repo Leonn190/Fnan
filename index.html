@@ -43,6 +43,7 @@
       <h1 id="game-title">Nine<br>Nights at<br>Nath's</h1>
       <nav class="title-actions" aria-label="Modos de jogo">
         <button class="title-start" id="start-game" type="button"><span aria-hidden="true">&gt;&gt;</span> New Game</button>
+        <button class="title-start" id="continue-game" type="button" lang="pt-BR" hidden><span aria-hidden="true">&gt;&gt;</span> <span id="continue-game-label"></span></button>
         <button class="title-start" id="open-custom" type="button"><span aria-hidden="true">&gt;&gt;</span> Custom Night</button>
       </nav>
     </div>
@@ -60,6 +61,7 @@
 
   <div class="game night-intro" id="night-intro" hidden>
     <img src="./public/images/Anúncio Vintage de Contratação Animatrônica.png" width="1448" height="1086" alt="Anúncio de jornal para a vaga de segurança noturno no restaurante da Nathzinha" draggable="false">
+    <p id="night-intro-title"></p>
   </div>
 
   <main class="game" id="game" data-mode="office" hidden>
@@ -191,9 +193,9 @@
       </header>
 
       <div class="resource-hud" id="resource-hud" hidden>
-        <label for="sanity-meter">Sanidade <span id="sanity-value" aria-hidden="true">100%</span></label>
+        <label id="sanity-label" for="sanity-meter">Sanidade <span id="sanity-value" aria-hidden="true">100%</span></label>
         <meter id="sanity-meter" min="0" max="100" value="100"></meter>
-        <label for="energy-meter">Energia <span id="energy-value" aria-hidden="true">100%</span></label>
+        <label id="energy-label" for="energy-meter">Energia <span id="energy-value" aria-hidden="true">100%</span></label>
         <meter id="energy-meter" min="0" max="100" value="100"></meter>
       </div>
       <div class="shadow-manifest" id="shadow-manifest" hidden><span lang="en">FIND ME</span></div>
@@ -205,8 +207,12 @@
       <div class="closet-blackout" id="closet-blackout" aria-hidden="true"></div>
 
       <div class="shift-complete" id="shift-complete" hidden role="dialog" aria-modal="true" aria-label="Turno encerrado">
-        <div class="shift-light">✿</div><div class="shift-time" id="shift-time">6:00 <small>AM</small></div><h2>O turno terminou.</h2><p>Noite concluída.</p><button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
-        <button type="button" id="complete-menu">VOLTAR AO MENU</button>
+        <div class="shift-light">✿</div><div class="shift-time" id="shift-time">6:00 <small>AM</small></div><h2 id="shift-result">O turno terminou.</h2><p id="shift-message">Noite concluída.</p>
+        <div class="shift-actions">
+          <button type="button" id="next-shift" hidden>PRÓXIMA NOITE</button>
+          <button type="button" id="restart-shift">COMEÇAR NOVAMENTE</button>
+          <button type="button" id="complete-menu">VOLTAR AO MENU</button>
+        </div>
       </div>
     </div>
 

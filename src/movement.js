@@ -10,7 +10,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   const { difficulty, retreat } = movement;
   const routes = createRoutes(map);
   const cameraIds = CAMERAS.map(cam => cam.id);
-  let actors, effects, threats, resources, shadow, smores, gates, electrical, input, now, outcome;
+  let actors, effects, threats, resources, shadow, smores, gates, electrical, input, now, outcome, sanityEnabled;
 
   const moveDue = actor => actor.due - (actor.retreating ? 0 : smores.intervalReduction());
   const camerasAvailable = () => resources.computerOn() && !electrical.failed();
@@ -31,14 +31,15 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
 
   const nextInterval = actor => actor.retreating ? retreat.stepSeconds : interval(actor);
 
-  function reset(levels = {}, initialInput = {}) {
+  function reset(levels = {}, initialInput = {}, rules = night) {
     now = 0;
     outcome = null;
+    sanityEnabled = rules.sanityEnabled;
     const { gates: initialGates, ...startingInput } = initialInput;
     input = startingInput;
     gates = createGates(map.maxClosedMapGates, changes => emit('gatesChanged', changes), initialGates);
     electrical = createElectrical();
-    const levelFor = key => Math.max(0, Math.min(night.levels[1], levels[key] ?? night.normalLevel));
+    const levelFor = key => Math.max(0, Math.min(night.levels[1], levels[key] ?? night.defaultLevel));
     actors = Object.entries(characters).filter(([key]) => levelFor(key) > 0).map(([key, rule]) => {
       const level = levelFor(key);
       const steps = difficulty.oddSteps.filter(step => level >= step).length;
@@ -58,8 +59,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     effects = createEffects(config, routes, actors);
     smores = createSmores(config.threats.smores, levelFor('smores'), random, emit);
     threats = createThreats(config, { palhaca: levelFor('palhaca') }, random, emit, smores.reactionReduction);
-    resources = createResources(config);
-    shadow = createShadow(config.shadow, shadowDifficulty(config.shadow, levelFor('shadow'), night.levels[1]),
+    resources = createResources(config, rules);
+    shadow = createShadow(config.shadow, shadowDifficulty(config.shadow, sanityEnabled ? levelFor('shadow') : 0, night.levels[1]),
       cameraIds, random);
   }
 
@@ -232,7 +233,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
 
   function integrate(until) {
     const { computerOn } = resources.snapshot(now);
-    const observation = window.NathGame.sanityObservation(config, actors, cameraActors, {
+    const observation = sanityEnabled && window.NathGame.sanityObservation(config, actors, cameraActors, {
       ...input, gates: gates.closed, camera: camerasAvailable() && !effects.staticActive(now) ? input.camera : null,
       view: !computerOn && input.computer ? 'office' : input.view,
       clownStage: threats.clownStage()

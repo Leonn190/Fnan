@@ -1,6 +1,8 @@
 # Nine Nights at Nath's — Sistema de jogo v1.1.2 🌸
 
-Fangame de terror com um turno de 12 AM a 6 AM. **New Game** inicia com todas as ameaças desativadas. **Custom Night** permite escolher o nível de 0 a 10 para cada personagem, incluindo a Palhaça e a Nathzinha Shadow. O nível 0 desativa a personagem. Cada hora do turno leva entre 60 e 240 segundos reais, conforme a sanidade. A mesma noite pode ser repetida após vitória ou derrota.
+Fangame de terror com uma campanha de nove noites. **New Game** começa na Noite 1 com Gótica e Yandere. Cada vitória desbloqueia a próxima noite e o menu guarda o progresso neste navegador. Os turnos começam às 12 AM e terminam às 6 AM, com a Noite 9 indo até as 7 AM. A energia começa a ser consumida na Noite 3 e a sanidade entra na Noite 4. Com sanidade ativa, cada hora leva entre 60 e 240 segundos reais. Nos primeiros três turnos, cada hora leva 60 segundos.
+
+**Custom Night** tem seis horas e permite escolher o nível de 0 a 10 para cada personagem. O nível 0 desativa a personagem. Tanto na campanha quanto na Custom Night, o turno pode ser repetido após vitória ou derrota.
 
 **Projeto estático puro:** HTML + CSS + JavaScript com scripts locais. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
 
@@ -94,7 +96,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 
 | Arquivo | Regras e dados |
 |---|---|
-| `night.json` | Horário inicial, duração, vitória e faixa de dificuldade |
+| `night.json` | Horário inicial, relógio, duração, recursos e níveis da campanha, além dos padrões da Custom Night |
 | `sanity.json` | Perdas, recuperação e multiplicador do apagão |
 | `power.json` | Energia inicial, consumo, aviso e prazo do rádio |
 | `shadow.json` | Dificuldade, chance, prazos e recursos visuais da Shadow |

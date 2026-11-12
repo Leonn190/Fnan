@@ -35,9 +35,10 @@ function clockProgress(clock, sanity, rate, seconds) {
   return hours;
 }
 
-function createResources({ night, sanity: sanityRules, power }) {
-  let sanity = clampPercent(sanityRules.initial);
-  let energy = clampPercent(power.initial);
+function createResources({ night: defaults, sanity: sanityRules, power }, night = defaults) {
+  const { clock, hoursToWin, powerEnabled, sanityEnabled } = night;
+  let sanity = sanityEnabled ? clampPercent(sanityRules.initial) : 100;
+  let energy = powerEnabled ? clampPercent(power.initial) : 100;
   let computerOn = energy > 0;
   let blackoutAt = energy === 0 ? 0 : Infinity;
   let hours = 0;
@@ -45,30 +46,32 @@ function createResources({ night, sanity: sanityRules, power }) {
   function segment(now, until, input, observation) {
     const radioUntil = blackoutAt + power.radioGraceSeconds;
     const radio = input.radio && now < radioUntil;
-    const drain = energy > 0 ? (computerOn ? power.computerDrain : 0) + input.gates.size * power.gateDrain : 0;
+    const drain = powerEnabled && energy > 0
+      ? (computerOn ? power.computerDrain : 0) + input.gates.size * power.gateDrain : 0;
     const powerEnds = drain > 0 ? now + energy / drain : Infinity;
-    const rate = sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 });
+    const rate = sanityEnabled ? sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 }) : 0;
+    const progress = seconds => sanityEnabled ? clockProgress(clock, sanity, rate, seconds)
+      : seconds / clock.fastSecondsPerHour;
     const limit = Math.min(until, powerEnds, radioUntil > now ? radioUntil : Infinity);
     const duration = limit - now;
-    const remaining = night.hoursToWin - hours;
+    const remaining = hoursToWin - hours;
     let end = limit;
     let won = false;
-    if (duration / night.clock.fastSecondsPerHour >= remaining - 1e-12
-        && clockProgress(night.clock, sanity, rate, duration) >= remaining - 1e-12) {
+    if (duration / clock.fastSecondsPerHour >= remaining - 1e-12 && progress(duration) >= remaining - 1e-12) {
       let low = 0;
       let high = duration;
       for (let i = 0; i < 42; i++) {
         const mid = (low + high) / 2;
-        if (clockProgress(night.clock, sanity, rate, mid) >= remaining) high = mid;
+        if (progress(mid) >= remaining) high = mid;
         else low = mid;
       }
       end = now + high;
       won = true;
     }
     const dt = end - now;
-    hours = won ? night.hoursToWin : hours + clockProgress(night.clock, sanity, rate, dt);
-    sanity = clampPercent(sanity + rate * dt);
-    energy = end >= powerEnds ? 0 : clampPercent(energy - drain * dt);
+    hours = won ? hoursToWin : hours + progress(dt);
+    if (sanityEnabled) sanity = clampPercent(sanity + rate * dt);
+    if (powerEnabled) energy = end >= powerEnds ? 0 : clampPercent(energy - drain * dt);
     if (end >= powerEnds) {
       blackoutAt = end;
       computerOn = false;
