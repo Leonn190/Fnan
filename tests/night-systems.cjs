@@ -23,6 +23,23 @@ function scenario({ levels, input, draws = [], tune = () => {} } = {}) {
     returnAt: (time, source = 'computer') => game.advance(time, { view: 'office' }, { type: 'returnToOffice', source }) };
 }
 
+// Constant inputs should yield the same resources and discrete events at any frame cadence.
+const cadences = [1 / 144, 1 / 30, 8.7, 180];
+const progress = cadences.map(interval => {
+  const input = { view: 'office', computer: true, gates: ['G01'] };
+  const run = scenario({ input, levels: { padrao: 1, gotica: 1 } });
+  for (let index = 1; index * interval < 170; index++) run.at(index * interval, input);
+  run.at(170, input);
+  return { frame: run.state(), moves: run.events.filter(([event]) => event === 'move')
+    .map(([, { from, to }]) => [from, to]) };
+});
+assert(progress[0].moves.length > 0);
+for (const { frame, moves } of progress) {
+  assert.equal(frame.now, 170);
+  for (const key of ['hours', 'energy', 'sanity']) near(frame[key], progress[0].frame[key]);
+  assert.deepEqual(moves, progress[0].moves);
+}
+
 for (const [conditions, rate] of [
   [{ camera: true }, -.15], [{ direct: true }, -.35], [{ closet: true }, -.5],
   [{ direct: true, invasion: true }, -2], [{ centralGate: true }, -.1],

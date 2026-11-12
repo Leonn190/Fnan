@@ -125,7 +125,7 @@ class SoundEngine {
   mixRadio(media, pan, behindDoor) {
     const volume = behindDoor ? .045 : .15 * (1 - .35 * Math.abs(pan));
     if (!this.radio) {
-      media.volume = volume;
+      if (media.volume !== volume) media.volume = volume;
       return;
     }
     const { lowpass, panner, gain } = this.radio;

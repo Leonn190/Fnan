@@ -124,6 +124,30 @@ for (const [level, opens] of [[3, false], [4, true]]) {
   assert.equal(game.snapshot().static, false);
 }
 
+for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
+  for (const [draw, triggers] of [[(chance - .01) / 100, true], [chance / 100, false]]) {
+    const { at, game, output, actor } = scenario({ gotica: { start: 1, interval: 10, positions: [1, 2] } },
+      { levels: { gotica: tier ? base.movement.difficulty.abilityLevel : 1 }, random: () => draw });
+    const due = actor('gotica').remaining;
+    at(0, { camera: 'CAM03' });
+    at(due, { camera: 'CAM03' });
+    assert.equal(game.snapshot().static, triggers);
+    assert.deepEqual(output('cameraInterference'), triggers ? [due] : []);
+    at(due + base.effects.static.duration, { camera: 'CAM03' });
+    assert.equal(game.snapshot().static, false);
+  }
+}
+
+{
+  const { at, game, actor } = scenario({ padrao: { start: 1, interval: 10, positions: [1, 2] } });
+  const input = { camera: 'CAM03', gates: ['G04'] };
+  at(0, input);
+  at(10, input, { type: 'gate', id: 'G04', closed: true, visible: true });
+  assert.equal(game.snapshot().static, false);
+  assert.equal(actor('padrao').position, 1);
+  assert.match(actor('padrao').stopped, /c.mera observada/);
+}
+
 {
   const { game, at, actor } = scenario({ maid: { interval: 10 } });
   at(10, { camera: 'CAM09' });

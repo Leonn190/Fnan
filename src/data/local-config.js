@@ -288,7 +288,24 @@ window.NathGame.localConfig = {
     },
     "static": {
       "duration": 2,
-      "gateClosingChance": 100
+      "visual": {
+        "gotica": {
+          "durationMs": 2000,
+          "intensity": 0.88
+        },
+        "gate": {
+          "durationMs": 650,
+          "intensity": 0.73
+        },
+        "switch": {
+          "durationMs": 340,
+          "intensity": 0.42
+        }
+      }
+    },
+    "imageCache": {
+      "limit": 16,
+      "parallel": 3
     },
     "flashlight": {
       "rates": {

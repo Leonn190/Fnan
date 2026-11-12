@@ -20,6 +20,8 @@
   <script defer src="./src/map.js"></script>
   <script defer src="./src/sound.js"></script>
   <script defer src="./src/night-menu.js"></script>
+  <script defer src="./src/image-cache.js"></script>
+  <script defer src="./src/camera-interference.js"></script>
   <script defer src="./src/main.js"></script>
 </head>
 <body>
@@ -66,11 +68,6 @@
           <img class="office-art shadow-office-art" id="shadow-office-art" alt="Nathzinha Shadow no escritório" draggable="false" hidden>
           <img class="office-art office-monitor-off" src="./public/images/office/NNN_escritorio_monitor_desligado.png" width="2048" height="682" alt="" draggable="false">
           <img class="office-character" id="smores-vent" alt="Smores espiando pela ventilação" draggable="false" hidden>
-          <div class="office-lighting" aria-hidden="true">
-            <span class="office-glow office-glow--gate"></span>
-            <span class="office-glow office-glow--monitor"></span>
-            <span class="office-glow office-glow--radio"></span>
-          </div>
           <div class="corridor-characters" id="corridor-characters" aria-hidden="true"></div>
           <img class="clown-peek" id="clown-peek" src="./public/images/office/characters/clown-peek.webp" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
           <div class="office-characters" id="office-characters" aria-hidden="true"></div>
@@ -142,7 +139,7 @@
                   <button class="window-close" id="close-cameras" type="button" aria-label="Fechar Câmeras" title="Fechar"></button>
                 </header>
                 <div class="camera-feed" id="camera-feed">
-                  <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async">
+                  <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async" fetchpriority="high">
                   <div class="technical-feed" id="technical-feed" hidden>
                     <div class="technical-frame">
                       <p class="technical-overline">MODO DE REFERÊNCIA</p>
@@ -154,8 +151,10 @@
                   <div class="feed-scanlines" aria-hidden="true"></div>
                   <div class="feed-noise" aria-hidden="true"></div>
                   <div class="feed-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-                  <div class="camera-switch-flash" id="camera-switch-flash" aria-hidden="true"></div>
-                  <div class="camera-static" id="camera-static" hidden aria-label="Sinal com interferência"></div>
+                  <div class="camera-static" id="camera-static" hidden aria-label="Sinal com interferência">
+                    <div class="camera-static-grain"></div>
+                    <div class="camera-static-band" id="camera-static-band"></div>
+                  </div>
                   <div class="shadow-feed" id="shadow-feed" hidden>
                     <img id="shadow-sprite" alt="Nathzinha Shadow" draggable="false">
                   </div>

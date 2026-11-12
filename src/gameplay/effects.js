@@ -6,6 +6,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 function createEffects(config, routes, actors) {
   const { cameraAudio, flashlight, noise } = config.effects;
+  const noiseRates = Object.entries(noise.rates);
   const { front, back, office, left, leftApproach } = config.map;
   const corridor = [front, back];
   let lure;
@@ -27,7 +28,7 @@ function createEffects(config, routes, actors) {
   }
 
   function integrate(dt, input) {
-    const rate = Object.entries(noise.rates).reduce((sum, [key, value]) => sum + (input[key] ? value : 0), 0);
+    const rate = noiseRates.reduce((sum, [key, value]) => sum + (input[key] ? value : 0), 0);
     for (const actor of actors) {
       addNoise(actor, dt * (rate || -noise.decay));
       const rates = flashlight.rates[actor.key];

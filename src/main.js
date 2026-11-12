@@ -2,7 +2,8 @@
 'use strict';
 const {
   CAMERAS, OFFICE, makeCameraMap, SoundEngine, createMovement, createNightMenu,
-  cameraActorFrame, characterStateImages, officeCharacterImage, corridorSlots, loadConfig
+  cameraActorFrame, characterStateImages, officeCharacterImage, corridorSlots, loadConfig,
+  createImageCache, setImageSource, createCameraInterference
 } = window.NathGame;
 const shopCamera = CAMERAS.find(cam => cam.id === 'CAM01');
 const receptionCamera = CAMERAS.find(cam => cam.id === 'CAM02');
@@ -41,11 +42,11 @@ const dom = {
   officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
   clownPeek: $('#clown-peek'), officeGate: $('#office-gate'), officeLight: $('#office-light'),
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
-  closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'), closetBlackout: $('#closet-blackout'),
+  closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'),
   closetExtra: $('#closet-extra'),
   feedArt: $('#feed-art'), tech: $('#technical-feed'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
-  camNumber: $('#cam-number'), flash: $('#camera-switch-flash'), cameraOffline: $('#camera-offline'), cameraAudio: $('#camera-audio'),
+  camNumber: $('#cam-number'), cameraOffline: $('#camera-offline'), cameraAudio: $('#camera-audio'),
   static: $('#camera-static'), threatAlert: $('#threat-alert'),
   systemsGrid: $('#systems-grid'), locatorGrid: $('#locator-grid'),
   restartAllSystems: $('#restart-all-systems'), restartAllLocators: $('#restart-all-locators'),
@@ -127,22 +128,32 @@ const state = {
   restarts: new Map(), levels: {}, custom: false
 };
 let toastTimeout;
-let flashTimeout;
 let nextHudUpdate = 0;
+let nextDebugUpdate = 0;
+let nextDesktopUpdate = 0;
 let nextRestartPanelUpdate = 0;
 let nextRebootSoundAt = 0;
 let clockLabel;
-let renderedSystems;
-let renderedLocators;
 let defeatDeadline = 0;
 let scareReplay = 0;
 let radioPlayback = null;
+let radioMixPan;
+let radioMixHiding;
 const playedScares = new Set();
-const imageCache = new Map();
+const imageCache = createImageCache(config.effects.imageCache);
+const interference = createCameraInterference(dom.static, $('#camera-static-band'), dom.feedArt,
+  () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+const signal = config.effects.static.visual;
 const changedCameras = new Set();
+const changedGates = new Set();
+const positions = new Map(config.map.positions.map(position => [position.id, position]));
+const officePositions = new Set([config.map.office, config.map.left, config.map.front, config.map.back]);
 let movementChanged = false;
-let gateChanged = false;
-const debugEnabled = window.location && new URLSearchParams(window.location.search).get('debug') === '1';
+let officeChanged = false;
+let officePreview = false;
+let goticaStaticAt;
+const params = new URLSearchParams(window.location?.search);
+const debugEnabled = params.get('debug') === '1';
 dom.debug.hidden = !debugEnabled;
 
 const officeLayers = ['doorway', 'room'].flatMap(location => OFFICE.characters.map(character => {
@@ -163,12 +174,29 @@ const closetExtras = OFFICE.characters.slice(3).map(id => {
   return { id, image };
 });
 
-function setCorridorCharacters(front = [], back = []) {
-  dom.corridorCharacters.replaceChildren(...corridorSlots(front, back).map(({ slot, column }) => {
-    const sprite = document.createElement('span');
-    sprite.style.backgroundPosition = `${column * 25}% ${slot * 25}%`;
-    return sprite;
-  }));
+const corridorSprites = [];
+let corridorKey;
+function setCorridorCharacters(front, back) {
+  const key = `${front.join(',')}|${back.join(',')}`;
+  if (key === corridorKey) return;
+  corridorKey = key;
+  const slots = corridorSlots(front, back);
+  for (const [index, { slot, column }] of slots.entries()) {
+    if (!corridorSprites[index]) {
+      const sprite = document.createElement('span');
+      corridorSprites.push(sprite);
+      dom.corridorCharacters.append(sprite);
+    }
+    const sprite = corridorSprites[index];
+    const position = `${column * 25}% ${slot * 25}%`;
+    if (sprite.style.backgroundPosition !== position) sprite.style.backgroundPosition = position;
+    sprite.hidden = false;
+  }
+  for (let index = slots.length; index < corridorSprites.length; index++) corridorSprites[index].hidden = true;
+}
+
+function setText(node, text) {
+  if (node.textContent !== text) node.textContent = text;
 }
 
 function announce(message) {
@@ -186,46 +214,52 @@ function locatorOnline(id) {
   return state.locators[id] === 'online';
 }
 
-function locatorPosition(id) {
-  return movement.diagnostics().find(actor => actor.id === id)?.location ?? 'SINAL INDISPONÍVEL';
-}
-
-function restartLabel(id, collection) {
-  const restart = state.restarts.get(`${collection}:${id}`);
-  if (!restart) return null;
-  return `${Math.max(0, Math.ceil((restart.endsAt - performance.now()) / 1000))}s`;
-}
-
-function renderSystemPanel() {
-  const { faults, ventilationRemaining } = movement.snapshot();
-  const systemsMarkup = SYSTEMS.map(system => {
-    const remaining = restartLabel(system.id, 'system');
-    const fault = faults.includes(system.fault);
-    const status = fault ? system.fault === 'ventilacao' ? `SABOTADA · ${Math.ceil(ventilationRemaining)}s` : 'SABOTAGEM DETECTADA'
-      : remaining ? 'REINICIANDO' : systemOnline(system.id) ? 'ONLINE' : 'OFFLINE';
-    return `<article class="system-card ${remaining ? 'restarting' : ''}">
-      <span class="system-icon">${system.icon}</span><div><h3>${system.name}</h3><p><i></i>${status}</p></div>
-      <button type="button" data-restart-system="${system.id}" ${remaining ? 'disabled' : ''}>${remaining ? `REINICIANDO ${remaining}` : 'REINICIAR'} <small>${controls.restarts.system}s</small></button>
+function makeRestartCards(grid, items, collection) {
+  grid.innerHTML = items.map(({ id, name, color, icon }) => {
+    const badge = icon ? `<span class="system-icon">${icon}</span>`
+      : `<span class="locator-dot" style="--locator-color:${color}"></span>`;
+    return `<article class="${collection}-card" data-card="${id}">
+      ${badge}<div><h3>${name}</h3><p>${icon ? '<i></i>' : ''}<span data-status></span></p></div>
+      <button type="button" data-restart-${collection}="${id}"><span data-label></span> <small>${controls.restarts[collection]}s</small></button>
     </article>`;
   }).join('');
-  const locatorMarkup = LOCATORS.map(locator => {
-    const remaining = restartLabel(locator.id, 'locator');
-    const status = remaining ? 'REINICIANDO' : locatorOnline(locator.id) ? 'LOCALIZANDO' : 'SINAL PERDIDO';
-    return `<article class="locator-card ${remaining ? 'restarting' : ''}">
-      <span class="locator-dot" style="--locator-color:${locator.color}"></span><div><h3>${locator.name}</h3><p>${status}${locatorOnline(locator.id) && !remaining ? ` · ${locatorPosition(locator.id)}` : ''}</p></div>
-      <button type="button" data-restart-locator="${locator.id}" ${remaining ? 'disabled' : ''}>${remaining ? `REINICIANDO ${remaining}` : 'REINICIAR'} <small>${controls.restarts.locator}s</small></button>
-    </article>`;
-  }).join('');
-  if (renderedSystems !== systemsMarkup) {
-    dom.systemsGrid.innerHTML = renderedSystems = systemsMarkup;
+  return items.map(item => {
+    const card = grid.querySelector(`[data-card="${item.id}"]`);
+    const button = card.querySelector('button');
+    return { ...item, card, button, status: card.querySelector('[data-status]'), label: button.querySelector('[data-label]') };
+  });
+}
+
+const systemCards = makeRestartCards(dom.systemsGrid, SYSTEMS, 'system');
+const locatorCards = makeRestartCards(dom.locatorGrid, LOCATORS, 'locator');
+
+function renderSystemPanel({ faults, ventilationRemaining } = movement.snapshot(), now = performance.now()) {
+  const locations = new Map(movement.tracking().map(({ id, location }) => [id, location]));
+  for (const [collection, cards, allButton] of [
+    ['system', systemCards, dom.restartAllSystems], ['locator', locatorCards, dom.restartAllLocators]
+  ]) {
+    let busy = false;
+    for (const { id, fault, card, button, status, label } of cards) {
+      const restart = state.restarts.get(`${collection}:${id}`);
+      const restarting = Boolean(restart);
+      const online = fault ? systemOnline(id) : locatorOnline(id);
+      let description;
+      if (fault && faults.includes(fault)) {
+        description = fault === 'ventilacao' ? `SABOTADA · ${Math.ceil(ventilationRemaining)}s` : 'SABOTAGEM DETECTADA';
+      } else if (restarting) description = 'REINICIANDO';
+      else if (fault) description = online ? 'ONLINE' : 'OFFLINE';
+      else description = online ? `LOCALIZANDO · ${locations.get(id) ?? 'SINAL INDISPONÍVEL'}` : 'SINAL PERDIDO';
+      if (button.disabled !== restarting) {
+        button.disabled = restarting;
+        card.classList.toggle('restarting', restarting);
+      }
+      setText(status, description);
+      const remaining = restarting ? Math.max(0, Math.ceil((restart.endsAt - now) / 1000)) : 0;
+      setText(label, restarting ? `REINICIANDO ${remaining}s` : 'REINICIAR');
+      busy ||= restarting;
+    }
+    if (allButton.disabled !== busy) allButton.disabled = busy;
   }
-  if (renderedLocators !== locatorMarkup) {
-    dom.locatorGrid.innerHTML = renderedLocators = locatorMarkup;
-  }
-  const allSystemsBusy = SYSTEMS.some(({ id }) => restartLabel(id, 'system'));
-  const allLocatorsBusy = LOCATORS.some(({ id }) => restartLabel(id, 'locator'));
-  dom.restartAllSystems.disabled = allSystemsBusy;
-  dom.restartAllLocators.disabled = allLocatorsBusy;
 }
 
 function beginRestart(collection, ids, duration) {
@@ -268,49 +302,41 @@ function advanceRestarts(now) {
 }
 
 function trackedActors() {
-  return movement.diagnostics()
-    .filter(actor => actor.trackable && locatorOnline(actor.id))
+  return movement.tracking()
+    .filter(actor => locatorOnline(actor.id))
     .map(({ id, position }) => ({ ...LOCATORS.find(locator => locator.id === id), position }));
 }
 
-function refreshComputerState() {
+function refreshComputerState(updateFeed = true) {
   const camerasOnline = systemOnline('cameras');
   dom.cameraOffline.hidden = camerasOnline;
   updateAudioControl();
   map.setTracking(trackedActors());
-  if (state.mode === 'cameras') updateCameraFeed(CAMERAS[state.cameraIndex]);
+  if (updateFeed && state.mode === 'cameras') updateCameraFeed(CAMERAS[state.cameraIndex]);
   updateOfficeView();
 }
 
-function preloadCamera(cam) {
-  if (!cam?.image) return;
-  const sources = cam.gateStateImages ? Object.values(cam.gateStateImages.images) : [cameraImage(cam)];
-  preloadImages(sources);
-}
-
-function preloadImages(sources) {
-  for (const source of sources) {
-    if (!source || imageCache.has(source)) continue;
-    const image = new Image();
-    image.decoding = 'async';
-    image.onerror = () => console.warn(`[FNAN] Imagem indisponível: ${source}`);
-    imageCache.set(source, image);
-    image.src = source;
-  }
+function warmCamera(cam, actors, source) {
+  const alternatives = (cam.gateStateImages?.gates ?? []).map(gate =>
+    cameraActorFrame(cam, actors, config, id => id === gate ? !map.isGateClosed(id) : map.isGateClosed(id),
+      state.characterPreviews.get(cam.id)).source);
+  imageCache.warm(alternatives.filter(alternative => alternative !== source));
+  imageCache.touch(source);
 }
 
 const map = makeCameraMap({
   canvas: $('#map-canvas'),
   maxClosedGates: config.map.maxClosedMapGates,
   canToggleGate: () => state.mode === 'cameras' && !state.complete && systemOnline('doors'),
-  onGatesChange: (id, closed) => {
-    if (id === OFFICE.gate && closed && state.mode === 'office') sound.playSample('officeGateClose');
-    const cam = CAMERAS[state.cameraIndex];
-    const visible = cam.gateStateImages?.gates.includes(id);
-    advanceGame(performance.now(), { type: 'gate', id, closed, visible });
-    updateOfficeView();
-    if (cam.gateStateImages) updateCameraFeed(cam);
-    updateMovementDebug();
+  onGatesChange(changes, duringSimulation = false) {
+    for (const { id, closed } of changes) {
+      changedGates.add(id);
+      if (id === OFFICE.gate && closed && state.mode === 'office') sound.playSample('officeGateClose');
+    }
+    if (!duringSimulation) {
+      advanceGame(performance.now());
+      updateMovementDebug();
+    }
   },
   onSelect: id => {
     if (state.complete || !systemOnline('cameras')) return;
@@ -321,18 +347,18 @@ const movement = createMovement(config, {
   emit(event, value) {
     if (event === 'move') {
       movementChanged = true;
+      officeChanged ||= officePositions.has(value.from) || officePositions.has(value.to);
       if (value.to === config.map.left && value.from !== value.to) sound.playSample('doorCreak');
-      for (const position of config.map.positions) {
-        if (position.id === value.from || position.id === value.to) {
-          for (const id of position.cameras) changedCameras.add(id);
-        }
+      for (const position of [positions.get(value.from), positions.get(value.to)]) {
+        for (const id of position.cameras) changedCameras.add(id);
       }
     } else if (event === 'smores') {
-      movementChanged = true;
+      officeChanged = true;
       if (value === 'vent') sound.playSample('vent');
     } else if (event === 'openGate') {
       map.openGate(value);
-      gateChanged = true;
+    } else if (event === 'cameraInterference') {
+      goticaStaticAt = state.startedAt + value * 1000;
     } else if (event === 'sabotage') {
       announce('Sabotagem detectada. Consulte o Painel Geral.');
     } else if (event === 'loss') {
@@ -349,6 +375,8 @@ const movement = createMovement(config, {
   }
 });
 
+let officeViewKey;
+let closetArtKey;
 function updateOfficeView() {
   const closed = map.isGateClosed(OFFICE.gate);
   const lightBlocked = closed || state.officeRoom.size > 0;
@@ -358,29 +386,36 @@ function updateOfficeView() {
   }
   const illuminated = state.flashlight && corridorInView();
   const view = closed ? 'closed' : illuminated ? 'lit' : 'dark';
-  dom.office.dataset.gate = closed ? 'closed' : 'open';
-  dom.office.dataset.flashlight = String(illuminated);
-  dom.officeGate.setAttribute('aria-pressed', String(closed));
-  dom.officeGate.disabled = !systemOnline('doors');
-  dom.officeLight.setAttribute('aria-pressed', String(state.flashlight));
-  dom.officeLight.disabled = lightBlocked;
-  dom.corridorCharacters.hidden = !illuminated;
-  const source = OFFICE.images[view];
-  if (dom.officeArt.getAttribute('src') !== source) dom.officeArt.src = source;
-  dom.officeArt.alt = closed
-    ? 'Escritório de segurança, portão principal fechado'
-    : illuminated
-      ? 'Escritório de segurança, portão aberto e corredor iluminado por luz circular'
-      : 'Escritório de segurança, portão principal aberto e corredor escuro';
+  const doorsOnline = systemOnline('doors');
+  const viewKey = `${view}|${doorsOnline}|${lightBlocked}|${state.flashlight}`;
+  if (viewKey !== officeViewKey) {
+    officeViewKey = viewKey;
+    dom.office.dataset.gate = closed ? 'closed' : 'open';
+    dom.office.dataset.flashlight = String(illuminated);
+    dom.officeGate.setAttribute('aria-pressed', String(closed));
+    dom.officeGate.disabled = !doorsOnline;
+    dom.officeLight.setAttribute('aria-pressed', String(state.flashlight));
+    dom.officeLight.disabled = lightBlocked;
+    dom.corridorCharacters.hidden = !illuminated;
+    setImageSource(dom.officeArt, OFFICE.images[view]);
+    dom.officeArt.alt = closed
+      ? 'Escritório de segurança, portão principal fechado'
+      : illuminated
+        ? 'Escritório de segurança, portão aberto e corredor iluminado por luz circular'
+        : 'Escritório de segurança, portão principal aberto e corredor escuro';
+  }
 
+  const smoresInRoom = !dom.smoresRoom.hidden;
+  const artKey = `${closed}|${[...state.officeRoom].sort().join(',')}|${state.officeDoorway}|${smoresInRoom}`;
+  if (artKey === closetArtKey) return;
+  closetArtKey = artKey;
   const occupants = OFFICE.characters.filter(character => state.officeRoom.has(character));
   const room = occupants.slice(0, 3).join('-') || 'vazia';
   const doorway = OFFICE.doorwayCharacters.includes(state.officeDoorway) ? state.officeDoorway : 'vazia';
   const gate = closed ? 'closed' : 'open';
-  const smoresInRoom = !dom.smoresRoom.hidden;
   const closetSource = smoresInRoom ? SMORES_ART.closet
     : `./public/images/office/closet/states/${gate}/sala-${room}--porta-${doorway}.webp`;
-  if (dom.closetDoorArt.getAttribute('src') !== closetSource) dom.closetDoorArt.src = closetSource;
+  setImageSource(dom.closetDoorArt, closetSource);
   dom.closetDoorArt.alt = smoresInRoom ? 'Smores visto pelas frestas da porta'
     : 'Escritório de segurança visto pelas frestas da porta';
   dom.closetExtra.hidden = smoresInRoom;
@@ -400,14 +435,15 @@ function setOfficeCharacterState(room = [], doorway = null) {
   if (doorway !== null && (!OFFICE.characters.includes(doorway) || selected.has(doorway))) {
     return false;
   }
-  state.officeRoom = selected;
-  state.officeDoorway = doorway;
-  for (const { location, character, image } of officeLayers) {
-    const visible = location === 'room' ? selected.has(character) : doorway === character;
-    if (visible && !image.getAttribute('src')) {
-      image.src = officeCharacterImage(location, character);
+  if (state.officeDoorway !== doorway || state.officeRoom.size !== selected.size
+    || room.some(character => !state.officeRoom.has(character))) {
+    state.officeRoom = selected;
+    state.officeDoorway = doorway;
+    for (const { location, character, image } of officeLayers) {
+      const visible = location === 'room' ? selected.has(character) : doorway === character;
+      if (visible && !image.getAttribute('src')) image.src = officeCharacterImage(location, character);
+      if (image.hidden !== !visible) image.hidden = !visible;
     }
-    image.hidden = !visible;
   }
   updateOfficeView();
   return true;
@@ -416,16 +452,12 @@ function setOfficeCharacterState(room = [], doorway = null) {
 function showTechnical(cam) {
   dom.feedArt.hidden = true;
   dom.tech.hidden = false;
-  dom.techArt.src = cam.technical;
-  dom.techNumber.textContent = cam.id.replace('CAM', 'CAM ');
+  setImageSource(dom.techArt, cam.technical);
+  setText(dom.techNumber, cam.id.replace('CAM', 'CAM '));
 }
 
-function currentCameraFrame(cam) {
-  return cameraActorFrame(cam, movement.cameraActors(cam.id), config, map.isGateClosed, state.characterPreviews.get(cam.id));
-}
-
-function cameraImage(cam) {
-  return currentCameraFrame(cam).source;
+function currentCameraFrame(cam, actors = movement.cameraActors(cam.id)) {
+  return cameraActorFrame(cam, actors, config, map.isGateClosed, state.characterPreviews.get(cam.id));
 }
 
 // Prévia manual de arte, descartada na próxima alteração de ocupação da sala.
@@ -439,15 +471,17 @@ function setCameraCharacterState(cam, key) {
   return true;
 }
 
-function updateCameraFeed(cam) {
+function updateCameraFeed(cam, warm = false) {
   if (!systemOnline('cameras')) {
+    interference.clear();
     dom.feedArt.hidden = true;
     dom.tech.hidden = true;
     dom.cameraOffline.hidden = false;
     return;
   }
   dom.cameraOffline.hidden = true;
-  const source = cameraImage(cam);
+  const actors = movement.cameraActors(cam.id);
+  const { source } = currentCameraFrame(cam, actors);
   if (!source) {
     showTechnical(cam);
     console.warn(`[FNAN] ${cam.id}: combinação sem imagem para a configuração atual.`);
@@ -455,18 +489,18 @@ function updateCameraFeed(cam) {
   }
   dom.tech.hidden = true;
   dom.feedArt.hidden = false;
-  dom.feedArt.alt = `Câmera ${cam.id}, cenário noturno`;
-  dom.feedArt.onerror = () => {
-    if (CAMERAS[state.cameraIndex].id === cam.id && dom.feedArt.getAttribute('src') === source) {
-      showTechnical(cam);
-      announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
-    }
-  };
-  if (dom.feedArt.getAttribute('src') !== source) dom.feedArt.src = source;
-  else if (dom.feedArt.complete && dom.feedArt.naturalWidth === 0) showTechnical(cam);
+  const alt = `Câmera ${cam.id}, cenário noturno`;
+  if (dom.feedArt.alt !== alt) dom.feedArt.alt = alt;
+  const changed = dom.feedArt.getAttribute('src') !== source;
+  setImageSource(dom.feedArt, source, () => {
+    if (!systemOnline('cameras') || CAMERAS[state.cameraIndex] !== cam) return;
+    showTechnical(cam);
+    announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
+  });
+  if ((changed || warm) && watchingCameras()) warmCamera(cam, actors, source);
 }
 
-function updateMovementDebug() {
+function updateMovementDebug(frame) {
   if (!debugEnabled) return;
   const cam = CAMERAS[state.cameraIndex];
   const { key, gateKey, source } = currentCameraFrame(cam);
@@ -479,15 +513,18 @@ function updateMovementDebug() {
       + `  Anterior: ${actor.previous ?? '—'} | Destino: ${actor.destination ?? '—'}\n`
       + `  ${status}`;
   });
-  const { counter, floor } = movement.snapshot();
+  const { counter, floor } = frame ?? movement.snapshot();
   dom.debug.textContent = [`IA · ${feed}`, `Palhaça · ${counter.toFixed(1)} · piso ${floor}`, ...lines].join('\n');
 }
 
-function syncMovement() {
+function syncMovement(now) {
+  if (!movementChanged && !officeChanged && !changedGates.size) return;
   for (const id of changedCameras) state.characterPreviews.delete(id);
   const cam = CAMERAS[state.cameraIndex];
-  if (changedCameras.has(cam.id) || gateChanged) updateCameraFeed(cam);
-  if (movementChanged) {
+  const visibleGateChanged = cam.gateStateImages?.gates.some(id => changedGates.has(id));
+  if (changedCameras.has(cam.id) || visibleGateChanged) updateCameraFeed(cam);
+  if (officeChanged || (movementChanged && officePreview)) {
+    officePreview = false;
     const { room, doorway, front, back, smores } = movement.officeState();
     for (const [phase, image] of [['vent', dom.smoresVent], ['room', dom.smoresRoom]]) {
       if (smores === phase && !image.getAttribute('src')) image.src = SMORES_ART[phase];
@@ -495,12 +532,18 @@ function syncMovement() {
     }
     setCorridorCharacters(front, back);
     setOfficeCharacterState(room, doorway);
-    map.setTracking(trackedActors());
-  } else if (gateChanged) {
+  } else if (changedGates.has(OFFICE.gate)) {
     updateOfficeView();
   }
+  if (movementChanged) map.setTracking(trackedActors());
+  if (visibleGateChanged && watchingCameras()) interference.play('gate', now, now, signal.gate);
   changedCameras.clear();
-  movementChanged = gateChanged = false;
+  changedGates.clear();
+  movementChanged = officeChanged = false;
+}
+
+function watchingCameras() {
+  return !state.complete && state.mode === 'cameras' && systemOnline('cameras') && !document.hidden;
 }
 
 function changeCamera(id, withSound = false) {
@@ -509,21 +552,18 @@ function changeCamera(id, withSound = false) {
   const changed = state.cameraIndex !== index;
   state.cameraIndex = index;
   const cam = CAMERAS[index];
-  dom.camNumber.textContent = cam.id.replace('CAM', 'CAM ');
+  setText(dom.camNumber, cam.id.replace('CAM', 'CAM '));
   map.setActive(cam);
 
-  updateCameraFeed(cam);
+  updateCameraFeed(cam, true);
   updateMovementDebug();
-  preloadCamera(cam);
-
-  clearTimeout(flashTimeout);
-  dom.flash.classList.remove('active');
-  // Restart CSS animation even when switching quickly.
-  void dom.flash.offsetWidth;
-  dom.flash.classList.add('active');
-  flashTimeout = setTimeout(() => dom.flash.classList.remove('active'), 360);
+  if (watchingCameras()) {
+    const now = performance.now();
+    if (changed) interference.clearTransient();
+    interference.play('switch', now, now, signal.switch);
+    imageCache.warm([currentCameraFrame(CAMERAS[(index + 1) % CAMERAS.length]).source]);
+  }
   if (withSound && changed) playSound('switch');
-  preloadCamera(CAMERAS[(index + 1) % CAMERAS.length]);
 }
 
 function setMode(mode, withSound = true) {
@@ -534,6 +574,7 @@ function setMode(mode, withSound = true) {
   const watching = mode === 'cameras';
   const hiding = mode === 'closet';
   state.mode = mode;
+  if (!watching) interference.clearTransient();
   dom.game.dataset.mode = mode;
   dom.office.hidden = mode !== 'office';
   dom.closet.hidden = !hiding;
@@ -553,10 +594,9 @@ function setMode(mode, withSound = true) {
   if (withSound) playSound('monitor');
   if (watching) {
     changeCamera(CAMERAS[state.cameraIndex].id);
-    preloadCamera(CAMERAS[0]);
   }
   if (mode === 'systems') renderSystemPanel();
-  refreshComputerState();
+  refreshComputerState(false);
   updateMovementDebug();
 }
 
@@ -652,14 +692,19 @@ function updateRadioMix() {
   if (!radioPlayback) return;
   const hiding = state.mode === 'closet';
   // The radio knob is at 70.3% of the panorama. Pan relative to the visible viewport.
-  const offset = .203 * dom.officeScene.offsetWidth + state.pan;
-  const relative = Math.max(-1, Math.min(1, 2 * offset / (dom.game.clientWidth || 1)));
+  const panoramaWidth = state.mode === 'office' ? viewport.panoramaWidth : 0;
+  const offset = .203 * panoramaWidth + state.pan;
+  const relative = Math.max(-1, Math.min(1, 2 * offset / (viewport.width || 1)));
   const pan = hiding ? (dom.closet.dataset.view === 'door' ? -.55 : .55) : Math.round(relative * 100) / 100;
+  if (pan === radioMixPan && hiding === radioMixHiding) return;
+  radioMixPan = pan;
+  radioMixHiding = hiding;
   sound.mixRadio(radioMusic, pan, hiding);
 }
 
 function stopRadio() {
   radioPlayback = null;
+  radioMixPan = radioMixHiding = undefined;
   state.radioPlaying = false;
   radioMusic.pause();
   dom.officeRadio.setAttribute('aria-pressed', 'false');
@@ -759,8 +804,6 @@ function beginClosetTransition(kind) {
   state.dragging = false;
   state.targetPan = state.pan;
   dom.game.style.setProperty('--closet-duration', `${duration}ms`);
-  // Restart the CSS animation if a new action follows the previous one immediately.
-  void dom.closetBlackout.offsetWidth;
   dom.game.dataset.closetTransition = kind;
   if (kind === 'enter') sound.playSample('running');
 }
@@ -839,9 +882,10 @@ function stopShift() {
   movement.stop();
   state.restarts.clear();
   clearTimeout(toastTimeout);
-  clearTimeout(flashTimeout);
   dom.toast.classList.remove('show');
-  dom.flash.classList.remove('active');
+  interference.clear();
+  goticaStaticAt = undefined;
+  cancelGameFrame();
   dom.resourceHud.hidden = dom.shadowManifest.hidden = dom.shadowOfficeArt.hidden = dom.shadowFeed.hidden = true;
   delete dom.shadowFeed.dataset.phase;
   clearFlashlight();
@@ -884,6 +928,7 @@ function beginJumpscare(source) {
 function setDefeatPhase(phase, deadline) {
   dom.game.dataset.defeat = phase;
   defeatDeadline = deadline;
+  requestGameFrame();
 }
 
 function advanceDefeat(now) {
@@ -912,9 +957,16 @@ function advanceDefeat(now) {
   }
 }
 
-function resetShift() {
+function resetShift({ keepWarm = false } = {}) {
+  cancelGameFrame();
+  interference.clear();
+  goticaStaticAt = undefined;
+  if (!keepWarm) imageCache.clear();
+  resetPerformance();
   state.startedAt = state.lastFrame = performance.now();
-  nextHudUpdate = 0;
+  nextHudUpdate = nextDebugUpdate = 0;
+  renderedShadow = undefined;
+  nextDesktopUpdate = 0;
   nextRestartPanelUpdate = 0;
   dom.scareSound.pause();
   dom.scareArt.removeAttribute('src');
@@ -927,29 +979,30 @@ function resetShift() {
   clearTimeout(toastTimeout);
   dom.toast.classList.remove('show');
   dom.threatAlert.hidden = true;
-  dom.static.hidden = true;
   sound.preloadSamples();
   sound.stopSamples();
   state.computerMode = 'desktop';
   for (const app of Object.values(desktopApps)) resetApp(app);
   movement.reset(state.levels);
   dom.resourceHud.hidden = false;
-  renderResources(movement.snapshot());
-  movementChanged = true;
-  gateChanged = false;
+  const frame = movement.snapshot();
+  renderResourceState(frame);
+  renderResources(frame);
+  movementChanged = officeChanged = true;
+  changedGates.clear();
   changedCameras.clear();
   state.characterPreviews.clear();
   state.systems = Object.fromEntries(SYSTEMS.map(({ id }) => [id, 'online']));
   state.locators = Object.fromEntries(LOCATORS.map(({ id }) => [id, 'online']));
   state.restarts.clear();
   stopRadio();
-  setClownPhase(movement.snapshot().clownStage);
+  setClownPhase(frame.clownStage);
   clearClosetTransition();
   setClosetView('door');
   state.pan = state.targetPan = 0;
-  dom.officeScene.style.setProperty('--pan-shift', '0px');
+  renderPan();
   map.resetGates();
-  syncMovement();
+  syncMovement(state.startedAt);
   state.complete = false;
   state.mode = 'cameras'; // Force setMode to apply the initial office state.
   dom.complete.hidden = true;
@@ -958,18 +1011,36 @@ function resetShift() {
   updateClockUI(0);
   dom.hint.hidden = false;
   dom.officeMonitor.focus({ preventScroll: true });
+  warmShiftImages();
   requestGameFrame();
 }
 
+let viewport;
+function measureViewport() {
+  if (dom.game.hidden) return;
+  const { clientWidth: width, clientHeight: height } = dom.game;
+  const { left, width: pointerWidth, height: pointerHeight } = dom.game.getBoundingClientRect();
+  // The CSS panorama is exactly 2172:724 (3:1).
+  const officeWidth = Math.max(width, height * 3);
+  const panoramaWidth = Math.round(Math.max(pointerWidth, pointerHeight * 3));
+  const limit = Math.max(0, (panoramaWidth - width) / 2);
+  viewport = {
+    width, left, pointerWidth, officeWidth, panoramaWidth, limit,
+    officeHalf: 1086 * width / (officeWidth || 1),
+    closetHalf: Math.min(835.5, 941 * width / (2 * height || 1))
+  };
+  state.targetPan = Math.min(limit, Math.max(-limit, state.targetPan));
+  state.pan = Math.min(limit, Math.max(-limit, state.pan));
+  updateRadioMix();
+}
+
 function maxPanShift() {
-  // The office panorama is exactly 2172:724 (3:1), never distorted.
-  return Math.max(0, (dom.officeScene.offsetWidth - dom.game.clientWidth) / 2);
+  return viewport.limit;
 }
 
 function setEdgePan(clientX) {
   if (state.dragging) return;
-  const bounds = dom.game.getBoundingClientRect();
-  const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+  const ratio = Math.max(0, Math.min(1, (clientX - viewport.left) / (viewport.pointerWidth || 1)));
   let signed = 0;
   const edge = .17;
   if (ratio < edge) signed = (edge - ratio) / edge;
@@ -978,10 +1049,18 @@ function setEdgePan(clientX) {
 }
 
 function moveCamera(dt) {
+  if (state.pan === state.targetPan) return;
   const speed = Math.min(1, dt * .008);
   state.pan += (state.targetPan - state.pan) * speed;
   if (Math.abs(state.pan - state.targetPan) < .3) state.pan = state.targetPan;
-  dom.officeScene.style.setProperty('--pan-shift', `${Math.round(state.pan)}px`);
+}
+
+let renderedPan;
+function renderPan() {
+  const pan = Math.round(state.pan);
+  if (renderedPan === pan) return;
+  renderedPan = pan;
+  dom.officeScene.style.setProperty('--pan-shift', `${pan}px`);
 }
 
 function corridorInView() {
@@ -992,10 +1071,8 @@ function gameInput() {
   const office = state.mode === 'office' && !state.closetTransition;
   const closet = state.mode === 'closet';
   const camera = state.mode === 'cameras' && systemOnline('cameras') ? CAMERAS[state.cameraIndex].id : null;
-  const officeWidth = Math.max(dom.game.clientWidth, dom.game.clientHeight * 3);
-  const officeHalf = 1086 * dom.game.clientWidth / (officeWidth || 1);
+  const { officeWidth, officeHalf, closetHalf } = viewport;
   const officeCenter = 1086 - 2172 * state.pan / (officeWidth || 1);
-  const closetHalf = Math.min(835.5, 941 * dom.game.clientWidth / (2 * dom.game.clientHeight || 1));
   const officeBounds = [officeCenter - officeHalf, officeCenter + officeHalf];
   return {
     gates: map.closedGateIds(),
@@ -1020,22 +1097,32 @@ function gameInput() {
 
 function updateAudioControl(audio = movement.snapshot().audio) {
   const online = systemOnline('audio') && systemOnline('cameras');
-  dom.cameraAudio.disabled = !online || audio.remaining > 0;
-  dom.cameraAudio.textContent = !online ? 'ÁUDIO INDISPONÍVEL'
+  const disabled = !online || audio.remaining > 0;
+  if (dom.cameraAudio.disabled !== disabled) dom.cameraAudio.disabled = disabled;
+  setText(dom.cameraAudio, !online ? 'ÁUDIO INDISPONÍVEL'
     : audio.camera ? `▸ SOM ATIVO · ${audio.camera} · ${Math.ceil(audio.remaining)}s`
     : audio.remaining > 0 ? `ÁUDIO RECARREGANDO · ${Math.ceil(audio.remaining)}s`
-    : '▸ REPRODUZIR SOM NESTA CÂMERA';
+    : '▸ REPRODUZIR SOM NESTA CÂMERA');
 }
 
 function advanceGame(now, action) {
   if (state.complete || dom.game.hidden) return false;
   const accepted = movement.advance((now - state.startedAt) / 1000, gameInput, action);
-  const frame = movement.snapshot();
-  syncMovement();
-  dom.static.hidden = !frame.static || !systemOnline('cameras');
-  if (state.complete) return accepted;
+  if (!state.complete) renderGameFrame(movement.snapshot(), now);
+  return accepted;
+}
+
+function renderGameFrame(frame, now) {
+  interference.update(now);
+  if (goticaStaticAt !== undefined) {
+    if (watchingCameras()) {
+      interference.play('gotica', goticaStaticAt, now, signal.gotica);
+      goticaStaticAt = undefined;
+    } else if (now >= goticaStaticAt + signal.gotica.durationMs) goticaStaticAt = undefined;
+  }
+  syncMovement(now);
   updateClockUI(frame.hours);
-  renderResources(frame);
+  renderResourceState(frame);
   if (!frame.radioAvailable && radioPlayback) stopRadio();
   if (frame.blackout && !dom.desktop.hidden) {
     setMode('office');
@@ -1043,25 +1130,50 @@ function advanceGame(now, action) {
   }
   renderShadow(frame.shadow);
   setClownPhase(frame.clownStage);
+  if (now >= nextHudUpdate) {
+    nextHudUpdate = now + 100;
+    renderResources(frame);
+    updateAudioControl(frame.audio);
+    renderWarnings(frame);
+  }
+  if (debugEnabled && now >= nextDebugUpdate) {
+    nextDebugUpdate = now + 200;
+    updateMovementDebug(frame);
+  }
+  if (state.mode === 'systems' && now >= nextRestartPanelUpdate) {
+    nextRestartPanelUpdate = now + 250;
+    renderSystemPanel(frame, now);
+  }
+}
+
+function renderWarnings(frame) {
   const warnings = [];
   if (state.officeRoom.size) warnings.push(frame.hidden ? 'AGUARDE NO ARMÁRIO' : 'INVASÃO · ENTRE NO ARMÁRIO');
   if (frame.ventilationRemaining !== null) warnings.push(`VENTILAÇÃO SABOTADA · ${Math.ceil(frame.ventilationRemaining)}s`);
-  const warning = warnings.join(' / ');
-  if (dom.threatAlert.textContent !== warning) dom.threatAlert.textContent = warning;
-  dom.threatAlert.hidden = !warnings.length;
-  return accepted;
+  setText(dom.threatAlert, warnings.join(' / '));
+  const hidden = warnings.length === 0;
+  if (dom.threatAlert.hidden !== hidden) dom.threatAlert.hidden = hidden;
 }
 
-function renderResources({ sanity, energy, blackout, computerOn, radioAvailable }) {
+function renderResources({ sanity, energy }) {
   for (const [meter, label, value] of [[dom.sanityMeter, dom.sanityValue, sanity], [dom.energyMeter, dom.energyValue, energy]]) {
     const rounded = Math.round(value * 10) / 10;
     const text = value > 0 && rounded === 0 ? '<0,1%' : `${String(rounded).replace('.', ',')}%`;
-    if (label.textContent !== text) label.textContent = text;
-    meter.value = value;
-    meter.style.setProperty('--meter-fill', `${value}%`);
+    if (label.textContent === text) continue;
+    label.textContent = text;
+    meter.value = rounded;
+    meter.style.setProperty('--meter-fill', `${rounded}%`);
+    if (meter === dom.sanityMeter) meter.style.setProperty('--meter-hue', 338 - rounded * .62);
   }
-  dom.sanityMeter.style.setProperty('--meter-hue', 338 - sanity * .62);
-  dom.energyMeter.classList.toggle('low', energy <= config.power.warningBelow);
+}
+
+let resourceStateKey;
+function renderResourceState({ energy, blackout, computerOn, radioAvailable }) {
+  const low = energy <= config.power.warningBelow;
+  const key = `${low}|${blackout}|${computerOn}|${radioAvailable}`;
+  if (key === resourceStateKey) return;
+  resourceStateKey = key;
+  dom.energyMeter.classList.toggle('low', low);
   dom.game.toggleAttribute('data-blackout', blackout);
   dom.game.toggleAttribute('data-computer-off', !computerOn);
   dom.officeMonitor.disabled = !computerOn;
@@ -1072,13 +1184,18 @@ function renderResources({ sanity, energy, blackout, computerOn, radioAvailable 
   dom.officeRadio.disabled = !radioAvailable;
 }
 
+let renderedShadow;
 function renderShadow({ phase, camera }) {
   const inOffice = state.mode === 'office';
+  const feedVisible = phase === 'found' && state.mode === 'cameras' && CAMERAS[state.cameraIndex].id === camera;
+  const key = `${phase}|${inOffice}|${feedVisible}`;
+  if (key === renderedShadow) return;
+  renderedShadow = key;
   const attacking = phase === 'manifested' || phase === 'searching';
   sound.setSampleLoop('nightmare', attacking ? .3 : 0);
   dom.shadowManifest.hidden = !inOffice || phase !== 'manifested';
   dom.shadowOfficeArt.hidden = !inOffice || !attacking;
-  dom.shadowFeed.hidden = phase !== 'found' || state.mode !== 'cameras' || CAMERAS[state.cameraIndex].id !== camera;
+  dom.shadowFeed.hidden = !feedVisible;
   if (!dom.shadowFeed.hidden) dom.shadowFeed.dataset.phase = phase;
   else delete dom.shadowFeed.dataset.phase;
 }
@@ -1094,42 +1211,75 @@ function requestGameFrame() {
   } else gameFrame ??= requestAnimationFrame(tick);
 }
 
+function cancelGameFrame() {
+  if (gameFrame !== undefined) cancelAnimationFrame(gameFrame);
+  gameFrame = undefined;
+  clearTimeout(backgroundFrame);
+  backgroundFrame = undefined;
+}
+
+const perf = params.get('perf') === '1' ? document.createElement('output') : null;
+let perfStart, perfFrames = 0, perfSlow = 0, perfWork = 0;
+if (perf) {
+  perf.className = 'perf-overlay';
+  dom.game.append(perf);
+}
+
+function recordPerformance(now, delta, started) {
+  if (perfStart === undefined) {
+    perfStart = now;
+    return;
+  }
+  perfFrames++;
+  if (delta > 25) perfSlow++;
+  perfWork += performance.now() - started;
+  const elapsed = now - perfStart;
+  if (elapsed < 1000) return;
+  perf.textContent = `${(1000 * perfFrames / elapsed).toFixed(0)} FPS · ${(elapsed / perfFrames).toFixed(1)} ms/quadro`
+    + ` · ${perfSlow} lentos (>25 ms) · JS ${(perfWork / perfFrames).toFixed(2)} ms · cache ${imageCache.size}`;
+  perfStart = now;
+  perfFrames = perfSlow = perfWork = 0;
+}
+
+function resetPerformance() {
+  if (!perf) return;
+  perf.textContent = '';
+  perfStart = undefined;
+  perfFrames = perfSlow = perfWork = 0;
+}
+
 function tick(now) {
   gameFrame = undefined;
-  const delta = Math.min(100, Math.max(0, now - state.lastFrame));
+  const elapsed = Math.max(0, now - state.lastFrame);
   state.lastFrame = now;
+  const time = performance.now();
   if (!state.complete) {
-    const time = performance.now();
     advanceRestarts(time);
     const action = advanceClosetTransition(time);
-    if (state.mode === 'office') moveCamera(delta);
-    advanceGame(time, action);
-    if (state.flashlight && dom.office.dataset.flashlight !== String(corridorInView())) updateOfficeView();
-    updateRadioMix();
-    if (now >= nextHudUpdate) {
-      const frame = movement.snapshot();
-      updateAudioControl(frame.audio);
-      if (!dom.desktop.hidden) updateDesktopClock();
-      updateMovementDebug();
-      nextHudUpdate = now + 200;
+    if (state.mode === 'office') {
+      moveCamera(Math.min(100, elapsed));
+      renderPan();
+      if (state.flashlight && dom.office.dataset.flashlight !== String(corridorInView())) updateOfficeView();
+      updateRadioMix();
     }
-    if (state.mode === 'systems' && now >= nextRestartPanelUpdate) {
-      renderSystemPanel();
-      nextRestartPanelUpdate = now + 250;
+    // Movement integrates elapsed time and resolves intermediate deadlines, even after dropped frames.
+    advanceGame(time, action);
+    if (!dom.desktop.hidden && now >= nextDesktopUpdate) {
+      nextDesktopUpdate = now + 1000;
+      updateDesktopClock();
     }
   }
   if (dom.game.dataset.defeat) advanceDefeat(now);
+  if (perf && !document.hidden) recordPerformance(now, elapsed, time);
   if (!state.complete || (dom.game.dataset.defeat && dom.game.dataset.defeat !== 'over')) requestGameFrame();
 }
 
 document.addEventListener('visibilitychange', () => {
+  cancelGameFrame();
+  resetPerformance();
   if (document.hidden) {
-    if (gameFrame !== undefined) cancelAnimationFrame(gameFrame);
-    gameFrame = undefined;
     clearFlashlight();
-  } else {
-    clearTimeout(backgroundFrame);
-    backgroundFrame = undefined;
+    interference.clearTransient();
   }
   advanceGame(performance.now());
   if (!state.complete || (dom.game.dataset.defeat && dom.game.dataset.defeat !== 'over')) requestGameFrame();
@@ -1199,8 +1349,17 @@ for (const [id, app] of Object.entries(desktopApps)) {
 
   let gesture;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  function measureGesture() {
+    const workspace = panel.parentElement;
+    gesture.viewport = viewport;
+    gesture.workspaceWidth = workspace.clientWidth;
+    gesture.workspaceHeight = workspace.clientHeight;
+    gesture.screen = workspace.parentElement.getBoundingClientRect();
+    gesture.width = panel.offsetWidth;
+    gesture.height = panel.offsetHeight;
+  }
   const snapSide = event => {
-    const { left, right } = panel.parentElement.parentElement.getBoundingClientRect();
+    const { left, right } = gesture.screen;
     if (event.clientX <= left + 18) return 'left';
     if (event.clientX >= right - 18) return 'right';
     return '';
@@ -1220,6 +1379,7 @@ for (const [id, app] of Object.entries(desktopApps)) {
       moving: false,
       left, top, right: left + width, bottom: top + height
     };
+    measureGesture();
     const handle = edge ? event.target : titlebar;
     handle.setPointerCapture(event.pointerId);
   });
@@ -1227,8 +1387,8 @@ for (const [id, app] of Object.entries(desktopApps)) {
     if (gesture?.pointer !== event.pointerId || panel.hidden || dom.desktop.hidden
         || state.complete) return;
     const workspace = panel.parentElement;
-    const { clientWidth, clientHeight } = workspace;
-    const { edge, x, y } = gesture;
+    if (gesture.viewport !== viewport) measureGesture();
+    const { edge, x, y, workspaceWidth: clientWidth, workspaceHeight: clientHeight } = gesture;
     const dx = event.clientX - x;
     const dy = event.clientY - y;
     let { left, top, right, bottom } = gesture;
@@ -1241,13 +1401,16 @@ for (const [id, app] of Object.entries(desktopApps)) {
           const grip = clamp((x - bounds.left - left) / (right - left), 0, 1);
           setMaximized(app, false);
           delete panel.dataset.snapped;
-          gesture.left = left = x - bounds.left - panel.offsetWidth * grip;
+          gesture.width = panel.offsetWidth;
+          gesture.height = panel.offsetHeight;
+          gesture.left = left = x - bounds.left - gesture.width * grip;
           gesture.top = top = y - bounds.top - clamp(y - bounds.top - top, 0, titlebar.offsetHeight);
         }
       }
-      panel.style.setProperty('--window-x', clamp(left + dx, 0, Math.max(0, clientWidth - panel.offsetWidth)) + 'px');
-      panel.style.setProperty('--window-y', clamp(top + dy, 0, Math.max(0, clientHeight - panel.offsetHeight)) + 'px');
-      workspace.dataset.snapPreview = snapSide(event);
+      panel.style.setProperty('--window-x', clamp(left + dx, 0, Math.max(0, clientWidth - gesture.width)) + 'px');
+      panel.style.setProperty('--window-y', clamp(top + dy, 0, Math.max(0, clientHeight - gesture.height)) + 'px');
+      const side = snapSide(event);
+      if (workspace.dataset.snapPreview !== side) workspace.dataset.snapPreview = side;
       return;
     }
     if (edge.includes('w') || edge.includes('e')) {
@@ -1319,8 +1482,11 @@ dom.restartAllLocators.addEventListener('click', () => beginRestart('locator', L
 dom.restart.addEventListener('click', resetShift);
 $('#retry-night').addEventListener('click', resetShift);
 function returnToMenu() {
+  stopShift();
   dom.scareSound.pause();
-  sound.stopSamples();
+  imageCache.clear();
+  dom.feedArt.removeAttribute('src');
+  dom.feedArt.onerror = null;
   dom.game.hidden = true;
   dom.gameOver.hidden = true;
   dom.playfield.inert = false;
@@ -1361,8 +1527,7 @@ for (const eventName of ['pointerup','pointercancel']) dom.office.addEventListen
 
 dom.closet.addEventListener('pointermove', event => {
   if (event.pointerType !== 'mouse' || state.closetTransition) return;
-  const bounds = dom.closet.getBoundingClientRect();
-  const ratio = (event.clientX - bounds.left) / bounds.width;
+  const ratio = (event.clientX - viewport.left) / (viewport.pointerWidth || 1);
   if (ratio > .25 && ratio < .75) state.closetMouseAtEdge = false;
   if (state.closetMouseAtEdge || (ratio > .12 && ratio < .88)) return;
   state.closetMouseAtEdge = true;
@@ -1419,12 +1584,10 @@ window.addEventListener('blur', () => {
 for (const event of ['click', 'keydown', 'keyup', 'focusin']) {
   document.addEventListener(event, () => advanceGame(performance.now()));
 }
-const resizeObserver = new ResizeObserver(() => {
-  const limit = maxPanShift();
-  state.targetPan = Math.min(limit, Math.max(-limit, state.targetPan));
-  state.pan = Math.min(limit, Math.max(-limit, state.pan));
-});
+const resizeObserver = new ResizeObserver(measureViewport);
 resizeObserver.observe(dom.game);
+window.addEventListener('resize', measureViewport);
+window.addEventListener('scroll', measureViewport, { passive: true });
 
 window.NathGame.setCam01ShopState = key => setCameraCharacterState(shopCamera, key);
 window.NathGame.setCam02ReceptionState = key => setCameraCharacterState(receptionCamera, key);
@@ -1437,29 +1600,38 @@ window.NathGame.setCam08StockroomState = key => setCameraCharacterState(stockroo
 window.NathGame.setCam10KitchenState = key => setCameraCharacterState(kitchenCamera, key);
 window.NathGame.setCam11PickupState = key => setCameraCharacterState(pickupCamera, key);
 window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorCamera, key);
-window.NathGame.setOfficeCharacterState = setOfficeCharacterState;
+window.NathGame.setOfficeCharacterState = (...args) => {
+  const accepted = setOfficeCharacterState(...args);
+  officePreview ||= accepted;
+  return accepted;
+};
 
 function startShift(levels, custom) {
+  const keepWarm = dom.game.hidden;
   state.levels = custom ? levels : { ...levels, smores: config.threats.smores.normalLevel };
   state.custom = custom;
   dom.game.hidden = false;
-  resetShift();
-  preloadImages(Object.values(OFFICE.images));
-  if (state.levels.smores > 0) preloadImages(Object.values(SMORES_ART));
-  if (levels.palhaca > 0) preloadImages(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
-  if (levels.shadow > 0) {
-    dom.shadowOfficeArt.src = config.shadow.officeArt;
-    dom.shadowSprite.src = config.shadow.sprite;
-    preloadImages([config.shadow.officeArt, config.shadow.sprite, SHADOW_IMAGE]);
+  measureViewport();
+  resetShift({ keepWarm });
+}
+
+function warmShiftImages() {
+  imageCache.warm(Object.values(OFFICE.images));
+  if (state.levels.smores > 0) imageCache.warm(Object.values(SMORES_ART));
+  if (state.levels.palhaca > 0) imageCache.warm(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
+  if (state.levels.shadow > 0) {
+    setImageSource(dom.shadowOfficeArt, config.shadow.officeArt);
+    setImageSource(dom.shadowSprite, config.shadow.sprite);
+    imageCache.warm([config.shadow.officeArt, config.shadow.sprite]);
+    imageCache.warm([SHADOW_IMAGE], false);
   }
-  // Load state variants before the player starts toggling their gates.
-  for (const cam of CAMERAS) if (cam.gateStateImages) preloadCamera(cam);
+  imageCache.warm([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE], false);
 }
 
 const menu = createNightMenu(config, {
   startShift,
   onEnter: () => {
-    preloadImages([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE]);
+    imageCache.warm([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE], false);
     sound.preloadSamples();
   }
 });

@@ -53,22 +53,28 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
 
   const gateLayer = makeSvg('g', { role: 'group', 'aria-label': 'Portões' });
   const gateNodes = new Map();
-  const closedGates = [];
+  const closedGates = new Set();
 
   function toggleGate(id) {
     const gate = gateNodes.get(id);
     if (!gate) return;
-    const index = closedGates.indexOf(gate);
-    const closed = index === -1;
+    const closed = !closedGates.has(id);
+    const changes = [];
     if (closed) {
       if (maxClosedGates <= 0) return;
-      if (closedGates.length === maxClosedGates) setGateClosed(closedGates.pop(), false);
-      closedGates.push(gate);
+      if (closedGates.size === maxClosedGates) {
+        const reopened = Array.from(closedGates).at(-1);
+        closedGates.delete(reopened);
+        setGateClosed(gateNodes.get(reopened), false);
+        changes.push({ id: reopened, closed: false });
+      }
+      closedGates.add(id);
     } else {
-      closedGates.splice(index, 1);
+      closedGates.delete(id);
     }
     setGateClosed(gate, closed);
-    onGatesChange(id, closed);
+    changes.push({ id, closed });
+    onGatesChange(changes);
   }
 
   for (const {id,axis,at,start,end,type} of VENUE.openings) {
@@ -132,21 +138,24 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
   // The gate targets sit above camera halos where their coordinates are close.
   svg.append(gateLayer, trackingLayer);
   canvas.append(svg);
+  let activeCamera;
+  let trackingKey;
   return {
     toggleGate,
-    isGateClosed(id) {
-      return closedGates.some(gate => gate.getAttribute('data-gate') === id);
-    },
+    isGateClosed: id => closedGates.has(id),
     openGate(id) {
-      const index = closedGates.findIndex(gate => gate.getAttribute('data-gate') === id);
-      if (index !== -1) setGateClosed(closedGates.splice(index, 1)[0], false);
+      if (!closedGates.delete(id)) return;
+      setGateClosed(gateNodes.get(id), false);
+      onGatesChange([{ id, closed: false }], true);
     },
-    closedGateIds: () => closedGates.map(gate => gate.getAttribute('data-gate')),
+    closedGateIds: () => Array.from(closedGates),
     resetGates() {
-      for (const gate of closedGates) setGateClosed(gate, false);
-      closedGates.length = 0;
+      for (const id of closedGates) setGateClosed(gateNodes.get(id), false);
+      closedGates.clear();
     },
     setActive(camera) {
+      if (activeCamera === camera) return;
+      activeCamera = camera;
       for (const [id,node] of cameraNodes) {
         node.classList.toggle('active',id===camera.id);
         node.setAttribute('aria-pressed',String(id===camera.id));
@@ -154,6 +163,9 @@ function makeCameraMap({ canvas, onSelect, canToggleGate, maxClosedGates, onGate
       for (const [id,polygon] of polygons) polygon.classList.toggle('highlight',id===camera.room);
     },
     setTracking(actors) {
+      const key = actors.map(({ id, position }) => `${id}:${position}`).join('|');
+      if (key === trackingKey) return;
+      trackingKey = key;
       const byPosition = new Map();
       for (const actor of actors) {
         if (!Object.hasOwn(TRACKING_POINTS, actor.position)) continue;

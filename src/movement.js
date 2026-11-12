@@ -79,7 +79,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   }
 
   function cameraObserves(position) {
-    return resources.snapshot(now).computerOn && routes.positions.get(position).cameras.includes(input.camera);
+    return routes.positions.get(position).cameras.includes(input.camera);
   }
 
   function transition(actor, choice, to) {
@@ -96,17 +96,20 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     if (actor.key === 'yandere' && to === config.threats.sabotage.position) threats.triggerSabotage(actor, now);
   }
 
-  function tryPending(actor) {
+  function tryPending(actor, computerOn) {
     const choice = actor.pending;
     const from = actor.position;
-    const bypass = from === leftApproach && choice.to === left && occupants(office).length > 0;
+    const bypass = from === leftApproach && choice.to === left && actors.some(candidate => candidate.position === office);
     const to = bypass ? office : choice.to;
     const gate = choice.retreat || choice.stationary ? null : routes.gate(bypass ? left : from, to);
-    const observed = !effects.staticActive(now) && (cameraObserves(from) || cameraObserves(to)
+    const observed = computerOn && input.camera && !effects.staticActive(now) && (cameraObserves(from) || cameraObserves(to)
       || (bypass && cameraObserves(left)));
     if (observed && actor.rule.staticChance && !choice.rolledStatic) {
       choice.rolledStatic = true;
-      if (random() * 100 < actor.rule.staticChance[actor.abilityTier]) effects.triggerStatic(now);
+      if (random() * 100 < actor.rule.staticChance[actor.abilityTier]) {
+        effects.triggerStatic(now);
+        emit('cameraInterference', now);
+      }
     }
     if (input.gates.has(gate) && actor.rule.doorChance && choice.rolledGate !== gate) {
       choice.rolledGate = gate;
@@ -162,7 +165,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       const staticBefore = effects.staticActive(now);
       const gatesBefore = input.gates.size;
       changed = false;
-      for (const actor of actors) if (actor.pending && tryPending(actor)) changed = true;
+      for (const actor of actors) if (actor.pending && tryPending(actor, computerOn)) changed = true;
       changed ||= staticBefore !== effects.staticActive(now) || gatesBefore !== input.gates.size;
     } while (changed && actors.some(actor => actor.pending));
     for (const actor of actors) {
@@ -229,11 +232,6 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         shadow.returnToOffice(now, action.source, sanity, blackout);
         break;
       }
-      case 'gate':
-        if (action.closed && action.visible && random() * 100 < config.effects.static.gateClosingChance) {
-          effects.triggerStatic(now);
-        }
-        break;
     }
     settle(action);
     return accepted;
@@ -262,6 +260,9 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   reset();
   return {
     reset, advance, cameraActors, diagnostics, stop: () => shadow.stop(),
+    tracking: () => actors.filter(actor => actor.rule.trackable).map(({ rule, position }) => ({
+      id: rule.artId, position, location: routes.positions.get(position).name
+    })),
     officeState: () => ({
       smores: smores.phase(),
       room: occupants(office).map(actor => actor.rule.artId),

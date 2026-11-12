@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 async function test() {
+const runningAnimations = new Set();
 class Element {
   constructor() {
     this.children = []; this.attrs = {}; this.dataset = {}; this.events = {};
@@ -25,6 +26,12 @@ class Element {
   append(...items) { this.children.push(...items); }
   replaceChildren(...items) { this.children = items; }
   querySelector() { return new Element(); }
+  getBoundingClientRect() { return { left: 0, width: this.clientWidth, height: this.clientHeight }; }
+  animate(keyframes, options) {
+    const animation = { keyframes, options, cancel() { runningAnimations.delete(this); } };
+    runningAnimations.add(animation);
+    return animation;
+  }
   focus() {}
   setPointerCapture() {}
   addEventListener(event, action) { (this.events[event] ??= []).push(action); }
@@ -32,6 +39,8 @@ class Element {
   fire(event, details) { for (const action of this.events[event] ?? []) action({ target: this, preventDefault() {}, ...details }); }
 }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'src/styles/main.css'), 'utf8');
+assert.doesNotMatch(html + css, /office-lighting|office-glow|office-light-drift/);
 const nodes = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, new Element()]));
 for (const [, id, attributes] of html.matchAll(/<main [^>]*id="([^"]+)"([^>]*)>/g)) {
   nodes[id].hidden = /\bhidden\b/.test(attributes);
@@ -59,6 +68,7 @@ document.createElementNS = () => new Element();
 const window = new Element();
 window.location = { search: '?debug=1' };
 let frame;
+let frameId = 0;
 let now = 0;
 let characterRules;
 const math = Object.create(Math);
@@ -88,6 +98,7 @@ const context = vm.createContext({
     set src(value) {
       assert(fs.existsSync(path.join(root, value)), value);
       this.naturalWidth = 1;
+      queueMicrotask(() => this.onload?.());
     }
   },
   console: { warn: message => warnings.push(message), info() {}, error: console.error },
@@ -101,7 +112,9 @@ const context = vm.createContext({
     if (url.pathname.endsWith('/threats.json')) data.clown.growthIncreasePerLevel = 0;
     return { ok: true, json: async () => data };
   },
-  setTimeout: () => 1, clearTimeout() {}, requestAnimationFrame: fn => { frame = fn; },
+  setTimeout: () => 1, clearTimeout() {},
+  requestAnimationFrame(fn) { frame = fn; return ++frameId; },
+  cancelAnimationFrame(id) { if (id === frameId) frame = undefined; },
   ResizeObserver: class { observe() {} }
 });
 const step = time => { now = time; const callback = frame; frame = undefined; callback?.(now); };
@@ -297,22 +310,42 @@ nodes['open-cameras'].fire('click'); office('dark');
 assert(!Object.hasOwn(nodes['cameras-view'].dataset, 'maximized'));
 pressW(); office('dark');
 camera('CAM05'); check('open-open');
+const signal = nodes['camera-static'];
+const assertGatePulse = () => {
+  assert.equal(signal.hidden, false);
+  assert.equal(signal.dataset.kind, 'gate');
+  assert.equal(runningAnimations.size, 3);
+  for (const animation of runningAnimations) assert.equal(animation.options.duration, 650);
+};
 // Corrected visual mapping: screen-left G04; screen-right G05.
-gate('G04'); check('closed-open');
-gate('G05'); check('closed-closed');
-gate('G04'); check('open-closed');
-gate('G05'); check('open-open');
+gate('G04'); check('closed-open'); assertGatePulse();
+const firstPulse = [...runningAnimations];
+gate('G05'); check('closed-closed'); assertGatePulse();
+assert(firstPulse.every(animation => !runningAnimations.has(animation)));
+gate('G04'); check('open-closed'); assertGatePulse();
+gate('G05'); check('open-open'); assertGatePulse();
+step(now + 650);
+assert.equal(signal.hidden, true);
+assert.equal(runningAnimations.size, 0);
 // Unrelated gates leave CAM05 alone. A fourth closure reopens the latest
 // previous closure, and the feed must update in the same interaction.
-gate('G01'); gate('G02'); gate('G04'); check('closed-open');
-gate('G03'); check('open-open'); assert(!isClosed('G04'));
+gate('G01'); gate('G02'); assert.equal(signal.hidden, true);
+gate('G04'); check('closed-open');
+gate('G03'); check('open-open'); assert(!isClosed('G04')); assertGatePulse();
 gate('G05'); check('open-closed'); assert(!isClosed('G03'));
 // State changes while another camera is selected must be visible on return.
 camera('CAM01');
 const otherSrc = nodes['feed-art'].src;
 gate('G04'); assert.equal(nodes['feed-art'].src, otherSrc);
+assert.equal(signal.dataset.kind, 'switch');
 assert(!isClosed('G05'));
 camera('CAM05'); check('closed-open');
+assert.equal(signal.dataset.kind, 'switch');
+assert(window.NathGame.setCam05VipState('original'));
+gate('G04'); assertGatePulse();
+assert.match(nodes['feed-art'].src, /CAM05\/states\/open-open\/original\.webp$/);
+gate('G04'); assert.match(nodes['feed-art'].src, /CAM05\/states\/closed-open\/original\.webp$/);
+assert(window.NathGame.setCam05VipState('vazia'));
 nodes['close-cameras'].fire('click');
 nodes['close-desktop'].fire('click');
 radioButton.fire('click');
@@ -322,6 +355,8 @@ nodes['open-cameras'].fire('click'); check('closed-open');
 // Resetting the night restores both the map and the default open-open image.
 for (let time = nightStart + 200; time <= nightStart + 360_000; time += 100) step(time);
 assert.equal(nodes['shift-complete'].hidden, false);
+assert.equal(frame, undefined);
+assert.equal(runningAnimations.size, 0);
 assert.equal(radio.paused, true);
 const chimes = samples.get('11_FNAF2_Chimes.mp3');
 assert.equal(chimes.paused, false);
@@ -722,6 +757,44 @@ console.log('PASS: three radio tracks, clown poses, music reduction, peek and au
 
 nodes['return-to-menu'].fire('click');
 randomValue = () => 0;
+Object.assign(characterRules.padrao, { start: 2, positions: [2, 19], interval: 10 });
+customStart({ padrao: 4 });
+const forcedGateStart = now;
+nodes['office-monitor'].fire('click');
+nodes['open-cameras'].fire('click');
+camera('CAM12');
+gate('G06'); checkBackstage(false);
+step(forcedGateStart + 9000);
+assert(!isClosed('G06'));
+checkBackstage(true);
+assertGatePulse();
+assert.match(nodes['movement-debug'].textContent, /c.mera observada/);
+customStart({});
+assert.equal(runningAnimations.size, 0);
+assert.equal(signal.hidden, true);
+console.log('PASS: visual gate pulses in both directions, limit-driven and forced openings, latest art and cleanup.');
+
+Object.assign(characterRules.gotica, { start: 1, positions: [1, 2], interval: 10 });
+customStart({ gotica: 1 });
+const gothicStart = now;
+nodes['office-monitor'].fire('click');
+nodes['open-cameras'].fire('click');
+camera('CAM03');
+step(gothicStart + 10);
+step(gothicStart + 8000);
+assert.equal(signal.dataset.kind, 'gotica');
+assert.equal(runningAnimations.size, 3);
+assert([...runningAnimations].every(animation => animation.options.duration === 2000 && animation.currentTime > 0));
+camera('CAM05');
+assert.equal(signal.dataset.kind, 'gotica');
+gate('G04');
+assert.equal(signal.dataset.kind, 'gotica');
+assert.equal(runningAnimations.size, 3);
+step(gothicStart + 10_000);
+assert.equal(signal.hidden, true);
+assert.equal(runningAnimations.size, 0);
+console.log('PASS: Gothic onset follows its simulation event and a concurrent gate reuses the same layers.');
+
 customStart({ shadow: 10 });
 nodes['office-monitor'].fire('click');
 nodes['open-cameras'].fire('click');
