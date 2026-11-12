@@ -922,6 +922,9 @@ window.NathGame.localConfig = {
     ],
     "campaign": [
       {
+        "movementDelay": 40,
+        "maxClosedGates": 0,
+        "secondsPerHour": 50,
         "hoursToWin": 6,
         "powerEnabled": false,
         "sanityEnabled": false,
@@ -937,6 +940,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 40,
+        "maxClosedGates": 1,
+        "secondsPerHour": 55,
         "hoursToWin": 6,
         "powerEnabled": false,
         "sanityEnabled": false,
@@ -952,6 +958,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 30,
+        "maxClosedGates": 2,
+        "secondsPerHour": 60,
         "hoursToWin": 6,
         "powerEnabled": true,
         "sanityEnabled": false,
@@ -967,6 +976,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 25,
+        "maxClosedGates": 3,
+        "secondsPerHour": 60,
         "hoursToWin": 6,
         "powerEnabled": true,
         "sanityEnabled": true,
@@ -982,6 +994,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 20,
+        "maxClosedGates": 4,
+        "secondsPerHour": 60,
         "hoursToWin": 6,
         "powerEnabled": true,
         "sanityEnabled": true,
@@ -997,6 +1012,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 20,
+        "maxClosedGates": 5,
+        "secondsPerHour": 60,
         "hoursToWin": 6,
         "powerEnabled": true,
         "sanityEnabled": true,
@@ -1012,6 +1030,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 15,
+        "maxClosedGates": 6,
+        "secondsPerHour": 60,
         "hoursToWin": 6,
         "powerEnabled": true,
         "sanityEnabled": true,
@@ -1027,6 +1048,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 12,
+        "maxClosedGates": 7,
+        "secondsPerHour": 60,
         "hoursToWin": 6,
         "powerEnabled": true,
         "sanityEnabled": true,
@@ -1042,6 +1066,9 @@ window.NathGame.localConfig = {
         }
       },
       {
+        "movementDelay": 12,
+        "maxClosedGates": 8,
+        "secondsPerHour": 60,
         "hoursToWin": 7,
         "powerEnabled": true,
         "sanityEnabled": true,

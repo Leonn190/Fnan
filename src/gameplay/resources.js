@@ -36,7 +36,9 @@ function clockProgress(clock, sanity, rate, seconds) {
 }
 
 function createResources({ night: defaults, sanity: sanityRules, power }, night = defaults) {
-  const { clock, hoursToWin, powerEnabled, sanityEnabled } = night;
+  const { clock, hoursToWin, powerEnabled, sanityEnabled, secondsPerHour } = night;
+  const fastestHour = secondsPerHour ?? clock.fastSecondsPerHour;
+  const dynamicClock = sanityEnabled && secondsPerHour === undefined;
   let sanity = sanityEnabled ? clampPercent(sanityRules.initial) : 100;
   let energy = powerEnabled ? clampPercent(power.initial) : 100;
   let computerOn = energy > 0;
@@ -50,14 +52,14 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
       ? (computerOn ? power.computerDrain : 0) + input.gates.size * power.gateDrain : 0;
     const powerEnds = drain > 0 ? now + energy / drain : Infinity;
     const rate = sanityEnabled ? sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 }) : 0;
-    const progress = seconds => sanityEnabled ? clockProgress(clock, sanity, rate, seconds)
-      : seconds / clock.fastSecondsPerHour;
+    const progress = seconds => dynamicClock ? clockProgress(clock, sanity, rate, seconds)
+      : seconds / fastestHour;
     const limit = Math.min(until, powerEnds, radioUntil > now ? radioUntil : Infinity);
     const duration = limit - now;
     const remaining = hoursToWin - hours;
     let end = limit;
     let won = false;
-    if (duration / clock.fastSecondsPerHour >= remaining - 1e-12 && progress(duration) >= remaining - 1e-12) {
+    if (duration / fastestHour >= remaining - 1e-12 && progress(duration) >= remaining - 1e-12) {
       let low = 0;
       let high = duration;
       for (let i = 0; i < 42; i++) {

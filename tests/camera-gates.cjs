@@ -205,6 +205,25 @@ const startNewGame = () => {
 startNewGame();
 assert.deepEqual(nodes['office-characters'].children.filter(image => !image.hidden), []);
 assert.match(nodes['movement-debug'].textContent, /Palhaça · 0\.0/);
+assert.equal(nodes['office-gate'].disabled, true);
+const initialMap = nodes['map-canvas'].children[0].children;
+assert(initialMap.find(node => node.attrs['aria-label'] === 'Portões')
+  .children.every(node => node.attrs['aria-disabled'] === 'true'));
+assert.equal(nodes['smores-room'].hidden, false);
+assert.equal(nodes['smores-vent'].hidden, true);
+nodes['office-monitor'].fire('click');
+nodes['open-cameras'].fire('click');
+for (const [id, art] of [['CAM03', 'todas'], ['CAM04', 'open/platinada'], ['CAM09', '01-maid-sentada']]) {
+  initialMap.find(node => node.attrs['data-cam'] === id).fire('click');
+  assert.equal(nodes['feed-art'].src, `./public/images/cameras/${id}/states/${art}.webp`);
+}
+initialMap.find(node => node.attrs['data-cam'] === 'CAM12').fire('click');
+assert.equal(nodes['shadow-feed'].hidden, false);
+assert.equal(nodes['shadow-feed'].dataset.phase, 'idle');
+assert.equal(nodes['shadow-manifest'].hidden, true);
+initialMap.find(node => node.attrs['data-cam'] === 'CAM09').fire('click');
+assert.equal(nodes['shadow-feed'].hidden, true);
+nodes['monitor-exit'].fire('click');
 const customStart = levels => {
   if (!nodes.game.hidden) nodes['complete-menu'].fire('click');
   nodes['open-custom'].fire('click');
@@ -539,7 +558,7 @@ pressW(); office('lit');
 console.log('PASS: 12 camera folders, all gate states, 208 office combinations and 172 closet frames.');
 
 // The closet only exits through the slatted door. Turning resets the flashlight.
-customStart({ palhaca: 1 });
+customStart({});
 nodes.game.clientWidth = 1280;
 nodes['office-scene'].offsetWidth = 2160;
 const closetStart = now;
@@ -580,6 +599,8 @@ closetExit.fire('click');
 assert.equal(nodes.game.dataset.closetTransition, undefined);
 press('W');
 assert.equal(closetBeam.hidden, false);
+assert.match(closetBeam.src, /sleeping\.webp$/);
+assert.equal(movement.snapshot().clownStage, -1);
 assert.equal(playedSamples.at(-1), '07_FNAF4_Flashlight.mp3');
 press('w', { repeat: true });
 assert.equal(closetBeam.hidden, false);
@@ -835,6 +856,11 @@ nodes['office-monitor'].fire('click');
 nodes['open-cameras'].fire('click');
 nodes['camera-audio'].fire('click');
 assert.equal(playedSamples.at(-1), '01_camera_sinistra/01_miado_agudo_camera.wav');
+const audioPin = cameras.find(node => node.attrs['data-cam'] === 'CAM01');
+assert(audioPin.classList.contains('audio-pulse'));
+assert(cameras.filter(node => node.classList.contains('audio-pulse')).length === 1);
+audioPin.children.find(node => node.attrs.class?.includes('pin-audio-echo')).fire('animationend');
+assert(!audioPin.classList.contains('audio-pulse'));
 nodes['monitor-exit'].fire('click');
 
 const shadowEntry = now;
@@ -979,7 +1005,7 @@ for (let number = 1; number <= 9; number++) {
   radioButton.fire('click');
   radio.fire('playing');
   step(start + 1);
-  const winAfter = number === 9 ? 420_000 : 360_000;
+  const winAfter = ([50, 55][number - 1] ?? 60) * (number === 9 ? 7000 : 6000);
   if (number === 9) {
     step(start + 360_000);
     assert.equal(nodes['shift-complete'].hidden, true);

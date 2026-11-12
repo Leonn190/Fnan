@@ -10,8 +10,11 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   const { difficulty, retreat } = movement;
   const routes = createRoutes(map);
   const cameraIds = CAMERAS.map(cam => cam.id);
-  let actors, effects, threats, resources, shadow, smores, gates, electrical, input, now, outcome, sanityEnabled;
+  let roster, actors, effects, threats, resources, shadow, smores, gates, electrical, input, now, outcome, sanityEnabled;
+  let movementDelay, maxClosedGates;
 
+  const movementPaused = () => now < movementDelay;
+  const gateControlsAvailable = () => maxClosedGates > 0 && !electrical.failed();
   const moveDue = actor => actor.due - (actor.retreating ? 0 : smores.intervalReduction());
   const camerasAvailable = () => resources.computerOn() && !electrical.failed();
   const canUse = (actor, edge) => edge && (!edge.actors || edge.actors.includes(actor.key));
@@ -21,7 +24,6 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const initial = actor.rule.initialStationaryAttempts !== undefined && actor.position === actor.rule.start;
     const extra = actor.rule.extraIntervalReduction ?? 0;
     const acceleration = initial ? actor.rule.initialIntervalReduction : 0;
-    // A future global start delay can consume this bonus instead of the first interval.
     const firstFactor = first && actor.abilityTier ? actor.rule.firstIntervalFactor ?? 1 : 1;
     const seconds = (actor.interval * (actor.abilityTier ? factor(-extra) * factor(-acceleration) : 1)
       + uniform(random, movement.jitter)) * firstFactor;
@@ -35,18 +37,22 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     now = 0;
     outcome = null;
     sanityEnabled = rules.sanityEnabled;
+    movementDelay = rules.movementDelay ?? 0;
+    maxClosedGates = rules.maxClosedGates ?? map.maxClosedMapGates;
     const { gates: initialGates, ...startingInput } = initialInput;
     input = startingInput;
-    gates = createGates(map.maxClosedMapGates, changes => emit('gatesChanged', changes), initialGates);
+    gates = createGates(maxClosedGates, changes => emit('gatesChanged', changes), initialGates);
     electrical = createElectrical();
     const levelFor = key => Math.max(0, Math.min(night.levels[1], levels[key] ?? night.defaultLevel));
-    actors = Object.entries(characters).filter(([key]) => levelFor(key) > 0).map(([key, rule]) => {
+    roster = Object.entries(characters).map(([key, rule]) => {
       const level = levelFor(key);
+      const character = { key, rule, level, position: rule.start, stage: 0 };
+      if (level === 0) return character;
       const steps = difficulty.oddSteps.filter(step => level >= step).length;
       const bonuses = difficulty.targetBonusLevels.filter(step => level >= step).length;
       const allowed = new Set(rule.positions);
       return {
-        key, rule, level, allowed, position: rule.start, previous: null, pending: null, stage: 0,
+        ...character, allowed, previous: null, pending: null,
         noise: 0, light: { advance: 0, retreat: 0 }, audioRetention: 1,
         abilityTier: Number(level >= difficulty.abilityLevel),
         interval: rule.interval * factor(-steps * difficulty.intervalReductionPerStep),
@@ -55,7 +61,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         retreating: false, retreatTarget: null
       };
     });
-    for (const actor of actors) actor.due = interval(actor, true);
+    actors = roster.filter(actor => actor.level > 0);
+    for (const actor of actors) actor.due = movementDelay + interval(actor, true);
     effects = createEffects(config, routes, actors);
     smores = createSmores(config.threats.smores, levelFor('smores'), random, emit);
     threats = createThreats(config, { palhaca: levelFor('palhaca') }, random, emit, smores.reactionReduction);
@@ -190,10 +197,13 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
 
   function settle(action) {
     const { blackout, computerOn, radioAvailable } = resources.snapshot(now);
-    const ventOpportunity = !input.smoresLooking
-      && (input.leftLook || (input.computer && computerOn) || action?.type === 'closetExit');
-    smores.resolve(input, input.radio && radioAvailable, ventOpportunity);
+    if (!movementPaused()) {
+      const ventOpportunity = !input.smoresLooking
+        && (input.leftLook || (input.computer && computerOn) || action?.type === 'closetExit');
+      smores.resolve(input, input.radio && radioAvailable, ventOpportunity);
+    }
     if (action?.type === 'closetEnter') threats.enterCloset(now);
+    if (movementPaused()) return;
     threats.resolve(now, actor => {
       actor.retreating = true;
       actor.due = now;
@@ -241,8 +251,10 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const { end, radio, won } = resources.segment(now, until, { ...input, gates: gates.closed }, observation);
     const activeInput = { ...input, radio, computer: computerOn && input.computer };
     effects.integrate(end - now, activeInput);
-    threats.integrate(end - now, activeInput);
-    smores.integrate(end - now, radio);
+    if (!movementPaused()) {
+      threats.integrate(end - now, activeInput);
+      smores.integrate(end - now, radio);
+    }
     now = end;
     if (won) finish('win');
   }
@@ -252,10 +264,11 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     until = Math.max(now, until);
     while (now < until) {
       const radio = input.radio && resources.snapshot(now).radioAvailable;
-      const due = Math.min(until, shadow.nextDeadline(), effects.staticDeadline(now),
-        threats.nextDeadline(now, { ...input, radio }),
-        smores.nextDeadline(now, radio),
-        ...actors.map(actor => actor.pending?.expires ?? moveDue(actor)));
+      const due = movementPaused() ? Math.min(until, movementDelay)
+        : Math.min(until, shadow.nextDeadline(), effects.staticDeadline(now),
+          threats.nextDeadline(now, { ...input, radio }),
+          smores.nextDeadline(now, radio),
+          ...actors.map(actor => actor.pending?.expires ?? moveDue(actor)));
       integrate(due);
       if (outcome) return;
       if (now < until) settle();
@@ -276,7 +289,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         accepted = camerasAvailable() && effects.startAudio(now, input.camera);
         break;
       case 'gate':
-        accepted = !electrical.failed() && gates.toggle(action.id);
+        accepted = gateControlsAvailable() && gates.toggle(action.id);
         break;
       case 'computerPower': {
         const wasOn = resources.computerOn();
@@ -286,7 +299,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       }
       case 'returnToOffice': {
         const { sanity, blackout } = resources.snapshot(now);
-        shadow.returnToOffice(now, action.source, sanity, blackout);
+        if (!movementPaused()) shadow.returnToOffice(now, action.source, sanity, blackout);
         break;
       }
     }
@@ -295,7 +308,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   }
 
   function cameraActors(camera) {
-    return actors.filter(actor => actor.rule.cameras.includes(camera) && routes.positions.get(actor.position).cameras.includes(camera));
+    return roster.filter(actor => actor.rule.cameras.includes(camera) && routes.positions.get(actor.position).cameras.includes(camera));
   }
 
   function diagnostics() {
@@ -307,7 +320,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         camera: position.cameras.join('/') || 'sem câmera',
         previous: routes.positions.get(actor.previous)?.name,
         destination: routes.positions.get(actor.pending?.to)?.name,
-        remaining: Math.max(0, (actor.pending?.expires ?? moveDue(actor)) - now),
+        remaining: Math.max(0, (actor.pending?.expires ?? moveDue(actor)) - Math.max(now, movementDelay)),
         stopped: actor.pending?.reason ?? (actor.retreating ? 'recuando' : actor.position === office ? 'invasão' : 'intervalo'),
         light: { ...actor.light }, noise: actor.noise, audioRetention: actor.audioRetention
       };
@@ -318,7 +331,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   return {
     reset, advance, cameraActors, diagnostics, stop: () => shadow.stop(),
     isGateClosed: id => gates.closed.has(id),
-    electricalFault: () => electrical.failed(),
+    electricalFault: () => electrical.failed(), gateControlsAvailable,
     camerasAvailable,
     officeState: () => ({
       smores: smores.phase(),

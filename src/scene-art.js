@@ -46,7 +46,8 @@ function cameraActorFrame(cam, actors, config, isGateClosed, preview) {
   const key = preview ?? cameraStateKey(cam, visibleActors, config.map.stage);
   const frame = cameraFrame(cam, key, isGateClosed);
   const variant = characterStateImages(cam)[key];
-  return { ...frame, occupied: Boolean(visibleActors.length && (frame.gateKey ? variant?.[frame.gateKey] : variant)) };
+  const activeActorVisible = visibleActors.some(actor => actor.level !== 0);
+  return { ...frame, occupied: Boolean(activeActorVisible && (frame.gateKey ? variant?.[frame.gateKey] : variant)) };
 }
 
 function sanityObservation(config, actors, cameraActors, input) {

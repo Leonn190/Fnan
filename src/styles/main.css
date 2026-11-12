@@ -422,6 +422,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .feed-art{width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.77) contrast(1.13) saturate(.70);transform:scale(1.015);pointer-events:none;transition:filter .3s}
 .shadow-feed{position:absolute;inset:0;z-index:4;pointer-events:none}
 .shadow-feed img{position:absolute;left:38%;top:47%;height:55%;max-width:46%;object-fit:contain;transform:translate(-50%,-50%);filter:brightness(1.18) drop-shadow(0 0 14px #b29cd14d)}
+.shadow-feed[data-phase="idle"] img{left:57%;top:35%;height:24%;filter:brightness(.8)}
 .camera-feed:has(.shadow-feed[data-phase="found"]) .camera-static[data-kind="switch"]{visibility:hidden}
 .shadow-feed[data-phase="found"] img{animation:shadow-fade var(--shadow-found-duration) both}
 .shadow-feed[data-phase="found"]::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#f0ddff70 0 2px,#09031680 3px 9px);animation:shadow-signal var(--shadow-found-duration) steps(1,end) both}
@@ -487,7 +488,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .rec-light{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff7185;box-shadow:0 0 16px #ff4d8b;animation:rec-pulse 1.9s infinite}
 @keyframes rec-pulse{50%{opacity:.32}}
 .feed-divider{height:19px;border-left:1px solid #fff7;margin:0 5px}
-.map-panel{position:absolute;right:16px;bottom:44px;width:min(470px,48cqw,calc((100cqh - var(--titlebar-height) - 54px)*1.14));pointer-events:none}
+.camera-controls{position:absolute;z-index:15;right:16px;bottom:12px;display:grid;justify-items:end;gap:5px;pointer-events:none}
+.map-panel{width:min(420px,43cqw,calc((100cqh - var(--titlebar-height) - 62px)*1.14))}
 .map-panel svg{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 4px #000a)}
 .map-room{fill:#302f427a;stroke:#b3a4ce;stroke-width:1.4;vector-effect:non-scaling-stroke}
 .map-room.highlight{fill:#4f3a619c;stroke:#fbbcdc;stroke-width:2;filter:drop-shadow(0 0 3px #e6adff88)}
@@ -513,7 +515,11 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .map-camera:hover .pin-body,.map-camera:focus .pin-body{stroke:#fff8c9;stroke-width:3}
 .map-camera.active .pin-halo{stroke:#ffcbe7;fill:none;stroke-width:1.2;opacity:.72;animation:pin-pulse 2s infinite;transform-origin:center;transform-box:fill-box}
 @keyframes pin-pulse{50%{transform:scale(1.12);opacity:.20}}
-.camera-audio{position:absolute;z-index:15;left:16px;bottom:12px;min-height:28px;padding:0 13px;border:1px solid #b8deec7a;border-radius:3px;background:#101a29d9;color:#d8f6ff;font:700 9px var(--mono);letter-spacing:.1em;box-shadow:0 4px 20px #0008}.camera-audio:hover:not(:disabled){background:#214b60}.camera-audio:disabled{cursor:not-allowed;opacity:.55}
+.pin-audio-wave{fill:none;stroke:#e0faff;stroke-width:1.7;vector-effect:non-scaling-stroke;opacity:0;pointer-events:none;transform-origin:center;transform-box:fill-box}
+.audio-pulse .pin-audio-wave{animation:pin-audio-wave .65s ease-out}
+.audio-pulse .pin-audio-echo{animation-delay:.14s}
+@keyframes pin-audio-wave{from{transform:scale(1);opacity:.95}to{transform:scale(2.25);opacity:0}}
+.camera-audio{pointer-events:auto;min-height:36px;padding:4px 15px;border:1px solid #b8deec7a;border-radius:3px;background:#101a29d9;color:#d8f6ff;font:700 10px var(--mono);letter-spacing:.1em;box-shadow:0 4px 20px #0008}.camera-audio:hover:not(:disabled){background:#214b60}.camera-audio:disabled{cursor:not-allowed;opacity:.55}
 
 .global-vignette{position:absolute;inset:0;z-index:7;pointer-events:none;box-shadow:inset 0 0 130px 22px rgba(0,0,0,.58);background:linear-gradient(90deg,#0004,transparent 25%,transparent 75%,#0005)}
 .screen-grain{position:absolute;inset:0;z-index:8;opacity:.045;pointer-events:none;background:repeating-linear-gradient(90deg,#fff3 0 1px,transparent 2px 3px)}
@@ -522,7 +528,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .game:is([data-mode="desktop"],[data-mode="cameras"]) .resource-hud{bottom:calc(7px + env(safe-area-inset-bottom));padding:4px 7px;border-radius:6px;background:#190c23db}
 @container(max-height:540px){
   .game:is([data-mode="desktop"],[data-mode="cameras"]) .resource-hud{bottom:calc(9.5cqh + 50px + env(safe-area-inset-bottom))}
-  .game[data-mode="cameras"] .cameras-view[data-maximized] .camera-audio{left:auto;right:16px}
 }
 .resource-hud label{display:flex;justify-content:space-between}
 #sanity-meter:not([hidden]) + #energy-label{margin-top:2px}
@@ -562,7 +567,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 
 .jumpscare,.death-flash,.game-over{position:absolute;inset:0;z-index:50}
 .jumpscare,.death-flash{display:none;pointer-events:none}
-.game[data-defeat] :is(.hud-top,.office-location,.office-reticle,.monitor-handle,.movement-debug,.initial-hint,.toast,.feed-heading,.map-panel){
+.game[data-defeat] :is(.hud-top,.office-location,.office-reticle,.monitor-handle,.movement-debug,.initial-hint,.toast,.feed-heading,.camera-controls){
   visibility:hidden;
 }
 .game[data-defeat] :is(.office-view,.cameras-view){
@@ -659,7 +664,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   .monitor-handle{min-width:240px;min-height:56px;gap:9px;font-size:10px}.monitor-handle small{font-size:8px}
   .initial-hint{bottom:135px;max-width:92cqw;font-size:9px;line-height:1.5}
   .feed-heading{left:12px}.feed-heading-first{font-size:10px;gap:6px}.feed-heading-first strong{font-size:17px}.feed-room{font-size:10px;margin-left:18px}
-  .map-panel{right:12px;width:min(390px,calc(100cqw - 24px),59cqh,calc((100cqh - var(--titlebar-height) - 50px)*1.14))}
+  .camera-controls{right:12px}
+  .map-panel{width:min(350px,calc(100cqw - 24px),54cqh,calc((100cqh - var(--titlebar-height) - 62px)*1.14))}
   .movement-debug{left:8px;bottom:69px;max-width:min(420px,calc(100% - 16px));font-size:9px}
   .technical-frame{width:92cqw}
 }
@@ -670,9 +676,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
  .monitor-handle{min-width:208px}
 }
 @container (max-height: 230px) {
+  .camera-controls { bottom: 8px; }
   .map-panel {
-    bottom: 8px;
-    width: min(38cqw, calc((100cqh - var(--titlebar-height) - 12px) * 1.14));
+    width: min(34cqw, calc((100cqh - var(--titlebar-height) - 54px) * 1.14));
   }
   .camera-audio { max-width: 55cqw; }
 }

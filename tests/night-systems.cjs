@@ -37,8 +37,12 @@ const campaignLevels = {
   shadow:  [0, 0, 0, 0, 0, 0, 1, 3, 10]
 };
 assert.equal(base.night.campaign.length, 9);
+const movementDelays = [40, 40, 30, 25, 20, 20, 15, 12, 12];
 for (const [index, entry] of base.night.campaign.entries()) {
   const nightNumber = index + 1;
+  const secondsPerHour = [50, 55][index] ?? 60;
+  const delay = movementDelays[index];
+  assert.equal(entry.movementDelay, delay);
   assert.deepEqual(entry.levels, Object.fromEntries(Object.entries(campaignLevels).map(([id, row]) => [id, row[index]])));
   const input = { closet: true, radio: true, computer: true, gates: ['G01'] };
   const test = scenario({ nightNumber, input, tune(config) { config.power.initial = .2; } });
@@ -48,7 +52,7 @@ for (const [index, entry] of base.night.campaign.entries()) {
   assert.equal(test.state().clownStage >= 0, nightNumber >= 2);
   test.at(1, input);
   assert.equal(test.state().sanity < 100, nightNumber >= 4);
-  near(test.state().hours, 1 / 60);
+  near(test.state().hours, 1 / secondsPerHour);
   near(test.state().energy, nightNumber >= 3 ? .2 - .018 - .028 : 100);
   test.at(10, input);
   assert.equal(test.state().blackout, nightNumber >= 3);
@@ -56,22 +60,54 @@ for (const [index, entry] of base.night.campaign.entries()) {
   if (nightNumber <= 2) {
     assert.equal(test.state().sanity, 100);
     assert(test.game.camerasAvailable());
-    assert(test.game.isGateClosed('G01'));
+    assert.equal(test.game.isGateClosed('G01'), nightNumber === 2);
     test.at(10, input, { type: 'computerPower' });
     assert.equal(test.state().computerOn, false);
     test.at(10, input, { type: 'computerPower' });
     assert.equal(test.state().computerOn, true);
     assert.equal(test.state().radioAvailable, true);
   }
-  const encounter = scenario({ nightNumber, input: { computer: true, radio: true }, tune(config) {
+  const watching = { computer: true, radio: true };
+  const encounter = scenario({ nightNumber, input: watching, tune(config) {
     config.sanity.initial = 20;
     for (const actor of Object.values(config.characters)) actor.interval = 1000;
   } });
-  encounter.at(15, { computer: true, radio: true });
+  const actors = encounter.game.diagnostics();
+  const initialCounter = encounter.state().counter;
+  encounter.at(delay - .01, watching);
+  assert.deepEqual(encounter.game.diagnostics().map(({ position, remaining }) => [position, remaining]),
+    actors.map(({ position, remaining }) => [position, remaining]));
+  assert.equal(encounter.state().counter, initialCounter);
+  assert.equal(encounter.game.officeState().smores, 'idle');
+  encounter.returnAt(delay - .01);
+  assert.equal(encounter.state().shadow.phase, 'inactive');
+  encounter.at(delay, watching);
+  encounter.at(delay + 15, watching);
+  near(encounter.state().hours, (delay + 15) / secondsPerHour);
+  near(encounter.game.diagnostics()[0].remaining, actors[0].remaining - 15);
   assert.equal(encounter.game.officeState().smores, nightNumber >= 6 ? 'vent' : 'idle');
-  encounter.returnAt(15);
+  encounter.returnAt(delay + 15);
   assert.equal(encounter.state().shadow.phase, nightNumber >= 7 ? 'manifested' : 'inactive');
+
+  const gates = scenario({ nightNumber });
+  const gateIds = window.NathGame.VENUE.openings.filter(({ type }) => type === 'portao').map(({ id }) => id);
+  for (const id of gateIds) {
+    assert.equal(gates.at(0, {}, { type: 'gate', id }), index > 0);
+  }
+  assert.equal(gateIds.filter(gates.game.isGateClosed).length, index);
 }
+
+const firstYandereMove = scenario({ nightNumber: 2, tune(config) {
+  Object.assign(config.characters.yandere, { start: 19, positions: [19, 21], interval: 5 });
+  config.movement.jitter = { min: 0, max: 0 };
+} });
+const yandere = () => firstYandereMove.game.diagnostics().find(actor => actor.key === 'yandere');
+const firstInterval = 5 * (1 - 4 * base.movement.difficulty.intervalReductionPerStep / 100) * .6;
+near(yandere().remaining, firstInterval);
+firstYandereMove.at(40 + firstInterval - .001);
+assert.equal(yandere().position, 19);
+firstYandereMove.at(40 + firstInterval + .001);
+assert.equal(yandere().position, 21);
 
 // Constant inputs should yield the same resources and discrete events at any frame cadence.
 const cadences = [1 / 144, 1 / 30, 8.7, 180];
@@ -98,10 +134,11 @@ for (const [conditions, rate] of [
   [{ radio: true, blackout: true }, .25]
 ]) near(sanityRate(base.sanity, conditions), rate);
 
-const empty = scenario({ input: { camera: 'CAM03' }, tune: config => { config.sanity.initial = 50; } });
+const stageFeed = { camera: 'CAM03', visibleCameraSource: './public/images/cameras/CAM03/states/todas.webp' };
+const empty = scenario({ input: stageFeed, tune: config => { config.sanity.initial = 50; } });
 empty.at(10);
 near(empty.state().sanity, 50.5);
-const stage = scenario({ levels: { padrao: 1, gotica: 1 }, input: { camera: 'CAM03' } });
+const stage = scenario({ levels: { padrao: 1, gotica: 1 }, input: stageFeed });
 stage.at(10, { camera: 'CAM01' });
 near(stage.state().sanity, 98.5);
 stage.at(12);
@@ -132,14 +169,25 @@ clown.at(2);
 near(clown.state().sanity, 98.3);
 near(clown.state().counter, 1);
 const inactive = scenario({ input: { view: 'closet-back', closet: true, clownLight: true } });
+const cameraRoster = () => CAMERAS.flatMap(cam => inactive.game.cameraActors(cam.id)
+  .map(({ key, level, position, stage }) => [cam.id, key, level, position, stage]));
+const startingRoster = [
+  ['CAM03', 'padrao', 0, 1, 0],
+  ['CAM03', 'gotica', 0, 1, 0],
+  ['CAM03', 'yandere', 0, 1, 0],
+  ['CAM04', 'gatinha', 0, 3, 0],
+  ['CAM09', 'maid', 0, 16, 0]
+];
+assert.deepEqual(cameraRoster(), startingRoster);
 inactive.at(2);
 near(inactive.state().sanity, 99);
+assert(inactive.at(5, { camera: 'CAM02' }, { type: 'cameraAudio' }));
 inactive.at(100, {}, { type: 'closetEnter' });
 inactive.at(1000);
 assert.equal(inactive.state().clownStage, -1);
 assert.equal(inactive.state().counter, 0);
 assert.deepEqual(inactive.game.diagnostics(), []);
-assert.deepEqual(CAMERAS.flatMap(cam => inactive.game.cameraActors(cam.id)), []);
+assert.deepEqual(cameraRoster(), startingRoster);
 assert.deepEqual(inactive.events, [['win', undefined]]);
 assert.equal(inactive.calls(), 0);
 

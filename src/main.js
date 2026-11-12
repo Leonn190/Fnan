@@ -108,7 +108,7 @@ const state = {
   complete: true, flashlight: false, flashlightKey: false, flashlightPointer: null, pan: 0, targetPan: 0,
   dragging: false, pointerX: null, lastFrame: performance.now(),
   closetTransition: null, closetMouseAtEdge: true, closetTouchX: null,
-  clownPhase: -1, radioPlaying: false,
+  clownPhase: -1, radioPlaying: false, passiveSmores: false, passiveShadow: false,
   shift: null
 };
 let toastTimeout;
@@ -254,7 +254,7 @@ function updateOfficeView() {
   }
   const illuminated = state.flashlight && corridorInView();
   const view = closed ? 'closed' : illuminated ? 'lit' : 'dark';
-  const doorsOnline = !movement.electricalFault();
+  const doorsOnline = movement.gateControlsAvailable();
   const viewKey = `${view}|${doorsOnline}|${lightBlocked}|${state.flashlight}`;
   if (viewKey !== officeViewKey) {
     officeViewKey = viewKey;
@@ -273,7 +273,7 @@ function updateOfficeView() {
         : 'Escritório de segurança, portão principal aberto e corredor escuro';
   }
 
-  const smoresInRoom = !dom.smoresRoom.hidden;
+  const smoresInRoom = !state.passiveSmores && !dom.smoresRoom.hidden;
   const artKey = `${closed}|${[...state.officeRoom].sort().join(',')}|${state.officeDoorway}|${smoresInRoom}`;
   if (artKey === closetArtKey) return;
   closetArtKey = artKey;
@@ -398,9 +398,10 @@ function syncMovement(now) {
   if (officeChanged || (movementChanged && officePreview)) {
     officePreview = false;
     const { room, doorway, front, back, smores } = movement.officeState();
-    for (const [phase, image] of [['vent', dom.smoresVent], ['room', dom.smoresRoom]]) {
-      if (smores === phase && !image.getAttribute('src')) image.src = SMORES_ART[phase];
-      image.hidden = smores !== phase;
+    const smoresPose = state.passiveSmores ? 'room' : smores;
+    for (const [pose, image] of [['vent', dom.smoresVent], ['room', dom.smoresRoom]]) {
+      if (smoresPose === pose && !image.getAttribute('src')) image.src = SMORES_ART[pose];
+      image.hidden = smoresPose !== pose;
     }
     setCorridorCharacters(front, back);
     setOfficeCharacterState(room, doorway);
@@ -427,6 +428,7 @@ function changeCamera(id, withSound = false) {
   map.setActive(cam);
 
   updateCameraFeed(cam, true);
+  renderShadow(movement.snapshot().shadow);
   updateMovementDebug();
   if (watchingCameras()) {
     const now = performance.now();
@@ -596,13 +598,10 @@ function toggleRadio() {
 }
 
 function setClownPhase(index) {
+  index = Math.max(0, index);
   if (state.clownPhase === index) return;
   state.clownPhase = index;
   dom.clownPeek.hidden = index !== CLOWN_PHASES.length - 1;
-  if (index < 0) {
-    dom.closetBeam.hidden = true;
-    return;
-  }
   const { art, alt } = CLOWN_PHASES[index];
   const source = CLOWN_ART + art;
   if (dom.closetBeam.getAttribute('src') !== source) dom.closetBeam.src = source;
@@ -610,7 +609,7 @@ function setClownPhase(index) {
 }
 
 function setClosetLight(on) {
-  dom.closetBeam.hidden = !on || state.clownPhase < 0;
+  dom.closetBeam.hidden = !on;
   dom.closetLight.setAttribute('aria-pressed', String(on));
 }
 
@@ -714,6 +713,7 @@ function playCameraAudio() {
     return;
   }
   sound.cameraMeow(movement.snapshot().sanity);
+  map.pulseAudio(CAMERAS[state.cameraIndex].id);
   updateAudioControl();
   announce(`Som reproduzido em ${CAMERAS[state.cameraIndex].id}.`);
 }
@@ -821,6 +821,8 @@ function advanceDefeat(now) {
 function prepareShift(shift) {
   const keepWarm = dom.game.hidden;
   state.shift = shift;
+  state.passiveSmores = (shift.levels.smores ?? config.night.defaultLevel) === 0;
+  state.passiveShadow = (shift.levels.shadow ?? config.night.defaultLevel) === 0;
   dom.game.hidden = false;
   measureViewport();
   cancelGameFrame();
@@ -987,7 +989,7 @@ let renderedElectrical;
 function renderElectrical(fault = movement.electricalFault()) {
   if (renderedElectrical === fault) return;
   renderedElectrical = fault;
-  map.setGateControls(!fault);
+  map.setGateControls(movement.gateControlsAvailable());
   if (state.mode === 'cameras') updateCameraFeed(CAMERAS[state.cameraIndex]);
   updateAudioControl();
   updateOfficeView();
@@ -1064,16 +1066,19 @@ function renderResourceState({ energy, blackout, computerOn, radioAvailable }) {
 let renderedShadow;
 function renderShadow({ phase, camera }) {
   const inOffice = state.mode === 'office';
-  const feedVisible = phase === 'found' && watchingCameras() && CAMERAS[state.cameraIndex].id === camera;
-  const key = `${phase}|${inOffice}|${feedVisible}`;
+  const selected = CAMERAS[state.cameraIndex].id;
+  const feedPhase = watchingCameras() && (
+    phase === 'found' && selected === camera ? 'found' : state.passiveShadow && selected === corridorCamera.id ? 'idle' : ''
+  );
+  const key = `${phase}|${inOffice}|${feedPhase}`;
   if (key === renderedShadow) return;
   renderedShadow = key;
   const attacking = phase === 'manifested' || phase === 'searching';
   sound.setSampleLoop('nightmare', attacking ? .3 : 0);
   dom.shadowManifest.hidden = !inOffice || phase !== 'manifested';
   dom.shadowOfficeArt.hidden = !inOffice || !attacking;
-  dom.shadowFeed.hidden = !feedVisible;
-  if (!dom.shadowFeed.hidden) dom.shadowFeed.dataset.phase = phase;
+  dom.shadowFeed.hidden = !feedPhase;
+  if (feedPhase) dom.shadowFeed.dataset.phase = feedPhase;
   else delete dom.shadowFeed.dataset.phase;
 }
 
@@ -1181,7 +1186,7 @@ radioMusic.addEventListener('pause', () => { if (radioMusic.paused) setRadioPlay
 radioMusic.addEventListener('error', stopRadio);
 dom.closetExit.addEventListener('click', () => beginClosetTransition('exit'));
 dom.officeGate.addEventListener('click', () => {
-  if (state.complete || state.mode !== 'office' || state.closetTransition || movement.electricalFault()) return;
+  if (state.complete || state.mode !== 'office' || state.closetTransition || !movement.gateControlsAvailable()) return;
   advanceGame(performance.now(), { type: 'gate', id: OFFICE.gate });
 });
 for (const button of [dom.officeLight, dom.closetLight]) {
@@ -1478,10 +1483,11 @@ function warmShiftImages(levels) {
   imageCache.warm(Object.values(OFFICE.images));
   if (levels.smores > 0) imageCache.warm(Object.values(SMORES_ART));
   if (levels.palhaca > 0) imageCache.warm(CLOWN_PHASES.map(({ art }) => CLOWN_ART + art));
+  setImageSource(dom.shadowSprite, config.shadow.sprite);
+  imageCache.warm([config.shadow.sprite]);
   if (levels.shadow > 0) {
     setImageSource(dom.shadowOfficeArt, config.shadow.officeArt);
-    setImageSource(dom.shadowSprite, config.shadow.sprite);
-    imageCache.warm([config.shadow.officeArt, config.shadow.sprite]);
+    imageCache.warm([config.shadow.officeArt]);
     imageCache.warm([SHADOW_IMAGE], false);
   }
   imageCache.warm([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE], false);

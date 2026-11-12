@@ -100,6 +100,10 @@ function makeCameraMap({ canvas, onSelect, onToggleGate }) {
     }));
     g.append(makeSvg('circle',{cx:px,cy:py,r:16,class:'pin-area'}));
     g.append(makeSvg('circle',{cx:px,cy:py,r:13,class:'pin-halo'}));
+    const wave = makeSvg('circle', { cx: px, cy: py, r: 11, class: 'pin-audio-wave' });
+    const echo = makeSvg('circle', { cx: px, cy: py, r: 11, class: 'pin-audio-wave pin-audio-echo' });
+    echo.addEventListener('animationend', () => g.classList.remove('audio-pulse'));
+    g.append(wave, echo);
     g.append(makeSvg('circle',{cx:px,cy:py,r:10.7,class:'pin-body'}));
     g.append(makeSvg('text',{x:px,y:py+3.5,class:'pin-number'},String(cam.number).padStart(2,'0')));
     bindMapButton(g, () => onSelect(cam.id));
@@ -114,6 +118,7 @@ function makeCameraMap({ canvas, onSelect, onToggleGate }) {
   canvas.append(svg);
   let activeCamera;
   return {
+    pulseAudio(id) { cameraNodes.get(id)?.classList.add('audio-pulse'); },
     setGate(id, closed) { setGateClosed(gateNodes.get(id), closed); },
     setGateControls(enabled) {
       for (const gate of gateNodes.values()) {
