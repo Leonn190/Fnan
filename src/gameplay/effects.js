@@ -27,27 +27,32 @@ function createEffects(config, routes, actors) {
     actor.noise = clamp(actor.noise + amount, 0, noise.max);
   }
 
+  const noiseMultiplier = actor => actor.approach.objective === 'corridor' ? noise.corridorMultiplier : 1;
+
   function integrate(dt, input) {
     let rate = 0;
     for (const [key, value] of noiseRates) if (input[key]) rate += value;
     const equilibrium = rate * noise.max / noise.decay;
     const blend = -Math.expm1(-dt * noise.decay / noise.max);
     for (const actor of actors) {
-      addNoise(actor, (equilibrium - actor.noise) * blend);
-      if (!flashlight.modifiers[actor.key]) continue;
-      const lit = input.corridorLight && corridor.includes(actor.position);
-      const lightRate = lit ? flashlight.buildPerSecond : -flashlight.decayPerSecond;
+      if (!actor.approach) continue;
+      addNoise(actor, (equilibrium * noiseMultiplier(actor) - actor.noise) * blend);
+      const light = flashlight.modifiers[actor.key];
+      if (!light) continue;
+      const lit = actor.approach.objective === 'corridor' && input.corridorLight && corridor.includes(actor.position);
+      const lightRate = lit ? 1 / light.secondsToMax : -flashlight.decayPerSecond;
       actor.light = clamp(actor.light + lightRate * dt, 0, 1);
     }
   }
 
   function attackOdds(actor, objective, phase) {
-    const { base, maxNoiseBonus } = config.movement.attack[objective][phase];
+    const { corridor, stock, stayShare } = config.movement.attack;
+    const [quiet, loud] = (objective === 'corridor' ? corridor[actor.key] : stock)[phase];
     const intensity = clamp(actor.noise / noise.max, 0, 1);
-    const light = objective === 'corridor' && flashlight.modifiers[actor.key];
-    const advance = clamp(base + maxNoiseBonus * intensity + (light ? light[phase] * actor.light : 0),
+    const light = objective === 'corridor' && actor.light > 0 && flashlight.modifiers[actor.key];
+    const advance = clamp(quiet + (loud - quiet) * intensity + (light ? light.advanceDelta * actor.light : 0),
       light ? flashlight.minimumAdvance : 0, light ? flashlight.maximumAdvance : 1);
-    const share = clamp(config.movement.attack.stayShare + (light ? light.stayShareDelta * actor.light : 0), 0, 1);
+    const share = clamp(stayShare + (light ? light.stayShareDelta * actor.light : 0), 0, 1);
     const stay = (1 - advance) * share;
     return { advance, stay, abandon: 1 - advance - stay };
   }
@@ -71,7 +76,12 @@ function createEffects(config, routes, actors) {
     staticDeadline: now => now < staticUntil ? staticUntil : Infinity,
     triggerStatic: now => { staticUntil = now + config.effects.static.duration; },
     audioStatus: now => ({ remaining: Math.max(0, readyAt - now), camera: now < lure?.ends ? lure.camera : null }),
-    addNoiseEvent: event => actors.forEach(actor => addNoise(actor, noise.events[event] ?? 0)),
+    addNoiseEvent(event) {
+      const amount = noise.events[event] ?? 0;
+      for (const actor of actors) {
+        if (actor.approach) addNoise(actor, amount * noiseMultiplier(actor));
+      }
+    },
     retain(actor) {
       const retain = config.movement.failedModifierRetention;
       actor.audioRetention *= retain;

@@ -108,7 +108,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - Ao ver **FIND ME**, abra as câmeras e encontre a Shadow antes do fim do prazo. Ela escolhe uma câmera por aparição e só pode se manifestar no retorno ao escritório.
 - Ao entrar na elétrica, a Yandere derruba os feeds e bloqueia os controles dos nove portões. Cada portão mantém sua posição física no momento da falha, e a Padrão ainda pode abri-lo. Quando a tela mostrar **SEM SINAL**, desligue e ligue o computador pelo botão ⏻. O rádio, a lanterna e o armário continuam disponíveis conforme suas próprias regras. O prazo de busca da Shadow pausa enquanto as câmeras estão indisponíveis.
 - O computador ligado, os portões fechados, o rádio e a lanterna consomem energia. No apagão, o computador para e as perdas contínuas de sanidade dobram. O rádio funciona por mais 30 s e a lanterna por mais 60 s.
-- Ative **Debug** antes de iniciar uma Custom Night para acompanhar posições, rotas, alvos, chances de movimento, bloqueios, Palhaça e Smores. As chances mostram o resultado de uma tentativa no estado atual. Enquanto uma tentativa está bloqueada, a linha de expiração mostra o que acontece se ela atingir o fim da janela. O parâmetro `?debug=1` também abre o painel na campanha e habilita **J** para testar os sustos.
+- Ative **Debug** antes de iniciar uma Custom Night para acompanhar posições, rotas, alvos, chances de movimento, bloqueios, Palhaça e Smores. Para cada Nathzinha, o painel mostra se o ataque está ativo, o caminho de ataque, o barulho e a intensidade acumulada da lanterna. As chances mostram o resultado de uma tentativa no estado atual. Enquanto uma tentativa está bloqueada, a linha de expiração mostra o que acontece se ela atingir o fim da janela. O parâmetro `?debug=1` também abre o painel na campanha e habilita **J** para testar os sustos.
 
 ## Configuração
 
@@ -151,7 +151,9 @@ A Padrão tenta abrir o portão quando a observação permite. As chances são 7
 
 A vantagem avançada da Yandere começa em `movement.difficulty.abilityLevel` (nível 4). O campo `yandere.firstIntervalFactor` vale 0,60 e incide uma vez, após o cálculo do primeiro intervalo. A rota EE tem peso de 24% e leva a Yandere à Elétrica (21) pelo menor caminho válido para executar a sabotagem. Uma nova sabotagem pode ocorrer depois que ela selecionar outra rota e voltar à Elétrica.
 
-No silêncio, a chance de avançar até a posição de ameaça é de 76% e a de invadir o escritório é de 86%. Com barulho máximo, sobem para 96% e 98%. A lanterna leva 4 s para atingir o efeito máximo e 5 s para dissipá-lo por completo. O áudio das câmeras continua sendo uma atração localizada.
+Cada Nathzinha começa o ataque com zero de barulho, acumula até 100 e recebe 80% dos acréscimos no corredor. Ligar a lanterna gera 8 pontos e ligar o computador gera 12 antes do multiplicador. No estoque, a chance de avançar de 10 para 12 vai de 20% a 94%, e a de entrar no escritório vai de 40% a 99%. No corredor, as chances variam por personagem e por etapa.
+
+Iluminar a Gótica ou a Yandere no corredor por 8 s reduz em até 65 pontos percentuais a chance de avanço. Para a Gatinha, 6 s de luz aumentam a chance em até 65 pontos percentuais. A intensidade máxima se dissipa em 5 s. O áudio das câmeras continua sendo uma atração localizada.
 
 O temporizador de permanência de cada invasora conta desde a entrada dela no controle. O clique no armário decide se a permanência usa o tempo normal ou tardio. Em caso de eventos simultâneos, as ações registradas do jogador precedem a resolução das tentativas e dos ataques. O relógio usa tempo real transcorrido, inclusive com a aba oculta.
 

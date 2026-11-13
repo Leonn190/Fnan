@@ -301,22 +301,21 @@ window.NathGame.localConfig = {
     "flashlight": {
       "modifiers": {
         "gotica": {
-          "approach": -0.58,
-          "entry": -0.65,
+          "secondsToMax": 8,
+          "advanceDelta": -0.65,
           "stayShareDelta": -0.4
         },
         "yandere": {
-          "approach": -0.58,
-          "entry": -0.65,
+          "secondsToMax": 8,
+          "advanceDelta": -0.65,
           "stayShareDelta": -0.4
         },
         "gatinha": {
-          "approach": 0.18,
-          "entry": 0.12,
+          "secondsToMax": 6,
+          "advanceDelta": 0.65,
           "stayShareDelta": 0
         }
       },
-      "buildPerSecond": 0.25,
       "decayPerSecond": 0.2,
       "minimumAdvance": 0.05,
       "maximumAdvance": 0.995
@@ -329,10 +328,13 @@ window.NathGame.localConfig = {
       },
       "events": {
         "closetEnter": 5,
-        "closetExit": 5
+        "closetExit": 5,
+        "flashlightOn": 8,
+        "computerOn": 12
       },
+      "corridorMultiplier": 0.8,
       "decay": 3,
-      "max": 40
+      "max": 100
     }
   },
   "map": {
@@ -1012,24 +1014,66 @@ window.NathGame.localConfig = {
     },
     "attack": {
       "corridor": {
-        "approach": {
-          "base": 0.76,
-          "maxNoiseBonus": 0.2
+        "gotica": {
+          "approach": [
+            0.6,
+            0.85
+          ],
+          "entry": [
+            0.8,
+            0.99
+          ]
         },
-        "entry": {
-          "base": 0.86,
-          "maxNoiseBonus": 0.12
+        "yandere": {
+          "approach": [
+            0.6,
+            0.85
+          ],
+          "entry": [
+            0.8,
+            0.99
+          ]
+        },
+        "gatinha": {
+          "approach": [
+            0.15,
+            0.45
+          ],
+          "entry": [
+            0.25,
+            0.65
+          ]
+        },
+        "maid": {
+          "approach": [
+            0.65,
+            0.76
+          ],
+          "entry": [
+            0.85,
+            0.96
+          ]
+        },
+        "padrao": {
+          "approach": [
+            0.45,
+            0.8
+          ],
+          "entry": [
+            0.6,
+            0.98
+          ]
         }
       },
       "stock": {
-        "approach": {
-          "base": 0.76,
-          "maxNoiseBonus": 0.2
-        },
-        "entry": {
-          "base": 0.86,
-          "maxNoiseBonus": 0.12
-        }
+        "approach": [
+          0.2,
+          0.94
+        ],
+        "entry": [
+          0.4,
+          0.99
+        ]
       },
       "stayShare": 0.6
     },

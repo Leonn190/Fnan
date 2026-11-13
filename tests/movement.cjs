@@ -190,12 +190,15 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
   const { at, actor, output } = scenario({ gotica: { start: 10, interval: 10, routes: { EC: 100 } } },
     { random: () => 0 });
   for (const time of [10, 20, 30, 40, 50]) {
-    at(time);
+    at(time, { corridorLight: true });
     assert.equal(actor('gotica').approach, null);
+    assert.equal(actor('gotica').noise, 0);
+    assert.equal(actor('gotica').light, 0);
     assert.equal(actor('gotica').routeBonus, 22 + 2 * time / 10);
   }
   at(60);
   assert.equal(actor('gotica').approach, 'approach');
+  assert.equal(actor('gotica').noise, 0);
   assert.equal(actor('gotica').routeCompleted, true);
   assert.deepEqual(output('move').map(({ to }) => to), [15, 18, 19, 18, 15, 10]);
 }
@@ -415,6 +418,7 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
   at(35);
   assert.equal(actor('gotica').route, 'EL');
   assert.equal(actor('gotica').approach, null);
+  assert.equal(actor('gotica').noise, 0);
   assert.equal(actor('gotica').routeBonus, 22);
   closeTo(actor('gotica').remaining, 3.5);
   assert.deepEqual(output('move').map(({ to }) => to), [15, 14, 17]);
@@ -449,36 +453,84 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
   at(20);
   assert.deepEqual(game.officeState().room, ['maid']);
   at(22, {}, { type: 'closetEnter' });
+  assert(actor('maid').noise > 0);
   at(28.5);
   assert.deepEqual(game.officeState().room, []);
+  assert.equal(actor('maid').noise, 0);
   assert.equal(actor('maid').intervalPenalty, 1.25);
 }
 
-for (const key of ['gotica', 'yandere', 'gatinha', 'padrao', 'maid']) {
-  const actor = { key, rule: base.characters[key], position: 15, noise: 0, light: 0 };
+for (const [key, reaction] of Object.entries({ padrao: 3.5, gotica: 4.5, yandere: 4.5, gatinha: 4.5, maid: 2.5 })) {
+  for (const level of [5, 6]) {
+    const { at, actor, output, game } = scenario({
+      [key]: { start: key === 'maid' ? 15 : 7, interval: 20, routes: key === 'maid' ? undefined : { CV: 100 },
+        initialStationaryAttempts: undefined }
+    }, { random: () => 0, levels: { [key]: level } });
+    const loud = { radio: true, flashlight: true, corridorLight: true, viewMoving: true };
+    let time = 0;
+    for (let step = 0; step < (key === 'maid' ? 2 : 3); step++) {
+      time += actor(key).remaining;
+      at(time, loud);
+    }
+    assert.equal(actor(key).position, 13);
+    const deadline = time + reaction * (level === 6 ? .89 : 1);
+    at(deadline - .001, loud);
+    assert.equal(game.snapshot().outcome, null);
+    at(deadline, loud);
+    assert.deepEqual(output('loss'), [key]);
+  }
+}
+
+const corridorOdds = {
+  gotica: [[.60, .85], [.80, .99]], yandere: [[.60, .85], [.80, .99]],
+  gatinha: [[.15, .45], [.25, .65]], maid: [[.65, .76], [.85, .96]],
+  padrao: [[.45, .80], [.60, .98]]
+};
+const attackPhases = ['approach', 'entry'];
+for (const [key, corridor] of Object.entries(corridorOdds)) {
+  const actor = { key, rule: base.characters[key], position: 15, noise: 0, light: 0,
+    approach: { objective: 'corridor', phase: 'approach' } };
   const fx = createEffects(base, routes, [actor]);
-  for (const objective of ['corridor', 'stock']) {
-    for (const [phase, quiet, loud] of [['approach', .76, .96], ['entry', .86, .98]]) {
-      actor.noise = 0;
-      const odds = fx.attackOdds(actor, objective, phase);
-      closeTo(odds.advance, quiet);
-      closeTo(odds.stay, (1 - quiet) * .6);
-      closeTo(odds.abandon, (1 - quiet) * .4);
-      actor.noise = base.effects.noise.max;
-      closeTo(fx.attackOdds(actor, objective, phase).advance, loud);
+  const tables = { corridor, ...(key !== 'maid' && { stock: [[.20, .94], [.40, .99]] }) };
+  for (const [objective, table] of Object.entries(tables)) {
+    for (const [index, phase] of attackPhases.entries()) {
+      const [quiet, loud] = table[index];
+      for (const noise of [0, 50, 100]) {
+        actor.noise = noise;
+        const odds = fx.attackOdds(actor, objective, phase);
+        const expected = quiet + (loud - quiet) * noise / 100;
+        closeTo(odds.advance, expected);
+        closeTo(odds.stay, (1 - expected) * .6);
+        closeTo(odds.abandon, (1 - expected) * .4);
+      }
     }
   }
   actor.noise = 0;
-  fx.integrate(4, { corridorLight: true });
-  const [approach, entry] = {
-    gotica: [.18, .21], yandere: [.18, .21], gatinha: [.94, .98], padrao: [.76, .86], maid: [.76, .86]
-  }[key];
-  closeTo(fx.attackOdds(actor, 'corridor', 'approach').advance, approach);
-  closeTo(fx.attackOdds(actor, 'corridor', 'entry').advance, entry);
-  closeTo(fx.attackOdds(actor, 'stock', 'approach').advance, .76);
-  if (['gotica', 'yandere'].includes(key)) assert(fx.attackOdds(actor, 'corridor', 'entry').abandon > .6);
+  const repelled = ['gotica', 'yandere'].includes(key);
+  const attracted = key === 'gatinha';
+  const seconds = attracted ? 6 : 8;
+  fx.integrate(seconds / 2, { corridorLight: true });
+  closeTo(actor.light, repelled || attracted ? .5 : 0);
+  closeTo(fx.attackOdds(actor, 'corridor', 'entry').advance,
+    corridor[1][0] + (repelled ? -.325 : attracted ? .325 : 0));
+  actor.position = 14;
+  fx.integrate(seconds / 2, { corridorLight: true });
+  closeTo(actor.light, repelled || attracted ? 1 : 0);
+  for (const [index, phase] of attackPhases.entries()) {
+    const quiet = repelled ? [.05, .15][index] : attracted ? [.80, .90][index] : corridor[index][0];
+    const odds = fx.attackOdds(actor, 'corridor', phase);
+    closeTo(odds.advance, quiet);
+    closeTo(odds.stay, (1 - quiet) * (repelled ? .2 : .6));
+    if (key !== 'maid') closeTo(fx.attackOdds(actor, 'stock', phase).advance, tables.stock[index][0]);
+    actor.noise = 100;
+    const loud = corridor[index][1] - (repelled ? .65 : 0);
+    closeTo(fx.attackOdds(actor, 'corridor', phase).advance, attracted ? .995 : loud);
+    actor.noise = 0;
+  }
+  fx.integrate(2, {});
+  closeTo(actor.light, repelled || attracted ? .6 : 0);
   fx.integrate(5, {});
-  closeTo(fx.attackOdds(actor, 'corridor', 'approach').advance, .76);
+  closeTo(fx.attackOdds(actor, 'corridor', 'approach').advance, corridor[0][0]);
 }
 
 for (const key of ['gotica', 'yandere', 'gatinha']) {
@@ -493,6 +545,92 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
   assert.equal(actor(key).position, 14);
   at(30, { radio: false, corridorLight: true });
   assert.equal(actor(key).position, 13);
+}
+
+{
+  let draw = 0;
+  const { at, actor, game } = scenario({
+    gotica: { start: 7, interval: 10, routes: { CV: 100 } },
+    yandere: { start: 5, interval: 10, routes: { EL: 100 } },
+    gatinha: { start: 7, interval: 15, routes: { CV: 100 } },
+    maid: { start: 16, interval: 1000 }
+  }, { random: () => draw });
+  const quiet = { radio: false };
+  const beam = { ...quiet, flashlight: true, corridorLight: true };
+  const debug = key => game.debugSnapshot().actors.find(actor => actor.key === key);
+  const decay = seconds => Math.exp(-.03 * seconds);
+  at(0, { ...beam, radio: true, computer: true, viewMoving: true }, { type: 'computerPower' });
+  at(5, { ...beam, radio: true, computer: true, viewMoving: true }, { type: 'computerPower' });
+  assert(game.diagnostics().every(({ noise, light }) => noise === 0 && light === 0));
+  at(10, beam);
+  assert.equal(debug('gotica').attackActive, true);
+  assert.equal(debug('gotica').attackPath, 'corridor');
+  assert.equal(debug('gotica').noise, 0);
+  assert.equal(debug('gotica').light, 0);
+  assert.equal(debug('yandere').attackActive, false);
+
+  at(11, quiet, { type: 'computerPower' }); // Off.
+  at(11, beam, { type: 'computerPower' });  // On again, along with the flashlight.
+  closeTo(debug('gotica').noise, (8 + 12) * .8);
+  closeTo(debug('gotica').light, .125);
+  at(11, beam);
+  assert.equal(debug('gotica').noise, 16);
+  const advance = .60 + .25 * .16 - .65 * .125;
+  const stay = (1 - advance) * (.60 - .40 * .125);
+  closeTo(debug('gotica').attackOdds.advance, advance);
+  closeTo(debug('gotica').attackOdds.stay, stay);
+  closeTo(debug('gotica').attackOdds.abandon, 1 - advance - stay);
+
+  at(15.001, quiet);
+  assert.equal(debug('gatinha').attackPath, 'corridor');
+  assert.equal(debug('gatinha').noise, 0);
+  at(20, quiet);
+  assert.equal(actor('gotica').position, 14);
+  closeTo(debug('gotica').noise, 16 * decay(9));
+  assert.equal(actor('yandere').position, 10);
+  assert.equal(debug('yandere').noise, 0);
+  assert.equal(debug('yandere').attackPath, 'stock');
+  at(20, quiet, { type: 'closetEnter' });
+  const closetBeam = { ...quiet, closet: true, flashlight: true, clownLight: true };
+  at(20, closetBeam);
+  at(20, closetBeam);
+  closeTo(debug('gotica').noise, 16 * decay(9) + (5 + 8) * .8);
+  closeTo(debug('gatinha').noise, (5 + 8) * .8);
+  closeTo(debug('yandere').noise, 5 + 8);
+  at(20, quiet, { type: 'closetExit' });
+  closeTo(debug('yandere').noise, 18);
+  assert.equal(debug('maid').noise, 0);
+  assert.equal(debug('yandere').light, 0);
+
+  const stockAdvance = .20 + (.94 - .20) * .18;
+  closeTo(debug('yandere').attackOdds.advance, stockAdvance);
+  at(20, { ...quiet, leftLook: true });
+  closeTo(debug('yandere').attackOdds.advance, 0);
+  closeTo(debug('yandere').attackOdds.blocked, stockAdvance);
+  closeTo(debug('yandere').attackOdds.stay, (1 - stockAdvance) * .6);
+  at(20, quiet, { type: 'gate', id: 'G01' });
+  assert.equal(debug('gotica').attackOdds.advance, 0);
+  assert(debug('gotica').attackOdds.blocked > 0);
+  at(21, { ...beam, corridorLight: false }); // Closed gate prevents office activation.
+  closeTo(debug('yandere').noise, 18 * decay(1));
+  assert.equal(debug('gotica').light, 0);
+  draw = .99;
+  at(30.001, quiet);
+  for (const key of ['gotica', 'yandere', 'gatinha']) {
+    assert.equal(debug(key).noise, 0);
+    assert.equal(debug(key).light, 0);
+    assert.equal(debug(key).attackActive, false);
+    assert.equal(debug(key).attackOdds, null);
+  }
+  draw = 0;
+  let time = 30.001;
+  for (let step = 0; step < 4 && !debug('gotica').attackActive; step++) {
+    time += actor('gotica').remaining;
+    at(time, { radio: true });
+    if (!debug('gotica').attackActive) assert.equal(debug('gotica').noise, 0);
+  }
+  assert.equal(debug('gotica').attackActive, true);
+  assert.equal(debug('gotica').noise, 0);
 }
 
 {
@@ -515,17 +653,40 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
   closeTo(fx.weight(actor, 8, 2), 1);
   assert(fx.startAudio(10, 'CAM12'));
   assert.equal(actor.noise, 0);
-  fx.integrate(40, { radio: true, computer: true, viewMoving: true });
-  assert.equal(actor.noise, base.effects.noise.max);
+  fx.integrate(40, { radio: true, computer: true, viewMoving: true, corridorLight: true });
+  fx.addNoiseEvent('flashlightOn');
+  assert.equal(actor.noise, 0);
+  assert.equal(actor.light, 0);
+  actor.approach = { objective: 'corridor', phase: 'entry' };
+  fx.integrate(10, { radio: true, computer: true, viewMoving: true });
+  closeTo(actor.noise, 7 * .8 / .03 * -Math.expm1(-.03 * 10));
   const loud = fx.attackOdds(actor, 'corridor', 'entry').advance;
   fx.integrate(2, {});
   assert(fx.attackOdds(actor, 'corridor', 'entry').advance < loud);
   const before = actor.noise;
   fx.addNoiseEvent('closetExit');
-  closeTo(actor.noise - before, base.effects.noise.events.closetExit);
+  closeTo(actor.noise - before, 4);
   actor.position = 14;
   fx.integrate(30, { corridorLight: true });
   assert.equal(actor.light, 1);
+  fx.integrate(40, { radio: true });
+  assert.equal(actor.noise, 100);
+}
+
+{
+  const actors = ['stock', 'corridor'].map(objective => ({
+    key: 'gotica', position: objective === 'stock' ? 10 : 15, noise: 0, light: 0,
+    approach: { objective, phase: 'approach' }
+  }));
+  const [stock, corridor] = actors;
+  const fx = createEffects(base, routes, actors);
+  fx.integrate(2, { radio: true, computer: true, viewMoving: true, corridorLight: true });
+  closeTo(stock.noise, 7 / .03 * -Math.expm1(-.03 * 2));
+  closeTo(corridor.noise, stock.noise * .8);
+  assert.equal(stock.light, 0);
+  closeTo(corridor.light, .25);
+  fx.addNoiseEvent('computerOn');
+  closeTo(corridor.noise, stock.noise * .8);
 }
 
 for (const level of [3, 4, 10]) {
@@ -693,8 +854,8 @@ for (const [key, rule] of Object.entries(base.characters)) {
   for (const id of Object.keys(rule.routes ?? {})) {
     const config = structuredClone(base);
     config.characters = { [key]: { ...rule, routes: { [id]: 100 } } };
-    for (const objective of ['corridor', 'stock']) {
-      for (const phase of ['approach', 'entry']) config.movement.attack[objective][phase].base = 1;
+    for (const table of [config.movement.attack.corridor[key], config.movement.attack.stock]) {
+      for (const phase of attackPhases) table[phase] = [1, 1];
     }
     const levels = { [key]: 10, palhaca: 0, smores: 0, shadow: 0 };
     const rules = { ...base.night, secondsPerHour: 600, powerEnabled: false, sanityEnabled: false };

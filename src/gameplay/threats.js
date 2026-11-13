@@ -194,17 +194,16 @@ function createApproach(map, effects, random) {
   };
 
   function begin(actor, objective) {
-    const [preparation, imminent] = stages[objective];
-    if (actor.position === preparation) actor.approach = { objective, phase: 'approach' };
-    if (actor.position === imminent) {
-      actor.approach = { objective, phase: 'entry' };
-    }
+    if (actor.position !== stages[objective][0]) return;
+    actor.noise = 0;
+    actor.light = 0;
+    actor.approach = { objective, phase: 'approach' };
   }
 
   function options(actor) {
     const { objective, phase } = actor.approach;
-    const { advance, stay } = effects.attackOdds(actor, objective, phase);
-    return { to: stages[objective][phase === 'approach' ? 1 : 2], objective, advance, stay };
+    return { to: stages[objective][phase === 'approach' ? 1 : 2], objective,
+      ...effects.attackOdds(actor, objective, phase) };
   }
 
   function choose(actor) {
@@ -218,7 +217,7 @@ function createApproach(map, effects, random) {
     if (actor.position === map.office) {
       if (actor.approach) actor.approach.phase = 'invasion';
     } else if (actor.approach) {
-      begin(actor, actor.approach.objective);
+      if (actor.position === stages[actor.approach.objective][1]) actor.approach.phase = 'entry';
     } else if (actor.key === 'maid' && actor.position === map.back) {
       begin(actor, 'corridor');
     }

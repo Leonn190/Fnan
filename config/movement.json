@@ -28,12 +28,15 @@
   },
   "attack": {
     "corridor": {
-      "approach": { "base": 0.76, "maxNoiseBonus": 0.20 },
-      "entry": { "base": 0.86, "maxNoiseBonus": 0.12 }
+      "gotica": { "approach": [0.60, 0.85], "entry": [0.80, 0.99] },
+      "yandere": { "approach": [0.60, 0.85], "entry": [0.80, 0.99] },
+      "gatinha": { "approach": [0.15, 0.45], "entry": [0.25, 0.65] },
+      "maid": { "approach": [0.65, 0.76], "entry": [0.85, 0.96] },
+      "padrao": { "approach": [0.45, 0.80], "entry": [0.60, 0.98] }
     },
     "stock": {
-      "approach": { "base": 0.76, "maxNoiseBonus": 0.20 },
-      "entry": { "base": 0.86, "maxNoiseBonus": 0.12 }
+      "approach": [0.20, 0.94],
+      "entry": [0.40, 0.99]
     },
     "stayShare": 0.60
   },

@@ -9,12 +9,14 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   const { left, leftApproach, office, front, back } = map;
   const { difficulty, retreat, recovery } = movement;
   const routes = createRoutes(map);
+  const officeGate = routes.gate(front, office);
   const cameraIds = CAMERAS.map(cam => cam.id);
   let roster, actors, effects, threats, resources, shadow, smores, gates, electrical, input, now, outcome, sanityEnabled;
   let movementDelay, maxClosedGates, approach;
 
   const movementPaused = () => now < movementDelay;
   const gateControlsAvailable = () => maxClosedGates > 0 && !electrical.failed();
+  const officeLightAvailable = () => !gates.closed.has(officeGate) && !actors.some(actor => actor.position === office);
   const moveDue = actor => {
     const accelerated = actor.due - smores.intervalReduction();
     return accelerated > actor.scheduledAt ? accelerated : actor.due;
@@ -93,6 +95,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   function recover(actor, intervalFactor = recovery.intervalFactor) {
     actor.route = null;
     actor.approach = null;
+    actor.noise = 0;
+    actor.light = 0;
     actor.freeMoves = actor.rule.routes && intervalFactor === recovery.intervalFactor ? recovery.freeMoves : 0;
     schedule(actor, intervalFactor);
   }
@@ -264,7 +268,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
 
   function blockedAttackRetreat(actor, to) {
     if (actor.approach && (actor.rule.routes || (actor.position === front && to === office
-        && gates.closed.has(routes.gate(front, office))))) return actor.approach.objective;
+        && gates.closed.has(officeGate)))) return actor.approach.objective;
   }
 
   function finish(result, source) {
@@ -339,7 +343,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     });
     const { end, radio, won } = resources.segment(now, until, input, observation, gates.closed);
     const activeInput = { ...input, radio, corridorLight, clownLight, computer: computerOn && input.computer };
-    effects.integrate(end - now, activeInput);
+    effects.integrate(end - now, { ...activeInput,
+      corridorLight: corridorLight && officeLightAvailable() });
     if (!movementPaused()) {
       threats.integrate(end - now, activeInput);
       smores.integrate(end - now, radio);
@@ -367,7 +372,12 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       if (outcome) return;
     }
     const current = typeof nextInput === 'function' ? nextInput() : nextInput;
+    const flashlightActivated = current?.flashlight && !input.flashlight;
     input = { ...current };
+    if (flashlightActivated && resources.flashlightAvailable(now)
+        && (input.clownLight || officeLightAvailable())) {
+      effects.addNoiseEvent('flashlightOn');
+    }
     if (action?.type === 'closetEnter') input.smoresLooking = false;
     let accepted = false;
     switch (action?.type) {
@@ -384,7 +394,9 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       case 'computerPower': {
         const wasOn = resources.computerOn();
         resources.toggleComputer();
-        if (electrical.powerChanged(wasOn, resources.computerOn())) emit('electricalRestored');
+        const on = resources.computerOn();
+        if (!wasOn && on) effects.addNoiseEvent('computerOn');
+        if (electrical.powerChanged(wasOn, on)) emit('electricalRestored');
         break;
       }
       case 'returnToOffice': {
@@ -470,10 +482,10 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       }
     }
     if (actor.approach) {
-      const { to, objective, advance, stay } = approach.options(actor);
+      const { to, objective, advance, stay, abandon } = approach.options(actor);
       addAttempt(odds, actor, { to }, probability * advance);
       addOdds(odds, 'Ficar', probability * stay);
-      addRetreat(odds, actor, objective, probability * (1 - (advance + stay)));
+      addRetreat(odds, actor, objective, probability * abandon);
       return;
     }
     if (actor.route?.counterattack) {
@@ -493,8 +505,16 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const { pending, position } = actor;
     const odds = { Ficar: 0 };
     const expiryOdds = {};
+    const attackActive = Boolean(actor.approach) && !outcome;
     let status;
     let target;
+    let attackOdds = null;
+    if (attackActive && position !== office) {
+      const options = pending ? { to: pending.to, advance: 1, stay: 0, abandon: 0 } : approach.options(actor);
+      const { pass } = attemptOdds(actor, pending ?? { to: options.to });
+      attackOdds = { advance: options.advance * pass, stay: options.stay,
+        abandon: options.abandon, blocked: options.advance * (1 - pass) };
+    }
     const selections = actor.level && actor.rule.routes && !outcome ? attackRoutes.selectionOdds(actor) : [];
     if (!actor.level || outcome) {
       status = actor.level ? 'turno encerrado' : 'parada · nível 0';
@@ -536,7 +556,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       route: actor.rule.routes ? (actor.route?.id ?? 'A sortear') : 'Sem rota',
       routeOdds, required: actor.route?.required, lastReached: actor.route?.lastReached,
       completed: actor.route?.completed, bonus: actor.level ? navigationBonus(actor) : null,
-      target, status, odds, expiryOdds };
+      target, status, odds, expiryOdds, attackActive, attackPath: actor.approach?.objective ?? null,
+      noise: actor.noise ?? 0, light: actor.light ?? 0, attackOdds };
   }
 
   function debugSnapshot() {

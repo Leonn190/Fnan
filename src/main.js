@@ -417,13 +417,17 @@ function updateMovementDebug() {
       routes.className = 'debug-odds';
       const expiry = document.createElement('div');
       expiry.className = 'debug-odds debug-expiry';
-      details.append(status, routes, odds, expiry);
+      const attack = document.createElement('div');
+      attack.className = 'debug-status';
+      const attackOdds = document.createElement('div');
+      attackOdds.className = 'debug-odds';
+      details.append(status, routes, odds, expiry, attack, attackOdds);
       detail.append(details);
       group.append(row, detail);
       debugActors.append(group);
-      debugRows.set(actor.key, [...cells, status, routes, odds, expiry]);
+      debugRows.set(actor.key, [...cells, status, routes, odds, expiry, attack, attackOdds]);
     }
-    const [position, route, target, status, routes, odds, expiry] = debugRows.get(actor.key);
+    const [position, route, target, status, routes, odds, expiry, attack, attackOdds] = debugRows.get(actor.key);
     setText(position, actor.location);
     setText(route, actor.route);
     setText(target, positions.get(actor.target)?.name ?? '—');
@@ -435,6 +439,12 @@ function updateMovementDebug() {
     renderDebugOdds(routes, actor.routeOdds, 'Sorteio de rota');
     renderDebugOdds(odds, actor.odds);
     renderDebugOdds(expiry, actor.expiryOdds, 'Se expirar');
+    const path = { corridor: 'corredor', stock: 'estoque' }[actor.attackPath] ?? '—';
+    setText(attack, `Ataque ${actor.attackActive ? 'ativo' : 'inativo'} · ${path}`
+      + ` · barulho ${actor.noise.toFixed(1)} / ${config.effects.noise.max} · lanterna ${debugPercent.format(actor.light)}`);
+    const chances = actor.attackOdds;
+    renderDebugOdds(attackOdds, chances ? { Avançar: chances.advance, Esperar: chances.stay,
+      Desistir: chances.abandon, ...(chances.blocked > 0 && { Bloqueio: chances.blocked }) } : {});
   }
   setText(debugClown, `Palhaça · ${clown.counter.toFixed(1)} / ${clown.max} · ${clown.status}`);
   debugProgress.max = clown.max;
@@ -1796,6 +1806,7 @@ document.addEventListener('keydown', event => {
   if (key === 'w' && flashlightTarget()) {
     state.flashlightKey = true;
     updateFlashlight();
+    advanceGame(performance.now());
     return;
   }
   if (state.mode === 'office') {
@@ -1810,6 +1821,7 @@ document.addEventListener('keyup', event => {
   if (event.key.toLowerCase() !== 'w' || !state.flashlightKey) return;
   state.flashlightKey = false;
   updateFlashlight();
+  advanceGame(performance.now());
 });
 window.addEventListener('blur', () => {
   state.targetPan = 0;

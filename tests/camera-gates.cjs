@@ -1206,6 +1206,42 @@ assert.equal(nodes['office-light'].disabled, true);
 assert.equal(nodes['closet-light'].disabled, true);
 assert.equal(radioButton.disabled, true);
 office('dark');
+
+Object.assign(characterRules.gotica, { start: 7, interval: 10, routes: { CV: 100 } });
+customStart({ gotica: 1 });
+const attackStart = now;
+const gothicDebug = debugGroups[1].children[1].children[0].children;
+const attackStatus = gothicDebug[4];
+const attackChances = () => gothicDebug[5].children.map(cell => cell.textContent);
+assert.match(attackStatus.textContent, /Ataque inativo.*barulho 0\.0 \/ 100/);
+nodes['office-power'].fire('click');
+step(attackStart + 10_000);
+assert.match(attackStatus.textContent, /Ataque ativo · corredor · barulho 0\.0 \/ 100 · lanterna 0%/);
+assert.deepEqual(attackChances(), ['Avançar · 60%', 'Esperar · 24%', 'Desistir · 16%']);
+
+step(attackStart + 10_200);
+pressW();
+press('w', { repeat: true });
+officeLight.fire('pointerdown', pointer);
+assert(Math.abs(movement.diagnostics()[0].noise - 6.4) < 1e-8);
+officeLight.fire('pointerup', pointer);
+releaseW();
+nodes['office-power'].fire('click');
+assert(Math.abs(movement.diagnostics()[0].noise - 16) < 1e-8);
+step(attackStart + 10_400);
+assert.match(attackStatus.textContent, /barulho 15\.9 \/ 100/);
+assert.deepEqual(attackChances(), ['Avançar · 63,98%', 'Esperar · 21,61%', 'Desistir · 14,41%']);
+
+nodes['office-closet'].fire('click');
+step(attackStart + 11_900);
+press('d');
+step(attackStart + 12_550);
+const beforeClosetLight = movement.diagnostics()[0].noise;
+closetLight.fire('pointerdown', pointer);
+assert(Math.abs(movement.diagnostics()[0].noise - beforeClosetLight - 6.4) < 1e-8);
+assert.equal(movement.diagnostics()[0].light, 0);
+closetLight.fire('pointerup', pointer);
+console.log('PASS: attack debug, keyboard and pointer activation, closet flashlight and computer power noise.');
 }
 
 test().catch(error => {
