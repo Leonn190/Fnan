@@ -40,8 +40,8 @@
     ],
     "interval": 24,
     "reaction": 3.5,
-    "routes": ["C1", "C2", "C3", "E1", "E2", "E3"],
-    "audioModifier": -30,
+    "routes": { "CV": 19, "CC": 19, "EL": 16, "EC": 15, "EV": 10, "ES": 21 },
+    "audioModifier": -45,
     "doorChance": [
       70,
       94
@@ -84,8 +84,8 @@
     ],
     "interval": 26,
     "reaction": 4.5,
-    "routes": ["C1", "C2", "C3", "E1", "E2"],
-    "audioModifier": 50,
+    "routes": { "CV": 30, "CC": 30, "EL": 20, "EC": 10, "EV": 10 },
+    "audioModifier": 60,
     "staticChance": [
       75,
       99
@@ -129,8 +129,8 @@
     ],
     "interval": 21,
     "reaction": 4.5,
-    "routes": ["C1", "C2", "C3", "E1", "E2", "electrical"],
-    "audioModifier": 50,
+    "routes": { "CV": 22, "CC": 22, "EL": 10, "EC": 14, "EV": 8, "EE": 24 },
+    "audioModifier": 60,
     "firstIntervalFactor": 0.6
   },
   "gatinha": {
@@ -162,13 +162,8 @@
     ],
     "interval": 19,
     "reaction": 4.5,
-    "routes": ["C2", "E1", "E2"],
-    "routePaths": {
-      "C2": [[3, 7, 15, 14, 13]],
-      "E1": [[3, 5, 9, 10, 12, 13]],
-      "E2": [[3, 7, 15, 10, 12, 13]]
-    },
-    "audioModifier": 20,
+    "routes": { "CV": 48, "EL": 26, "EV": 26 },
+    "audioModifier": 30,
     "hidingPlaces": [
       23,
       24,
@@ -201,7 +196,7 @@
     "interval": 29,
     "reaction": 2.5,
     "targetBonus": 10,
-    "audioModifier": 20,
+    "audioModifier": 30,
     "initialStationaryAttempts": 1,
     "initialIntervalReduction": 10
   }

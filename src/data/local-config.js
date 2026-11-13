@@ -42,15 +42,15 @@ window.NathGame.localConfig = {
       ],
       "interval": 24,
       "reaction": 3.5,
-      "routes": [
-        "C1",
-        "C2",
-        "C3",
-        "E1",
-        "E2",
-        "E3"
-      ],
-      "audioModifier": -30,
+      "routes": {
+        "CV": 19,
+        "CC": 19,
+        "EL": 16,
+        "EC": 15,
+        "EV": 10,
+        "ES": 21
+      },
+      "audioModifier": -45,
       "doorChance": [
         70,
         94
@@ -93,14 +93,14 @@ window.NathGame.localConfig = {
       ],
       "interval": 26,
       "reaction": 4.5,
-      "routes": [
-        "C1",
-        "C2",
-        "C3",
-        "E1",
-        "E2"
-      ],
-      "audioModifier": 50,
+      "routes": {
+        "CV": 30,
+        "CC": 30,
+        "EL": 20,
+        "EC": 10,
+        "EV": 10
+      },
+      "audioModifier": 60,
       "staticChance": [
         75,
         99
@@ -144,15 +144,15 @@ window.NathGame.localConfig = {
       ],
       "interval": 21,
       "reaction": 4.5,
-      "routes": [
-        "C1",
-        "C2",
-        "C3",
-        "E1",
-        "E2",
-        "electrical"
-      ],
-      "audioModifier": 50,
+      "routes": {
+        "CV": 22,
+        "CC": 22,
+        "EL": 10,
+        "EC": 14,
+        "EV": 8,
+        "EE": 24
+      },
+      "audioModifier": 60,
       "firstIntervalFactor": 0.6
     },
     "gatinha": {
@@ -184,43 +184,12 @@ window.NathGame.localConfig = {
       ],
       "interval": 19,
       "reaction": 4.5,
-      "routes": [
-        "C2",
-        "E1",
-        "E2"
-      ],
-      "routePaths": {
-        "C2": [
-          [
-            3,
-            7,
-            15,
-            14,
-            13
-          ]
-        ],
-        "E1": [
-          [
-            3,
-            5,
-            9,
-            10,
-            12,
-            13
-          ]
-        ],
-        "E2": [
-          [
-            3,
-            7,
-            15,
-            10,
-            12,
-            13
-          ]
-        ]
+      "routes": {
+        "CV": 48,
+        "EL": 26,
+        "EV": 26
       },
-      "audioModifier": 20,
+      "audioModifier": 30,
       "hidingPlaces": [
         23,
         24,
@@ -253,7 +222,7 @@ window.NathGame.localConfig = {
       "interval": 29,
       "reaction": 2.5,
       "targetBonus": 10,
-      "audioModifier": 20,
+      "audioModifier": 30,
       "initialStationaryAttempts": 1,
       "initialIntervalReduction": 10
     }
@@ -300,20 +269,12 @@ window.NathGame.localConfig = {
   },
   "effects": {
     "cameraAudio": {
-      "duration": 7,
-      "cooldown": 12,
+      "duration": 3,
+      "cooldown": 10,
       "factors": [
         1,
         1,
-        0.15
-      ],
-      "excluded": [
-        8,
-        11,
-        22,
-        23,
-        24,
-        25
+        0.2
       ]
     },
     "static": {
@@ -839,6 +800,12 @@ window.NathGame.localConfig = {
       },
       {
         "from": 19,
+        "to": 18,
+        "type": "free",
+        "openingId": "P10"
+      },
+      {
+        "from": 19,
         "to": 20,
         "type": "free",
         "openingId": "P11",
@@ -909,11 +876,6 @@ window.NathGame.localConfig = {
     "front": 14,
     "back": 15,
     "leftApproach": 10,
-    "stockRequired": {
-      "origin": 19,
-      "via": 10,
-      "destination": 15
-    },
     "capacities": {
       "12": 1,
       "14": 2,
@@ -927,137 +889,124 @@ window.NathGame.localConfig = {
       "max": 1.5
     },
     "weight": 1,
+    "stayFactor": 0.25,
     "backtrackFactor": 0.5,
-    "retryWindow": 3,
-    "failedIntervalFactor": 0.5,
+    "retryWindow": 5,
+    "failedIntervalFactor": 0.35,
     "failedModifierRetention": 0.75,
     "routes": {
       "bonusByLevel": [
         {
           "minLevel": 1,
-          "bonus": 12
+          "bonus": 18
         },
         {
           "minLevel": 4,
-          "bonus": 16
+          "bonus": 24
         },
         {
           "minLevel": 8,
-          "bonus": 20
+          "bonus": 30
         }
       ],
-      "electricalChance": 0.15,
+      "bonusPerMove": 1,
       "definitions": {
-        "C1": {
+        "CV": {
           "objective": "corridor",
+          "target": 15,
           "paths": [
             [
-              1,
-              2,
               6,
-              15,
-              14,
-              13
-            ]
-          ]
-        },
-        "C2": {
-          "objective": "corridor",
-          "paths": [
-            [
-              1,
-              2,
-              7,
-              15,
-              14,
-              13
-            ]
-          ]
-        },
-        "C3": {
-          "objective": "corridor",
-          "paths": [
-            [
-              1,
-              19,
-              1,
-              2,
-              3,
-              5,
-              9,
-              10,
-              15,
-              14,
-              13
-            ]
-          ]
-        },
-        "E1": {
-          "objective": "stock",
-          "paths": [
-            [
-              1,
-              2,
-              3,
-              5,
-              9,
-              10,
-              12,
-              13
-            ]
-          ]
-        },
-        "E2": {
-          "objective": "stock",
-          "paths": [
-            [
-              1,
-              19,
-              1,
-              2,
-              3,
-              5,
-              9,
-              10,
-              12,
-              13
-            ]
-          ]
-        },
-        "E3": {
-          "objective": "stock",
-          "paths": [
-            [
-              1,
-              2,
-              3,
-              5,
-              8,
-              11,
-              10,
-              12,
-              13
+              15
             ],
             [
-              1,
-              19,
-              22,
-              11,
-              10,
-              12,
-              13
+              7,
+              15
             ]
           ]
         },
-        "electrical": {
-          "objective": "electrical",
+        "CC": {
+          "objective": "corridor",
+          "target": 15,
           "paths": [
             [
-              1,
               19,
-              21
+              18,
+              15
+            ],
+            [
+              19,
+              18,
+              17,
+              15
             ]
           ]
+        },
+        "EL": {
+          "objective": "stock",
+          "target": 10,
+          "paths": [
+            [
+              5,
+              9,
+              10
+            ]
+          ]
+        },
+        "EC": {
+          "objective": "stock",
+          "target": 10,
+          "paths": [
+            [
+              19,
+              18,
+              15,
+              10
+            ],
+            [
+              19,
+              18,
+              17,
+              15,
+              10
+            ]
+          ]
+        },
+        "EV": {
+          "objective": "stock",
+          "target": 10,
+          "paths": [
+            [
+              6,
+              15,
+              10
+            ],
+            [
+              7,
+              15,
+              10
+            ]
+          ]
+        },
+        "ES": {
+          "objective": "stock",
+          "target": 10,
+          "paths": [
+            [
+              8,
+              11,
+              10
+            ],
+            [
+              22,
+              11,
+              10
+            ]
+          ]
+        },
+        "EE": {
+          "objective": "electrical",
+          "target": 21
         }
       }
     },
@@ -1082,12 +1031,7 @@ window.NathGame.localConfig = {
           "maxNoiseBonus": 0.12
         }
       },
-      "stayShare": 0.6,
-      "stockCounterattack": {
-        "gate": "G01",
-        "chance": 0.75,
-        "route": "E2"
-      }
+      "stayShare": 0.6
     },
     "retreat": {
       "stock": [
@@ -1401,9 +1345,6 @@ window.NathGame.localConfig = {
       "closetGrowthFactor": 3,
       "musicReduction": 2,
       "growthIncreasePerLevel": 10
-    },
-    "electrical": {
-      "position": 21
     }
   }
 };

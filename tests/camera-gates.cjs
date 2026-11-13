@@ -972,20 +972,19 @@ assert.match(scream.src, /shadow\.ogg$/);
 assert(fs.existsSync(path.join(root, scream.src)));
 
 nodes['return-to-menu'].fire('click');
-Object.assign(characterRules.padrao, { start: 10, positions: [10, 12], interval: 5, routes: undefined, targetBonus: 0 });
+Object.assign(characterRules.padrao, { start: 5, positions: [5, 9, 10, 12], interval: 5, routes: { EL: 100 } });
 customStart({ padrao: 1 });
 const approachStart = now;
 const doorCreak = '04_FNAF4_Door_Creak.mp3';
 assert(!playedSamples.includes(doorCreak));
-step(approachStart + 3_500);
+step(approachStart + 10_500);
 assert.deepEqual(visibleOfficeLayers(), [officeLayer('doorway', 'original')]);
 assert.equal(playedSamples.at(-1), doorCreak);
-step(approachStart + 4_000);
+step(approachStart + 11_000);
 assert.equal(playedSamples.filter(file => file === doorCreak).length, 1);
 console.log('PASS: samples for both meow sets, flashlight, closet travel, doorway arrival, win and Shadow attack.');
 Object.assign(characterRules.yandere, {
-  start: 19, positions: [19, 21], interval: 10, routes: ['electrical'],
-  routePaths: { electrical: [[19, 21]] }
+  start: 19, positions: [19, 21], interval: 10, routes: { EE: 24 }
 });
 Object.assign(characterRules.padrao, { start: 1, positions: [1, 19], interval: 14 });
 customStart({ yandere: 1, padrao: 1 });

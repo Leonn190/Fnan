@@ -4,25 +4,26 @@
     "max": 1.5
   },
   "weight": 1,
+  "stayFactor": 0.25,
   "backtrackFactor": 0.5,
-  "retryWindow": 3,
-  "failedIntervalFactor": 0.5,
+  "retryWindow": 5,
+  "failedIntervalFactor": 0.35,
   "failedModifierRetention": 0.75,
   "routes": {
     "bonusByLevel": [
-      { "minLevel": 1, "bonus": 12 },
-      { "minLevel": 4, "bonus": 16 },
-      { "minLevel": 8, "bonus": 20 }
+      { "minLevel": 1, "bonus": 18 },
+      { "minLevel": 4, "bonus": 24 },
+      { "minLevel": 8, "bonus": 30 }
     ],
-    "electricalChance": 0.15,
+    "bonusPerMove": 1,
     "definitions": {
-      "C1": { "objective": "corridor", "paths": [[1, 2, 6, 15, 14, 13]] },
-      "C2": { "objective": "corridor", "paths": [[1, 2, 7, 15, 14, 13]] },
-      "C3": { "objective": "corridor", "paths": [[1, 19, 1, 2, 3, 5, 9, 10, 15, 14, 13]] },
-      "E1": { "objective": "stock", "paths": [[1, 2, 3, 5, 9, 10, 12, 13]] },
-      "E2": { "objective": "stock", "paths": [[1, 19, 1, 2, 3, 5, 9, 10, 12, 13]] },
-      "E3": { "objective": "stock", "paths": [[1, 2, 3, 5, 8, 11, 10, 12, 13], [1, 19, 22, 11, 10, 12, 13]] },
-      "electrical": { "objective": "electrical", "paths": [[1, 19, 21]] }
+      "CV": { "objective": "corridor", "target": 15, "paths": [[6, 15], [7, 15]] },
+      "CC": { "objective": "corridor", "target": 15, "paths": [[19, 18, 15], [19, 18, 17, 15]] },
+      "EL": { "objective": "stock", "target": 10, "paths": [[5, 9, 10]] },
+      "EC": { "objective": "stock", "target": 10, "paths": [[19, 18, 15, 10], [19, 18, 17, 15, 10]] },
+      "EV": { "objective": "stock", "target": 10, "paths": [[6, 15, 10], [7, 15, 10]] },
+      "ES": { "objective": "stock", "target": 10, "paths": [[8, 11, 10], [22, 11, 10]] },
+      "EE": { "objective": "electrical", "target": 21 }
     }
   },
   "attack": {
@@ -34,8 +35,7 @@
       "approach": { "base": 0.76, "maxNoiseBonus": 0.20 },
       "entry": { "base": 0.86, "maxNoiseBonus": 0.12 }
     },
-    "stayShare": 0.60,
-    "stockCounterattack": { "gate": "G01", "chance": 0.75, "route": "E2" }
+    "stayShare": 0.60
   },
   "retreat": {
     "stock": [9, 6, 11],

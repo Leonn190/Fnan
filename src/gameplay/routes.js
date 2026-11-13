@@ -44,7 +44,9 @@ function createRoutes(map) {
       const distance = result.get(from) + 1;
       if (distance > max) continue;
       for (const to of (towardOrigins ? incoming : neighbors).get(from)) {
-        if (!allowed(to) || result.has(to) || !passable(towardOrigins ? connection(to, from) : connection(from, to))) continue;
+        const start = towardOrigins ? to : from;
+        const end = towardOrigins ? from : to;
+        if (!allowed(to) || result.has(to) || !passable(connection(start, end), start, end)) continue;
         result.set(to, distance);
         queue.push(to);
       }
@@ -55,130 +57,130 @@ function createRoutes(map) {
   return { positions, neighbors, distances, connection, gate: (a, b) => connection(a, b)?.gateId };
 }
 
-function createAttackRoutes(config, graph, random, gateVersion, passable) {
+function createAttackRoutes(config, graph, random, passable, clear) {
   const { map, movement } = config;
-  const { definitions, electricalChance, bonusByLevel } = movement.routes;
-  const preparation = { corridor: map.back, stock: map.leftApproach };
-  const cache = new WeakMap();
-  const permitsEdge = (key, edge) => edge && (!edge.actors || edge.actors.includes(key));
-  const catalog = Object.fromEntries(Object.entries(config.characters).map(([key, rule]) => {
-    const allowed = new Set(rule.positions);
-    const options = (rule.routes ?? []).map(id => {
-      const { objective, paths } = definitions[id];
-      const variants = (rule.routePaths?.[id] ?? paths).filter(path => path.every((position, index) =>
-        allowed.has(position) && (index === 0 || permitsEdge(key, graph.connection(path[index - 1], position)))));
-      return { id, objective, variants };
-    }).filter(({ variants }) => variants.length);
-    return [key, options];
-  }));
-
-  function navigationDistances(actor, target, openOnly) {
-    return graph.distances([target], id => actor.allowed.has(id) && id !== map.office && id !== map.left
-      && !(actor.stockRequired && id === map.stockRequired.destination), Infinity,
-      edge => openOnly ? passable(actor, edge) : permitsEdge(actor.key, edge), true);
+  const { definitions, bonusByLevel, bonusPerMove } = movement.routes;
+  const permitsEdge = (actor, edge) => edge && (!edge.actors || edge.actors.includes(actor.key));
+  function routeOptions(actor) {
+    return Object.entries(actor.rule.routes ?? {}).map(([id, weight]) => {
+      const { objective, target, paths } = definitions[id];
+      const variants = paths?.filter(path => path.every((position, index) =>
+        actor.allowed.has(position) && (index === 0 || permitsEdge(actor, graph.connection(path[index - 1], position)))));
+      return { id, weight, objective, target, variants };
+    }).filter(({ target, variants }) => actor.allowed.has(target) && (variants === undefined || variants.length));
   }
 
-  function checkpointPath(actor, objective, path) {
-    const prepare = preparation[objective];
-    const checkpoints = prepare === undefined ? path : path.slice(0, path.indexOf(prepare) + 1);
-    const at = checkpoints.indexOf(actor.position);
-    if (at >= 0 && actor.position !== config.threats.electrical.position) {
-      return checkpoints.slice(at === checkpoints.length - 1 ? at : at + 1);
-    }
-    if (checkpoints.length < 2) return null;
-    // Join the route at an intermediate waypoint, keeping the final approach on the selected route.
-    const last = checkpoints.length - 1;
-    let join;
-    let nearest = Infinity;
-    for (let index = 1; index < last; index++) {
-      const distances = navigationDistances(actor, checkpoints[index], false);
-      const distance = distances.get(actor.position) ?? Infinity;
-      if (distance >= nearest) continue;
-      nearest = distance;
-      join = index;
-    }
-    if (join === undefined) return null;
-    return checkpoints.slice(join);
+  function canNavigate(actor, id) {
+    return actor.allowed.has(id) && id !== map.office && id !== map.front && id !== map.left
+      && !(actor.rule.initialStationaryAttempts !== undefined && id === actor.rule.start)
+      && !(actor.route?.id === 'CC' && id === map.leftApproach);
   }
 
-  const makeRoute = ({ id, objective }, checkpoints, counterattack = false) =>
-    ({ id, objective, checkpoints, index: 0, completed: false, counterattack });
-
-  function assign(actor, option, checkpoints, counterattack = false) {
-    actor.route = makeRoute(option, checkpoints, counterattack);
-    const { id } = option;
-    actor.lastRoute = id;
+  function distances(actor, target, usable) {
+    return graph.distances([target], id => canNavigate(actor, id) || id === actor.position, Infinity,
+      (edge, from, to) => usable(actor, edge, from, to), true);
   }
 
-  function candidates(actor) {
-    const options = catalog[actor.key].filter(({ id, objective }) => id !== actor.lastRoute
-      && (objective !== 'electrical' || electricalChance > 0))
-      .map(option => ({
-        ...option,
-        paths: option.variants.map(path => checkpointPath(actor, option.objective, path)).filter(Boolean)
-      })).filter(({ paths }) => paths.length);
-    const electrical = options.find(option => option.objective === 'electrical');
-    const regular = options.filter(option => option !== electrical);
-    return { electrical, regular };
+  function pathUsable(actor, path, start, usable) {
+    return path.slice(start + 1).every((to, index) => {
+      const from = path[start + index];
+      return usable(actor, graph.connection(from, to), from, to);
+    });
   }
 
-  function select(actor) {
-    const { electrical, regular } = candidates(actor);
-    const selected = electrical && (!regular.length || random() < electricalChance)
-      ? electrical : weighted(random, regular, () => 1);
+  function candidate(actor, option, usable) {
+    const { id, objective, target, variants, weight } = option;
+    actor = { ...actor, route: { id } };
+    let required = null;
+    if (variants) {
+      let nearest = Infinity;
+      for (const start of new Set(variants.map(path => path[0]))) {
+        if (!variants.some(path => path[0] === start && pathUsable(actor, path, 0, usable))) continue;
+        const distance = distances(actor, start, usable).get(actor.position) ?? Infinity;
+        if (distance >= nearest) continue;
+        nearest = distance;
+        required = start;
+      }
+      if (required === null) return;
+    } else if (!distances(actor, target, usable).has(actor.position)) return;
+    return { route: { id, objective, target, required, paths: variants?.filter(path => path[0] === required),
+      index: 0, lastReached: null, completed: false, moves: 0 }, weight };
+  }
+
+  function selectionOdds(actor, exclude) {
+    const options = routeOptions(actor).filter(({ id, objective, weight }) => id !== exclude && weight > 0
+      && !(objective === 'electrical' && actor.lastRoute === id && actor.route?.id !== id));
+    const candidates = usable => options.map(option => candidate(actor, option, usable)).filter(Boolean);
+    let eligible = candidates(passable);
+    // If every route is gated, keep a physical option so the actor can wait for a door.
+    if (!eligible.length && exclude === undefined) eligible = candidates(permitsEdge);
+    const total = eligible.reduce((sum, { weight }) => sum + weight, 0);
+    return eligible.map(({ route, weight }) => ({ route, probability: weight / total }));
+  }
+
+  function select(actor, exclude) {
+    const options = selectionOdds(actor, exclude);
+    const selected = weighted(random, options, option => option.probability);
     if (!selected) return;
-    const { paths } = selected;
-    assign(actor, selected, paths.length === 1 ? paths[0] : weighted(random, paths, () => 1));
+    actor.route = selected.route;
+    actor.lastRoute = selected.route.id;
   }
 
-  function selectionOdds(actor) {
-    const { electrical, regular } = candidates(actor);
-    const electricalShare = electrical ? (regular.length ? electricalChance : 1) : 0;
-    const variants = (option, share) => option.paths.map(path => ({
-      route: makeRoute(option, path), probability: share / option.paths.length
-    }));
-    return [
-      ...(electrical ? variants(electrical, electricalShare) : []),
-      ...regular.flatMap(option => variants(option, (1 - electricalShare) / regular.length))
-    ];
+  function internalSteps(actor, usable) {
+    const { paths, index } = actor.route;
+    const eligible = paths.filter(path => pathUsable(actor, path, index, usable));
+    const shortest = Math.min(...eligible.map(path => path.length));
+    return [...new Set(eligible.filter(path => path.length === shortest).map(path => path[index + 1]))];
   }
 
-  function counterattackOption(actor) {
-    const options = catalog[actor.key].filter(({ id, objective }) => objective === 'stock' && id !== actor.lastRoute);
-    const selected = options.find(({ id }) => id === movement.attack.stockCounterattack.route) ?? options[0];
-    if (selected && permitsEdge(actor.key, graph.connection(map.front, map.back))
-        && permitsEdge(actor.key, graph.connection(map.back, map.leftApproach))) return selected;
-  }
-
-  function counterattack(actor) {
-    const selected = counterattackOption(actor);
-    if (!selected) return false;
-    assign(actor, selected, [map.back, map.leftApproach], true);
-    return true;
-  }
-
-  const checkpoint = actor => actor.route?.checkpoints[actor.route.index];
-
-  function reach(actor) {
-    if (checkpoint(actor) !== actor.position) return false;
-    return ++actor.route.index === actor.route.checkpoints.length;
-  }
-
-  function distances(actor, target) {
-    const version = gateVersion();
-    let entry = cache.get(actor);
-    if (entry?.target !== target || entry.version !== version || entry.stockRequired !== actor.stockRequired) {
-      entry = { target, version, stockRequired: actor.stockRequired,
-        open: navigationDistances(actor, target, true), physical: null };
-      cache.set(actor, entry);
+  function nextSteps(actor, target) {
+    const { position, route } = actor;
+    for (const usable of [clear, passable, permitsEdge]) {
+      if (route?.paths && route.lastReached === position) {
+        const steps = internalSteps(actor, usable);
+        if (steps.length) return steps;
+      } else {
+        const distance = distances(actor, target, usable);
+        const steps = graph.neighbors.get(position).filter(to =>
+          distance.get(to) === distance.get(position) - 1
+          && usable(actor, graph.connection(position, to), position, to));
+        if (steps.length) return steps;
+      }
     }
-    if (entry.open.has(actor.position)) return entry.open;
-    entry.physical ??= navigationDistances(actor, target, false);
-    return entry.physical;
+    return [];
   }
 
-  const bonus = level => bonusByLevel.findLast(({ minLevel }) => level >= minLevel)?.bonus ?? 0;
-  return { select, selectionOdds, counterattack, counterattackOption, checkpoint, reach, distances, bonus };
+  function checkpoint(actor) {
+    const { route, position } = actor;
+    if (!route || route.completed) return;
+    if (!route.paths) return route.target;
+    if (route.lastReached === null) return route.required;
+    if (position !== route.lastReached) return route.lastReached;
+    return nextSteps(actor)[0];
+  }
+
+  function reach(actor, from) {
+    const { route, position } = actor;
+    if (!route || route.completed) return false;
+    if (route.paths) {
+      if (route.lastReached === null) {
+        if (position !== route.required) return false;
+      } else {
+        if (from !== route.lastReached) return false;
+        const paths = route.paths.filter(path => path[route.index + 1] === position);
+        if (!paths.length) return false;
+        route.paths = paths;
+        route.index++;
+      }
+    }
+    route.lastReached = position;
+    route.completed = position === route.target;
+    return route.completed;
+  }
+
+  const bonus = (level, moves = 0) =>
+    (bonusByLevel.findLast(({ minLevel }) => level >= minLevel)?.bonus ?? 0) + moves * bonusPerMove;
+  return { select, selectionOdds, checkpoint, reach, nextSteps, canNavigate, bonus };
 }
 
 Object.assign(window.NathGame, { factor, uniform, weighted, weightedChoices, drawWeighted, createRoutes, createAttackRoutes });

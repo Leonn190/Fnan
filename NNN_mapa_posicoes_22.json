@@ -3,7 +3,7 @@
   "versao": "mapa-posicoes-v4",
   "fonte": "config/map.json",
   "total_posicoes": 25,
-  "total_ligacoes": 34,
+  "total_ligacoes": 35,
   "ligacoes_bidirecionais": false,
   "posicoes": [
     {
@@ -259,7 +259,8 @@
       ],
       "conexoes": [
         15,
-        17
+        17,
+        19
       ]
     },
     {
@@ -272,6 +273,7 @@
       ],
       "conexoes": [
         1,
+        18,
         20,
         21,
         22

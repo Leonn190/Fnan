@@ -16,7 +16,7 @@ function createEffects(config, routes, actors) {
   function startAudio(now, camera) {
     if (!camera || now < readyAt) return false;
     const origins = [...routes.positions.values()].filter(p => p.cameras.includes(camera)).map(p => p.id);
-    const distance = routes.distances(origins, id => !cameraAudio.excluded.includes(id), cameraAudio.factors.length - 1);
+    const distance = routes.distances(origins, () => true, cameraAudio.factors.length - 1, undefined, true);
     lure = { camera, distance, ends: now + cameraAudio.duration };
     readyAt = now + cameraAudio.cooldown;
     for (const actor of actors) actor.audioRetention = 1;

@@ -55,6 +55,7 @@
     {"from": 15, "to": 18, "type": "free", "openingId": "P10"},
     {"from": 16, "to": 17, "type": "free", "openingId": "P06"},
     {"from": 17, "to": 18, "type": "free", "openingId": "P09"},
+    {"from": 19, "to": 18, "type": "free", "openingId": "P10"},
     {"from": 19, "to": 20, "type": "free", "openingId": "P11", "actors": ["padrao"]},
     {"from": 19, "to": 21, "type": "free", "openingId": "P12", "actors": ["yandere"]},
     {"from": 19, "to": 22, "type": "room"},
@@ -68,7 +69,6 @@
   "front": 14,
   "back": 15,
   "leftApproach": 10,
-  "stockRequired": {"origin": 19, "via": 10, "destination": 15},
   "capacities": {
     "12": 1,
     "14": 2,

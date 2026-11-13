@@ -198,7 +198,6 @@ function createApproach(map, effects, random) {
     if (actor.position === preparation) actor.approach = { objective, phase: 'approach' };
     if (actor.position === imminent) {
       actor.approach = { objective, phase: 'entry' };
-      if (actor.route) actor.route.completed = true;
     }
   }
 
@@ -220,10 +219,8 @@ function createApproach(map, effects, random) {
       if (actor.approach) actor.approach.phase = 'invasion';
     } else if (actor.approach) {
       begin(actor, actor.approach.objective);
-    } else if (actor.position === map.front || (!actor.rule.routes && actor.position === map.back)) {
+    } else if (actor.key === 'maid' && actor.position === map.back) {
       begin(actor, 'corridor');
-    } else if (actor.position === map.left) {
-      begin(actor, 'stock');
     }
   }
 

@@ -409,19 +409,26 @@ function updateMovementDebug() {
       status.className = 'debug-status';
       const odds = document.createElement('div');
       odds.className = 'debug-odds';
+      const routes = document.createElement('div');
+      routes.className = 'debug-odds';
       const expiry = document.createElement('div');
       expiry.className = 'debug-odds debug-expiry';
-      details.append(status, odds, expiry);
+      details.append(status, routes, odds, expiry);
       detail.append(details);
       group.append(row, detail);
       debugActors.append(group);
-      debugRows.set(actor.key, [...cells, status, odds, expiry]);
+      debugRows.set(actor.key, [...cells, status, routes, odds, expiry]);
     }
-    const [position, route, target, status, odds, expiry] = debugRows.get(actor.key);
+    const [position, route, target, status, routes, odds, expiry] = debugRows.get(actor.key);
     setText(position, actor.location);
     setText(route, actor.route);
     setText(target, positions.get(actor.target)?.name ?? '—');
-    setText(status, actor.status);
+    const required = positions.get(actor.required)?.name ?? '—';
+    const progress = actor.completed ? 'concluída' : positions.get(actor.lastReached)?.name ?? '—';
+    const routeDetails = actor.route !== 'Sem rota' && actor.bonus !== null
+      ? ` · início ${required} · progresso ${progress} · bônus +${actor.bonus}%` : '';
+    setText(status, actor.status + routeDetails);
+    renderDebugOdds(routes, actor.routeOdds, 'Sorteio de rota');
     renderDebugOdds(odds, actor.odds);
     renderDebugOdds(expiry, actor.expiryOdds, 'Se expirar');
   }

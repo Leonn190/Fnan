@@ -112,8 +112,9 @@ assert.equal(yandere().position, 21);
 // Constant inputs should yield the same resources and discrete events at any frame cadence.
 const cadences = [1 / 144, 1 / 30, 8.7, 180];
 const progress = cadences.map(interval => {
-  const input = { view: 'office', computer: true, gates: ['G01'] };
+  const input = { view: 'closet', computer: true, gates: ['G01'] };
   const run = scenario({ input, levels: { padrao: 1, gotica: 1 } });
+  run.at(0, input, { type: 'closetEnter' });
   for (let index = 1; index * interval < 170; index++) run.at(index * interval, input);
   run.at(170, input);
   return { frame: run.state(), moves: run.events.filter(([event]) => event === 'move')
@@ -386,8 +387,9 @@ for (const [level, ticket, duration] of [[1, .1499, 35], [10, .1999, 50]]) {
 const boosted = scenario({
   levels: { smores: 1, padrao: 1 }, input: pc,
   tune(config) {
-    config.characters.padrao.start = config.map.left;
-    config.characters.padrao.interval = 25;
+    config.characters.padrao.start = 5;
+    config.characters.padrao.routes = { EL: 100 };
+    config.characters.padrao.interval = 25 / 3;
     config.movement.jitter = { min: 0, max: 0 };
   }
 });
@@ -395,20 +397,19 @@ boosted.at(15, pc);
 boosted.at(16, ventLook);
 boosted.at(17, pc);
 near(boosted.game.diagnostics()[0].remaining, 5);
-boosted.at(21.99, pc);
+boosted.at(28.65, pc);
 assert.deepEqual(boosted.game.officeState().room, []);
-boosted.at(22, pc);
+boosted.at(28.67, pc);
 assert.deepEqual(boosted.game.officeState().room, ['original']);
-boosted.at(25.19, pc);
+boosted.at(31.86, pc);
 assert.equal(boosted.state().outcome, null);
-boosted.at(25.2, pc);
+boosted.at(31.87, pc);
 assert.equal(boosted.state().outcome, 'loss');
 console.log('PASS: Smores radio rolls, vent timing, silence, room duration and movement/reaction reductions.');
 
 function tuneElectrical(config) {
   Object.assign(config.characters.yandere, {
-    start: 19, positions: [19, 21], interval: 5, routes: ['electrical'],
-    routePaths: { electrical: [[19, 21]] }
+    start: 19, positions: [19, 21], interval: 5, routes: { EE: 24 }
   });
   config.movement.jitter = { min: 0, max: 0 };
 }
@@ -453,7 +454,7 @@ for (const level of [1, 4]) {
   // Release the next unplanned move from observation. Electrical is still the last route.
   run.at(arrival + 1 + next * 2 + 2, { radio: true });
   assert.equal(run.state().electricalFault, false);
-  assert.equal(run.game.diagnostics()[0].lastRoute, 'electrical');
+  assert.equal(run.game.diagnostics()[0].lastRoute, 'EE');
   assert.equal(run.events.filter(([type]) => type === 'electricalFault').length, 1);
 }
 
@@ -481,7 +482,7 @@ assert.equal(faultDuringBlackout.state().computerOn, false);
 for (const find of [true, false]) {
   const run = scenario({
     levels: { shadow: 1, yandere: 1 },
-    draws: [0, 0, .99, 0, ...Array(100).fill(.99)],
+    draws: [0, 0, .99, 0, .5, .5, ...Array(100).fill(.99)],
     tune(config) { tuneElectrical(config); config.sanity.initial = 20; }
   });
   run.returnAt(0);

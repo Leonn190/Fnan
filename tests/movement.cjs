@@ -41,9 +41,11 @@ function scenario(overrides = {}, { levels, random = () => .5, gates = [], tune 
 
 const routes = createRoutes(base.map);
 assert.equal(routes.positions.size, 25);
-assert.equal(base.map.edges.length, 34);
+assert.equal(base.map.edges.length, 35);
 assert.deepEqual(routes.neighbors.get(2).sort((a, b) => a - b), [1, 3, 6, 7]);
 assert.equal(routes.gate(19, 1), 'G06');
+assert.equal(routes.connection(19, 18).openingId, 'P10');
+assert.equal(routes.connection(18, 19), routes.connection(19, 18));
 assert.equal(routes.connection(19, 15), undefined);
 assert.equal(routes.connection(15, 19), undefined);
 assert.deepEqual(routes.connection(19, 20).actors, ['padrao']);
@@ -112,6 +114,7 @@ const gateCrossings = {
   G06: [[1, 19]], G07: [[3, 4], [3, 24]], G08: [[3, 5]], G09: [[9, 10]]
 };
 for (const [id, crossings] of Object.entries(gateCrossings)) {
+  if (id === 'G01') continue; // Office entry is verified after completing a corridor route.
   for (const [a, b] of crossings) for (const [from, to] of id === 'G01' ? [[a, b]] : [[a, b], [b, a]]) {
     assert.equal(routes.gate(from, to), id);
     const { game, at, actor } = scenario({ gatinha: { start: from, interval: 10, positions: [from, to] } },
@@ -149,114 +152,122 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
 
 {
   const expected = {
-    padrao: ['C1', 'C2', 'C3', 'E1', 'E2', 'E3'],
-    gotica: ['C1', 'C2', 'C3', 'E1', 'E2'],
-    yandere: ['C1', 'C2', 'C3', 'E1', 'E2', 'electrical'],
-    gatinha: ['C2', 'E1', 'E2'], maid: []
+    padrao: { CV: 19, CC: 19, EL: 16, EC: 15, EV: 10, ES: 21 },
+    gotica: { CV: 30, CC: 30, EL: 20, EC: 10, EV: 10 },
+    yandere: { CV: 22, CC: 22, EL: 10, EC: 14, EV: 8, EE: 24 },
+    gatinha: { CV: 48, EL: 26, EV: 26 }, maid: {}
   };
-  const routing = createAttackRoutes(base, routes, () => 0, () => 0, () => true);
-  assert.deepEqual([1, 3, 4, 7, 8, 10].map(routing.bonus), [12, 12, 16, 16, 20, 20]);
-  for (const [key, ids] of Object.entries(expected)) {
+  const open = (_, edge) => Boolean(edge);
+  const routing = createAttackRoutes(base, routes, () => 0, open, open);
+  assert.deepEqual([1, 3, 4, 7, 8, 10].map(level => routing.bonus(level)), [18, 18, 24, 24, 30, 30]);
+  assert.equal(routing.bonus(10, 120), 150);
+  for (const [key, weights] of Object.entries(expected)) {
     const rule = base.characters[key];
-    assert.deepEqual(rule.routes ?? [], ids);
-    for (const id of ids) {
-      const paths = rule.routePaths?.[id] ?? base.movement.routes.definitions[id].paths;
-      assert.equal(paths.length, id === 'E3' ? 2 : 1);
-      for (const path of paths) {
-        assert.equal(path[0], rule.start);
-        path.forEach((position, index) => {
-          assert(rule.positions.includes(position));
-          if (!index) return;
-          const edge = routes.connection(path[index - 1], position);
-          assert(edge);
-          if (edge.actors) assert(edge.actors.includes(key));
-        });
-      }
+    const actor = { key, rule, allowed: new Set(rule.positions), position: rule.start };
+    const odds = routing.selectionOdds(actor);
+    assert.deepEqual(odds.map(({ route }) => route.id), Object.keys(weights));
+    for (const { route, probability } of odds) {
+      closeTo(probability, weights[route.id] / 100);
+      assert.equal(route.required, route.id === 'EE' ? null : route.paths[0][0]);
+      assert(route.paths?.every(path => path.at(-1) === route.target) ?? route.target === 21);
     }
   }
-
-  for (const [draw, checkpoints] of [[.2, [2, 3, 5, 8, 11, 10]], [.8, [19, 22, 11, 10]]]) {
-    const routing = createAttackRoutes(base, routes, () => draw, () => 0, () => true);
-    const rule = base.characters.padrao;
-    const actor = { key: 'padrao', allowed: new Set(rule.positions), position: 1, lastRoute: null };
-    const onlyExterior = structuredClone(base);
-    onlyExterior.characters.padrao.routes = ['E3'];
-    const exterior = createAttackRoutes(onlyExterior, routes, () => draw, () => 0, () => true);
-    exterior.select(actor);
-    assert.equal(actor.route.id, 'E3');
-    assert.deepEqual(actor.route.checkpoints, checkpoints);
-    actor.route = null;
-    exterior.select(actor);
-    assert.equal(actor.route, null); // Both variants share the same route identity.
-    routing.select(actor);
-    assert.notEqual(actor.route.id, 'E3');
+  const rule = base.characters.padrao;
+  for (const position of [5, 19]) {
+    const actor = { key: 'padrao', rule, allowed: new Set(rule.positions), position };
+    const { route } = routing.selectionOdds(actor).find(({ route }) => route.id === 'ES');
+    assert.equal(route.required, position === 5 ? 8 : 22);
   }
+  const gatinha = base.characters.gatinha;
+  const actor = { key: 'gatinha', rule: gatinha, allowed: new Set(gatinha.positions), position: 3 };
+  const closedVip = (_, edge) => open(null, edge) && edge.gateId !== 'G02';
+  const available = createAttackRoutes(base, routes, () => 0, closedVip, closedVip).selectionOdds(actor);
+  assert.deepEqual(available.map(({ route, probability }) => [route.id, probability]), [['EL', 1]]);
 }
 
-// A deviation keeps the checkpoint. A return to the route gets the weight bonus.
-for (const [level, expected] of [[2, 1], [8, 3]]) {
-  let draw = .214;
-  const { at, actor } = scenario({ gotica: { start: 2, interval: 10, routes: ['E1'] } },
-    { levels: { gotica: level }, random: () => draw });
-  at(10);
-  assert.equal(actor('gotica').position, expected);
-  assert.equal(actor('gotica').checkpoint, expected === 1 ? 3 : 5);
-  if (expected === 1) {
-    draw = 0;
-    at(20);
-    assert.equal(actor('gotica').position, 2);
-    assert.equal(actor('gotica').route, 'E1');
-    assert.equal(actor('gotica').checkpoint, 3);
-  }
-}
-
+// Beginning at the stockroom still requires CAM12. Its intermediate corridor visit cannot start an attack.
 {
-  const { at, actor, output } = scenario({ gatinha: { start: 7, interval: 10, routes: ['C2', 'E2'] } },
-    { random: () => .4, gates: ['G02'] });
-  at(10);
-  assert.equal(actor('gatinha').route, 'C2');
-  assert.match(actor('gatinha').stopped, /porta fechada/);
-  at(12.999);
-  assert.equal(actor('gatinha').route, 'C2');
-  at(13);
-  assert.equal(actor('gatinha').route, 'E2');
-  assert.equal(actor('gatinha').freeMoves, 0);
-  at(13);
-  assert.equal(actor('gatinha').route, 'E2');
+  const { at, actor, output } = scenario({ gotica: { start: 10, interval: 10, routes: { EC: 100 } } },
+    { random: () => 0 });
+  for (const time of [10, 20, 30, 40, 50]) {
+    at(time);
+    assert.equal(actor('gotica').approach, null);
+    assert.equal(actor('gotica').routeBonus, 18 + time / 10);
+  }
+  at(60);
+  assert.equal(actor('gotica').approach, 'approach');
+  assert.equal(actor('gotica').routeCompleted, true);
+  assert.deepEqual(output('move').map(({ to }) => to), [15, 18, 19, 18, 15, 10]);
+}
+
+for (const reason of ['observada', 'lotada']) {
+  const input = reason === 'observada' ? { camera: 'CAM06' } : {};
+  const { at, actor, output } = scenario({ gatinha: { start: 7, interval: 10, routes: { CV: 48, EL: 26 } } }, {
+    random: () => 0,
+    tune(config) { if (reason === 'lotada') config.map.capacities[15] = 0; }
+  });
+  at(10, input);
+  assert.equal(actor('gatinha').route, 'CV');
+  assert.match(actor('gatinha').stopped, new RegExp(reason));
+  at(14.999, input);
+  assert.equal(actor('gatinha').route, 'CV');
+  at(15, input);
+  assert.equal(actor('gatinha').route, 'EL');
+  assert.equal(actor('gatinha').routeBonus, 18);
+  closeTo(actor('gatinha').remaining, 3.5);
   assert.deepEqual(output('move'), []);
 }
 
-for (const input of [{ camera: 'CAM06' }, {}]) {
-  const { at, actor } = scenario({ gatinha: { start: 7, interval: 10, routes: ['C2', 'E2'] } },
-    { random: () => .4, tune(config) { config.map.capacities[15] = input.camera ? 3 : 0; } });
-  at(10, input);
-  assert.match(actor('gatinha').stopped, input.camera ? /observada/ : /lotada/);
-  at(13, input);
-  assert.equal(actor('gatinha').route, 'C2');
-  assert.equal(actor('gatinha').audioRetention, .75);
-}
-
-{
-  const { at, actor } = scenario({ gatinha: { start: 7, interval: 10, routes: ['C2', 'E2'] } },
-    { random: () => .4, gates: ['G02'] });
-  const observed = { camera: 'CAM06' };
-  at(10, observed);
-  at(11, observed, { type: 'gate', id: 'G02' });
-  at(12, observed, { type: 'gate', id: 'G02' });
-  at(13, observed);
-  assert.equal(actor('gatinha').route, 'C2'); // Observation outlasted the window, but the gate reopened.
-}
-
-{
-  const { at, actor } = scenario({ yandere: { start: 1, interval: 10, positions: [1, 19] } }, { gates: ['G06'] });
+for (const reopen of [true, false]) {
+  const { at, actor } = scenario({ gatinha: { start: 3, interval: 10, routes: { CV: 48, EL: 26 } } },
+    { random: () => 0 });
   at(10);
-  assert.match(actor('yandere').stopped, /porta fechada/);
-  at(13);
-  closeTo(actor('yandere').remaining, 5);
-  at(17.99, {}, { type: 'gate', id: 'G06' });
-  assert.equal(actor('yandere').position, 1);
-  at(18);
-  assert.equal(actor('yandere').position, 19);
+  assert.equal(actor('gatinha').position, 7);
+  assert.equal(actor('gatinha').routeBonus, 19);
+  at(11, {}, { type: 'gate', id: 'G02' });
+  at(20);
+  assert.match(actor('gatinha').stopped, /porta fechada/);
+  if (reopen) {
+    at(24.999, {}, { type: 'gate', id: 'G02' });
+    assert.equal(actor('gatinha').position, 15);
+    assert.equal(actor('gatinha').approach, 'approach');
+  } else {
+    at(25);
+    assert.equal(actor('gatinha').position, 7);
+    assert.equal(actor('gatinha').route, 'EL');
+    assert.equal(actor('gatinha').routeBonus, 18);
+    closeTo(actor('gatinha').remaining, 3.5);
+  }
+}
+
+{
+  const { at, actor, output } = scenario({ gotica: { start: 19, interval: 10, routes: { CC: 100 } } }, {
+    random: () => 0,
+    tune(config) {
+      config.map.edges.find(({ from, to }) => from === 15 && to === 18).gateId = 'G09';
+    }
+  });
+  at(10);
+  at(11, {}, { type: 'gate', id: 'G09' });
+  at(30);
+  assert.deepEqual(output('move').map(({ to }) => to), [18, 17, 15]);
+  assert.equal(actor('gotica').approach, 'approach');
+}
+
+{
+  let draw = .6;
+  const { at, game, actor, output } = scenario({ gatinha: { start: 7, interval: 10, routes: { CV: 100 } } },
+    { random: () => draw });
+  at(10);
+  assert.equal(actor('gatinha').position, 25);
+  assert.equal(actor('gatinha').lastReached, 7);
+  assert.equal(actor('gatinha').checkpoint, 7);
+  closeTo(game.debugSnapshot().actors[0].odds['VIP 2'], 1.19 / (1.19 + .25));
+  draw = 0;
+  at(30);
+  assert.deepEqual(output('move').map(({ to }) => to), [25, 7, 15]);
+  assert.equal(actor('gatinha').routeBonus, 21);
+  assert.equal(actor('gatinha').routeCompleted, true);
 }
 
 for (const [level, roll, opens] of [[3, .6999, true], [3, .70, false], [4, .9399, true], [4, .94, false]]) {
@@ -348,12 +359,16 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
 
 {
   const { at, actor } = scenario({
-    padrao: { start: 10, interval: 10, routes: ['E1'] },
-    gotica: { start: 10, interval: 10, routes: ['E1'] }
+    padrao: { start: 9, interval: 10, routes: { EV: 100 } },
+    gotica: { start: 9, interval: 10, routes: { EV: 100 } }
   }, { random: () => 0 });
-  at(10, { leftLook: true });
+  at(50);
   assert.equal(actor('padrao').position, 10);
-  at(11);
+  assert.equal(actor('gotica').position, 10);
+  assert.equal(actor('gotica').approach, 'approach');
+  at(60, { leftLook: true });
+  assert.match(actor('padrao').stopped, /porta esquerda observada/);
+  at(61);
   assert.equal(actor('padrao').position, 12);
   assert.equal(actor('gotica').position, 10);
   assert.match(actor('gotica').stopped, /lotada/);
@@ -361,223 +376,72 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
 
 {
   const { game, at, actor } = scenario({
-    padrao: { start: 15, interval: 10, routes: ['C1'] },
-    gotica: { start: 15, interval: 10, routes: ['C1'] },
-    gatinha: { start: 15, interval: 10, routes: ['C2'] }
+    padrao: { start: 6, interval: 10, routes: { CV: 100 } },
+    gotica: { start: 6, interval: 10, routes: { CV: 100 } },
+    yandere: { start: 6, interval: 10, routes: { CV: 100 } },
+    gatinha: { start: 7, interval: 10, routes: { CV: 100 } }
   }, { random: () => 0 });
-  at(10);
-  assert.equal(game.officeState().front.length, 2);
-  assert.equal(actor('gatinha').position, 15);
-  assert.match(actor('gatinha').stopped, /lotada/);
-}
-
-{
-  const { at, game, actor } = scenario({
-    padrao: { start: 6, interval: 10 }, gotica: { start: 6, interval: 10 },
-    yandere: { start: 6, interval: 10 }, gatinha: { start: 7, interval: 10 }
-  }, { random: () => .45 });
   at(10);
   assert.equal(game.officeState().back.length, 3);
   assert.equal(actor('gatinha').position, 7);
   assert.match(actor('gatinha').stopped, /lotada/);
+  at(20);
+  assert.equal(game.officeState().front.length, 2);
+  assert.match(actor('yandere').stopped, /lotada/);
 }
 
 {
-  const { game, at, actor, output } = scenario({
-    maid: { start: 14, interval: 10, initialStationaryAttempts: undefined },
-    gotica: { start: 10, interval: 11, routes: ['E1'] }
-  }, { random: () => 0 });
-  at(10);
-  at(11, { leftLook: true });
-  assert.equal(actor('gotica').position, 10);
-  at(12);
-  assert.match(actor('gotica').stopped, /invasão em andamento/);
-  assert.deepEqual(game.officeState().room, ['maid']);
-  at(12, {}, { type: 'closetEnter' });
-  at(14, {}, { type: 'gate', id: 'G01' });
-  at(18.499);
-  assert.equal(actor('maid').position, 13);
-  at(18.5);
-  assert.equal(actor('maid').position, 6);
-  assert.equal(actor('maid').previous, routes.positions.get(13).name);
-  assert.equal(actor('maid').remaining, 12.5);
-  assert.equal(actor('maid').freeMoves, 0);
-  assert.deepEqual(output('move').filter(({ actor }) => actor.key === 'maid').map(({ from, to }) => [from, to]),
-    [[14, 13], [13, 6]]);
-  assert.deepEqual(output('loss'), []);
-}
-
-{
-  const { at, actor, output } = scenario({ gotica: { start: 10, interval: 10, routes: ['E1'] } },
+  const { at, actor, output } = scenario({ gotica: { start: 7, interval: 10, routes: { CV: 30, EL: 20 } } },
     { gates: ['G01'], random: () => 0 });
   at(10);
-  assert.equal(actor('gotica').position, 12);
+  assert.equal(actor('gotica').approach, 'approach');
   assert.equal(actor('gotica').routeCompleted, true);
-  assert.equal(actor('gotica').approach, 'entry');
-  assert.equal(actor('gotica').freeMoves, 0);
   at(20);
-  assert.equal(actor('gotica').position, 13);
-  assert.deepEqual(output('move').map(({ from, to }) => [from, to]), [[10, 12], [12, 13]]);
-}
-
-for (const key of ['padrao', 'gotica', 'yandere', 'gatinha', 'maid']) {
-  for (const roll of [.7499, .75]) {
-    let draw = 0;
-    const { at, actor, output } = scenario({ [key]: { start: 14, interval: 10, initialStationaryAttempts: undefined } },
-      { random: () => draw, gates: ['G01'] });
-    if (key === 'padrao') {
-      // Advance at the noise-adjusted odds, but miss the forced-opening roll.
-      draw = .75;
-    }
-    at(10);
-    assert.match(actor(key).stopped, /porta fechada/);
-    at(12.999);
-    assert.equal(actor(key).position, 14);
-    draw = roll;
-    at(13);
-    if (key === 'maid' || roll === .75) {
-      assert.equal(actor(key).counterattack, false);
-      assert.equal(actor(key).position, 7);
-      assert.equal(actor(key).intervalPenalty, 1.25);
-      continue;
-    }
-    assert.equal(actor(key).position, 14);
-    assert.equal(actor(key).route, 'E2');
-    assert.equal(actor(key).counterattack, true);
-    assert.equal(actor(key).freeMoves, 0);
-    assert.equal(actor(key).intervalPenalty, 1);
-    draw = 0;
-    at(23);
-    assert.equal(actor(key).position, 15);
-    assert.equal(actor(key).approach, null);
-    at(33);
-    assert.equal(actor(key).position, 10);
-    assert.equal(actor(key).approach, 'approach');
-    at(43);
-    assert.equal(actor(key).position, 12);
-    assert.equal(actor(key).routeCompleted, true);
-    at(53);
-    assert.equal(actor(key).position, 13);
-    assert.deepEqual(output('move').map(({ from, to }) => [from, to]), [[14, 15], [15, 10], [10, 12], [12, 13]]);
-  }
+  assert.equal(actor('gotica').approach, 'entry');
+  at(30);
+  assert.match(actor('gotica').stopped, /porta fechada/);
+  at(34.999);
+  assert.equal(actor('gotica').position, 14);
+  at(35);
+  assert.equal(actor('gotica').route, 'EL');
+  assert.equal(actor('gotica').approach, null);
+  assert.equal(actor('gotica').routeBonus, 18);
+  closeTo(actor('gotica').remaining, 3.5);
+  assert.deepEqual(output('move').map(({ to }) => to), [15, 14, 17]);
 }
 
 {
   let draw = 0;
-  const { at, actor, output } = scenario({ gotica: { start: 15, interval: 10, routes: ['C1', 'E2'] } },
+  const { at, actor, output } = scenario({ gotica: { start: 7, interval: 10, routes: { CV: 100 } } },
     { random: () => draw });
   const quiet = { radio: false };
   at(0, quiet);
-  at(10, quiet);
-  assert.equal(actor('gotica').routeCompleted, true);
-  draw = .90; // Stay at the imminent stage in silence.
   at(20, quiet);
-  assert.equal(actor('gotica').position, 14);
-  assert.equal(actor('gotica').route, 'C1');
-  assert.equal(actor('gotica').freeMoves, 0);
-  draw = .99; // Abandon the approach.
+  draw = .90;
   at(30, quiet);
+  assert.equal(actor('gotica').position, 14);
+  draw = .99;
+  at(40, quiet);
   assert.equal(actor('gotica').position, 7);
   assert.equal(actor('gotica').route, null);
-  assert.equal(actor('gotica').lastRoute, 'C1');
   assert.equal(actor('gotica').freeMoves, 1);
   closeTo(actor('gotica').remaining, 12.5);
-  at(42.499, quiet);
-  assert.equal(actor('gotica').freeMoves, 1);
-  at(42.5, quiet);
+  at(52.5, quiet);
   assert.equal(actor('gotica').position, 7);
   assert.equal(actor('gotica').freeMoves, 0);
-  assert.equal(actor('gotica').intervalPenalty, 1);
-  at(52.5, quiet);
-  assert.equal(actor('gotica').route, 'E2');
-  assert.deepEqual(output('move').map(({ from, to }) => [from, to]), [[15, 14], [14, 7]]);
-}
-
-for (const [key, route, start, destination] of [
-  ['padrao', 'E1', 10, 11], ['padrao', 'E1', 12, 11], ['gatinha', 'E1', 10, 9],
-  ['gatinha', 'E1', 12, 9], ['gatinha', 'C2', 15, 7], ['gatinha', 'C2', 14, 7],
-  ['maid', undefined, 15, 7], ['maid', undefined, 14, 7]
-]) {
-  const { at, actor, output } = scenario({ [key]: { start, interval: 10, initialStationaryAttempts: undefined,
-    ...(route ? { routes: [route] } : {}) } }, { random: () => .999 });
-  at(0, { radio: false });
-  at(10, { radio: false });
-  assert.equal(actor(key).position, destination);
-  assert.equal(actor(key).route, null);
-  assert.equal(output('move')[0].retreat, route === 'E1' ? 'stock' : 'corridor');
-}
-
-for (const blocked of ['open', 'expire']) {
-  let draw = .99;
-  const { at, actor } = scenario({ gatinha: { start: 14, interval: 10, routes: ['C2', 'E2'] } },
-    { random: () => draw, gates: ['G02'] });
-  at(0, { radio: false });
-  at(10, { radio: false });
-  draw = .4; // From VIP2, attempt the closed G02 on the free move.
-  at(22.5);
-  assert.equal(actor('gatinha').freeMoves, 1);
-  assert.match(actor('gatinha').stopped, /porta fechada/);
-  if (blocked === 'open') at(24, {}, { type: 'gate', id: 'G02' });
-  else at(25.5);
-  assert.equal(actor('gatinha').freeMoves, 0);
-  assert.equal(actor('gatinha').route, null);
-  assert.equal(actor('gatinha').position, blocked === 'open' ? 15 : 7);
+  assert.deepEqual(output('move').map(({ from, to }) => [from, to]), [[7, 15], [15, 14], [14, 7]]);
 }
 
 {
-  const { at, actor, game, output } = scenario({
-    padrao: { start: 12, interval: 10 }, gotica: { start: 14, interval: 11 }
-  }, { random: () => 0 });
-  at(10);
-  at(11);
-  assert.deepEqual(game.officeState().room, ['original', 'gotica']);
-  at(12, {}, { type: 'closetEnter' });
-  at(15.5);
-  assert.deepEqual(game.officeState().room, ['gotica']);
-  assert.equal(actor('padrao').position, 6);
-  assert.equal(actor('padrao').freeMoves, 1);
-  at(16.5);
+  const { at, game, actor } = scenario({ maid: { start: 15, interval: 10, initialStationaryAttempts: undefined } },
+    { random: () => 0 });
+  assert.equal(actor('maid').approach, 'approach');
+  at(20);
+  assert.deepEqual(game.officeState().room, ['maid']);
+  at(22, {}, { type: 'closetEnter' });
+  at(28.5);
   assert.deepEqual(game.officeState().room, []);
-  assert.equal(actor('gotica').position, 6);
-  assert.equal(actor('gotica').freeMoves, 1);
-  assert.deepEqual(output('move').filter(move => move.retreat === 'office')
-    .map(({ actor }) => actor.key), ['padrao', 'gotica']);
-}
-
-{
-  const { at, game } = scenario({ gotica: { start: 14, interval: 10 } }, { random: () => 0 });
-  at(10);
-  at(14.4, {}, { type: 'closetEnter' });
-  at(15.5);
-  assert.deepEqual(game.officeState().room, ['gotica']);
-  at(18.5);
-  assert.deepEqual(game.officeState().room, []);
-}
-
-for (const [roll, chance, expected] of [[.1499, .15, 'electrical'], [.15, .15, 'C1'], [0, 0, 'C1']]) {
-  let draw = () => 0;
-  const { at, actor } = scenario({ yandere: { start: 1, interval: 10 } }, {
-    random: () => draw(),
-    tune(config) { config.movement.routes.electricalChance = chance; }
-  });
-  const draws = [roll, 0, 0];
-  draw = () => draws.shift() ?? 0;
-  at(10);
-  assert.equal(actor('yandere').route, expected);
-  if (expected !== 'electrical') continue;
-  assert.equal(actor('yandere').checkpoint, 19);
-}
-
-{
-  const { game, at, output } = scenario({ gotica: { start: 14, interval: 10, positions: [14, 13, 7] } },
-    { levels: { gotica: 6 } });
-  at(8);
-  at(9, {}, { type: 'closetEnter' });
-  at(10, {}, { type: 'closetExit' });
-  at(11.604);
-  assert.equal(game.snapshot().outcome, null);
-  at(11.606);
-  assert.deepEqual(output('loss'), ['gotica']);
+  assert.equal(actor('maid').intervalPenalty, 1.25);
 }
 
 for (const key of ['gotica', 'yandere', 'gatinha', 'padrao', 'maid']) {
@@ -608,14 +472,16 @@ for (const key of ['gotica', 'yandere', 'gatinha', 'padrao', 'maid']) {
 }
 
 for (const key of ['gotica', 'yandere', 'gatinha']) {
-  const { at, actor } = scenario({ [key]: { start: 15, interval: 10, routes: [key === 'gatinha' ? 'C2' : 'C1'] } },
+  const { at, actor } = scenario({ [key]: { start: 7, interval: 10, routes: { CV: 100 } } },
     { random: () => 0 });
   at(0, { radio: false, corridorLight: true });
   at(10, { radio: false, corridorLight: true });
-  assert.equal(actor(key).position, 14);
+  assert.equal(actor(key).position, 15);
   assert.equal(actor(key).routeCompleted, true);
-  assert.equal(actor(key).approach, 'entry');
+  assert.equal(actor(key).approach, 'approach');
   at(20, { radio: false, corridorLight: true });
+  assert.equal(actor(key).position, 14);
+  at(30, { radio: false, corridorLight: true });
   assert.equal(actor(key).position, 13);
 }
 
@@ -627,17 +493,17 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
   };
   const fx = createEffects(rules, routes, [actor]);
   assert(fx.startAudio(0, 'CAM03'));
-  assert.equal(fx.audioStatus(6.99).camera, 'CAM03');
-  assert.equal(fx.audioStatus(7).camera, null);
-  assert(!fx.startAudio(11.99, 'CAM12'));
-  closeTo(fx.weight(actor, 19, 6), 1.5); // 19 is one step from the hall.
+  assert.equal(fx.audioStatus(2.99).camera, 'CAM03');
+  assert.equal(fx.audioStatus(3).camera, null);
+  assert(!fx.startAudio(9.99, 'CAM12'));
+  closeTo(fx.weight(actor, 19, 2), 1.6); // 19 is one step from the hall.
   actor.position = 17;
-  closeTo(fx.weight(actor, 15, 6), 1.075); // 17 is out of range, 15 is in ring two.
+  closeTo(fx.weight(actor, 15, 2), 1.12); // 17 is out of range, 15 is in ring two.
   fx.retain(actor);
-  closeTo(fx.weight(actor, 15, 6), 1.05625);
-  actor.position = 8;
-  closeTo(fx.weight(actor, 22, 6), 1);
-  assert(fx.startAudio(12, 'CAM12'));
+  closeTo(fx.weight(actor, 15, 2), 1.09);
+  actor.position = 22;
+  closeTo(fx.weight(actor, 8, 2), 1);
+  assert(fx.startAudio(10, 'CAM12'));
   assert.equal(actor.noise, 0);
   fx.integrate(40, { radio: true, computer: true, viewMoving: true });
   assert.equal(actor.noise, base.effects.noise.max);
@@ -654,7 +520,7 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
 
 for (const level of [3, 4, 10]) {
   let draw = .72;
-  const { at, actor, game } = scenario({ yandere: { start: 19, interval: 20, routes: ['electrical'] } },
+  const { at, actor, game } = scenario({ yandere: { start: 19, interval: 20, routes: { EE: 24 } } },
     { levels: { yandere: level }, random: () => draw });
   const normal = 20 * (1 - .08 * base.movement.difficulty.oddSteps.filter(step => level >= step).length);
   const due = actor('yandere').remaining;
@@ -662,7 +528,7 @@ for (const level of [3, 4, 10]) {
   at(due);
   assert.equal(actor('yandere').position, 21);
   assert(game.electricalFault());
-  assert.equal(actor('yandere').lastRoute, 'electrical');
+  assert.equal(actor('yandere').lastRoute, 'EE');
   assert.equal(actor('yandere').freeMoves, 1);
   closeTo(actor('yandere').remaining, normal * 1.25);
   draw = 0;
@@ -815,25 +681,22 @@ for (const key of Object.keys(base.characters).filter(key => key !== 'yandere'))
 }
 
 for (const [key, rule] of Object.entries(base.characters)) {
-  for (const id of rule.routes ?? []) {
+  for (const id of Object.keys(rule.routes ?? {})) {
     const config = structuredClone(base);
-    config.characters = { [key]: { ...rule, routes: [id] } };
+    config.characters = { [key]: { ...rule, routes: { [id]: 100 } } };
     for (const objective of ['corridor', 'stock']) {
       for (const phase of ['approach', 'entry']) config.movement.attack[objective][phase].base = 1;
     }
     const levels = { [key]: 10, palhaca: 0, smores: 0, shadow: 0 };
     const rules = { ...base.night, secondsPerHour: 600, powerEnabled: false, sanityEnabled: false };
     let seed = 912;
-    let stockRequired = false;
     let reached = false;
     const game = createMovement(config, {
       random: () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32,
       emit(type, data) {
         if (type === 'electricalFault') reached = true;
         if (type !== 'move' || data.retreat) return;
-        if (data.to === 19) stockRequired = true;
-        if (data.to === 10) stockRequired = false;
-        if (data.to === 15) assert.equal(stockRequired, false, `${key} ${id} bypassed stock`);
+        if (data.to === 15 && data.actor.route?.target === 10) assert.equal(data.actor.approach, null);
         if (data.to === 13 && data.actor.route) {
           assert.equal(data.actor.route.id, id);
           assert.equal(data.from, config.movement.routes.definitions[id].objective === 'corridor' ? 14 : 12);
@@ -852,11 +715,11 @@ for (const [key, rule] of Object.entries(base.characters)) {
   const { game, at } = scenario({ padrao: { start: 1, interval: 10, positions: [1, 19] } },
     { gates: ['G06'], random: () => .8 });
   const odds = () => game.debugSnapshot().actors[0].odds;
-  closeTo(odds().Ficar, 1 / 3);
-  closeTo(odds()['Corredor da CAM 12'], 2 / 3 * .7);
-  closeTo(odds()['Bloqueio em Corredor da CAM 12 (G06)'], 2 / 3 * .3);
+  closeTo(odds().Ficar, 1 / 5);
+  closeTo(odds()['Corredor da CAM 12'], 4 / 5 * .7);
+  closeTo(odds()['Bloqueio em Corredor da CAM 12 (G06)'], 4 / 5 * .3);
   at(0, { camera: 'CAM12' });
-  closeTo(odds()['Bloqueio em Corredor da CAM 12 (câmera observada, G06)'], 2 / 3);
+  closeTo(odds()['Bloqueio em Corredor da CAM 12 (câmera observada, G06)'], 4 / 5);
 }
 
 {
@@ -864,8 +727,8 @@ for (const [key, rule] of Object.entries(base.characters)) {
     { random: () => 0 });
   at(0, { camera: 'CAM03' });
   const { odds } = game.debugSnapshot().actors[0];
-  closeTo(odds['Meio do salão'], 2 / 3 * .75);
-  closeTo(odds['Bloqueio em Meio do salão (câmera observada)'], 2 / 3 * .25);
+  closeTo(odds['Meio do salão'], 4 / 5 * .75);
+  closeTo(odds['Bloqueio em Meio do salão (câmera observada)'], 4 / 5 * .25);
 }
 
 console.log('PASS: physical graph, route checkpoints, blocked moves, attack probabilities, recovery, static, clown and deadline catch-up.');
