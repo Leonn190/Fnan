@@ -898,18 +898,18 @@ window.NathGame.localConfig = {
       "bonusByLevel": [
         {
           "minLevel": 1,
-          "bonus": 18
+          "bonus": 22
         },
         {
           "minLevel": 4,
-          "bonus": 24
+          "bonus": 27
         },
         {
           "minLevel": 8,
-          "bonus": 30
+          "bonus": 32
         }
       ],
-      "bonusPerMove": 1,
+      "bonusPerMove": 2,
       "definitions": {
         "CV": {
           "objective": "corridor",
@@ -1259,23 +1259,34 @@ window.NathGame.localConfig = {
   },
   "power": {
     "initial": 100,
-    "computerDrain": 0.018,
-    "gateDrain": 0.028,
-    "radioGraceSeconds": 25,
+    "computerDrain": 0.025,
+    "gateDrain": 0.3,
+    "radioDrain": 0.05,
+    "flashlightDrain": 0.12,
+    "eventDrain": {
+      "electricalFault": 10
+    },
+    "radioGraceSeconds": 30,
+    "flashlightGraceSeconds": 60,
     "warningBelow": 15
   },
   "sanity": {
     "initial": 100,
     "loss": {
-      "camera": 0.15,
-      "direct": 0.35,
-      "centralGate": 0.1,
-      "closet": 0.5,
-      "invasion": 2
+      "camera": 0.2,
+      "yandereCamera": 0.25,
+      "direct": 0.45,
+      "centralGate": 0.12,
+      "closet": 0.52,
+      "invasion": 2.5
+    },
+    "eventLoss": {
+      "closetEnter": 2,
+      "electricalFault": 5
     },
     "recovery": {
       "music": 0.2,
-      "passive": 0.05
+      "passive": 0.04
     },
     "blackoutLossMultiplier": 2
   },

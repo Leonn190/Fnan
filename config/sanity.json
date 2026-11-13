@@ -1,15 +1,17 @@
 {
   "initial": 100,
   "loss": {
-    "camera": 0.15,
-    "direct": 0.35,
-    "centralGate": 0.10,
-    "closet": 0.50,
-    "invasion": 2
+    "camera": 0.20,
+    "yandereCamera": 0.25,
+    "direct": 0.45,
+    "centralGate": 0.12,
+    "closet": 0.52,
+    "invasion": 2.50
   },
+  "eventLoss": { "closetEnter": 2, "electricalFault": 5 },
   "recovery": {
     "music": 0.20,
-    "passive": 0.05
+    "passive": 0.04
   },
   "blackoutLossMultiplier": 2
 }

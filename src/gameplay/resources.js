@@ -3,10 +3,10 @@
 
 const clampPercent = value => Math.min(100, Math.max(0, value));
 
-function sanityRate(rules, { camera, direct, invasion, centralGate, closet, radio, blackout }) {
+function sanityRate(rules, { camera, yandereCamera, direct, invasion, centralGate, closet, radio, blackout }) {
   const { loss, recovery, blackoutLossMultiplier } = rules;
-  const totalLoss = (camera ? loss.camera : 0)
-    + (invasion ? loss.invasion : direct ? loss.direct : 0)
+  const totalLoss = (camera ? (yandereCamera ? loss.yandereCamera : loss.camera) : 0)
+    + (invasion ? loss.invasion : 0) + (direct ? loss.direct : 0)
     + (centralGate ? loss.centralGate : 0) + (closet ? loss.closet : 0);
   return (radio ? recovery.music : 0) + (totalLoss === 0 ? recovery.passive : 0)
     - totalLoss * (blackout ? blackoutLossMultiplier : 1);
@@ -46,17 +46,35 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
   let hours = 0;
 
   const radioAvailable = now => now < blackoutAt + power.radioGraceSeconds;
+  const flashlightAvailable = now => now < blackoutAt + power.flashlightGraceSeconds;
+
+  function drainEnergy(amount, now) {
+    if (!powerEnabled || energy === 0) return;
+    energy = clampPercent(energy - amount);
+    if (energy === 0) {
+      blackoutAt = now;
+      computerOn = false;
+    }
+  }
+
+  function applyEvent(event, now) {
+    if (sanityEnabled) sanity = clampPercent(sanity - (sanityRules.eventLoss[event] ?? 0));
+    drainEnergy(power.eventDrain[event] ?? 0, now);
+  }
 
   function segment(now, until, input, observation, gates = input.gates) {
     const radioUntil = blackoutAt + power.radioGraceSeconds;
-    const radio = input.radio && now < radioUntil;
+    const flashlightUntil = blackoutAt + power.flashlightGraceSeconds;
+    const radio = input.radio && radioAvailable(now);
     const drain = powerEnabled && energy > 0
-      ? (computerOn ? power.computerDrain : 0) + gates.size * power.gateDrain : 0;
+      ? (computerOn ? power.computerDrain : 0) + gates.size * power.gateDrain
+        + (radio ? power.radioDrain : 0) + (input.flashlight ? power.flashlightDrain : 0) : 0;
     const powerEnds = drain > 0 ? now + energy / drain : Infinity;
     const rate = sanityEnabled ? sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 }) : 0;
     const progress = seconds => dynamicClock ? clockProgress(clock, sanity, rate, seconds)
       : seconds / fastestHour;
-    const limit = Math.min(until, powerEnds, radioUntil > now ? radioUntil : Infinity);
+    const limit = Math.min(until, powerEnds, radioUntil > now ? radioUntil : Infinity,
+      flashlightUntil > now ? flashlightUntil : Infinity);
     const duration = limit - now;
     const remaining = hoursToWin - hours;
     let end = limit;
@@ -75,21 +93,19 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
     const dt = end - now;
     hours = won ? hoursToWin : hours + progress(dt);
     if (sanityEnabled) sanity = clampPercent(sanity + rate * dt);
-    if (powerEnabled) energy = end >= powerEnds ? 0 : clampPercent(energy - drain * dt);
-    if (end >= powerEnds) {
-      blackoutAt = end;
-      computerOn = false;
-    }
+    drainEnergy(end >= powerEnds ? energy : drain * dt, end);
     return { end, radio, won };
   }
 
   return {
     segment,
+    applyEvent,
     radioAvailable,
+    flashlightAvailable,
     computerOn: () => computerOn,
     toggleComputer() { if (energy > 0) computerOn = !computerOn; },
     snapshot: now => ({ sanity, energy, hours, computerOn, blackout: energy === 0,
-      radioAvailable: radioAvailable(now) })
+      radioAvailable: radioAvailable(now), flashlightAvailable: flashlightAvailable(now) })
   };
 }
 

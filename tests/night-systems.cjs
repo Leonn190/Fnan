@@ -45,7 +45,7 @@ for (const [index, entry] of base.night.campaign.entries()) {
   assert.equal(entry.movementDelay, delay);
   assert.deepEqual(entry.levels, Object.fromEntries(Object.entries(campaignLevels).map(([id, row]) => [id, row[index]])));
   const input = { closet: true, radio: true, computer: true, gates: ['G01'] };
-  const test = scenario({ nightNumber, input, tune(config) { config.power.initial = .2; } });
+  const test = scenario({ nightNumber, input, tune(config) { config.power.initial = 1; } });
   const expectedActors = Object.entries(entry.levels).filter(([id, level]) => level > 0 && id in base.characters);
   assert.deepEqual(test.game.diagnostics().map(({ key, level }) => [key, level]).sort(), expectedActors.sort());
   assert.equal(test.state().sanity, 100);
@@ -53,7 +53,7 @@ for (const [index, entry] of base.night.campaign.entries()) {
   test.at(1, input);
   assert.equal(test.state().sanity < 100, nightNumber >= 4);
   near(test.state().hours, 1 / secondsPerHour);
-  near(test.state().energy, nightNumber >= 3 ? .2 - .018 - .028 : 100);
+  near(test.state().energy, nightNumber >= 3 ? 1 - .025 - .30 - .05 : 100);
   test.at(10, input);
   assert.equal(test.state().blackout, nightNumber >= 3);
   assert.equal(test.state().computerOn, nightNumber <= 2);
@@ -112,7 +112,7 @@ assert.equal(yandere().position, 21);
 // Constant inputs should yield the same resources and discrete events at any frame cadence.
 const cadences = [1 / 144, 1 / 30, 8.7, 180];
 const progress = cadences.map(interval => {
-  const input = { view: 'closet', computer: true, gates: ['G01'] };
+  const input = { view: 'closet', computer: true, radio: true, flashlight: true, gates: ['G01'] };
   const run = scenario({ input, levels: { padrao: 1, gotica: 1 } });
   run.at(0, input, { type: 'closetEnter' });
   for (let index = 1; index * interval < 170; index++) run.at(index * interval, input);
@@ -128,22 +128,26 @@ for (const { frame, moves } of progress) {
 }
 
 for (const [conditions, rate] of [
-  [{ camera: true }, -.15], [{ direct: true }, -.35], [{ closet: true }, -.5],
-  [{ direct: true, invasion: true }, -2], [{ centralGate: true }, -.1],
-  [{ radio: true, camera: true }, .05], [{}, .05], [{ radio: true }, .25],
-  [{ radio: true, direct: true, closet: true, blackout: true }, -1.5],
-  [{ radio: true, blackout: true }, .25]
+  [{ camera: true }, -.20], [{ camera: true, yandereCamera: true }, -.25],
+  [{ direct: true }, -.45], [{ closet: true }, -.52],
+  [{ direct: true, invasion: true }, -2.95], [{ centralGate: true }, -.12],
+  [{ radio: true, camera: true }, 0], [{}, .04], [{ radio: true }, .24],
+  [{ radio: true, direct: true, closet: true, blackout: true }, -1.74],
+  [{ radio: true, blackout: true }, .24]
 ]) near(sanityRate(base.sanity, conditions), rate);
 
 const stageFeed = { camera: 'CAM03', visibleCameraSource: './public/images/cameras/CAM03/states/todas.webp' };
 const empty = scenario({ input: stageFeed, tune: config => { config.sanity.initial = 50; } });
 empty.at(10);
-near(empty.state().sanity, 50.5);
+near(empty.state().sanity, 50.4);
 const stage = scenario({ levels: { padrao: 1, gotica: 1 }, input: stageFeed });
 stage.at(10, { camera: 'CAM01' });
-near(stage.state().sanity, 98.5);
+near(stage.state().sanity, 98);
 stage.at(12);
-near(stage.state().sanity, 98.6);
+near(stage.state().sanity, 98.08);
+const yandereOnStage = scenario({ levels: { padrao: 1, yandere: 1 }, input: stageFeed });
+yandereOnStage.at(10);
+near(yandereOnStage.state().sanity, 97.5);
 
 function observation(start, input, expected, key = 'padrao') {
   const test = scenario({ levels: { [key]: 1 }, input, tune(config) {
@@ -154,21 +158,29 @@ function observation(start, input, expected, key = 'padrao') {
   near(test.state().sanity, expected);
 }
 const { left, front, office } = base.map;
-observation(left, { view: 'office', officeBounds: [0, 480] }, 99.3);
+observation(left, { view: 'office', officeBounds: [0, 480] }, 99.1);
 observation(left, { view: 'office', officeBounds: [800, 1300] }, 100);
-observation(left, { view: 'closet-door', closet: true, closetBounds: [500, 900] }, 98.3);
-observation(office, { view: 'office', officeBounds: [800, 1300] }, 96);
-observation(office, { view: 'closet-door', closet: true, closetBounds: [400, 900] }, 95);
-observation(front, { view: 'office', officeBounds: [800, 1300], corridorLight: true }, 99.3);
+observation(left, { view: 'closet-door', closet: true, closetBounds: [500, 900] }, 98.06);
+observation(office, { view: 'office', officeBounds: [800, 1300] }, 95);
+observation(office, { view: 'closet-door', closet: true, closetBounds: [400, 900] }, 93.96);
+observation(front, { view: 'office', officeBounds: [800, 1300], corridorLight: true }, 99.1);
 observation(front, { view: 'office', officeBounds: [800, 1300] }, 100);
-observation(16, { camera: 'CAM09' }, 99.7, 'maid');
+observation(16, { camera: 'CAM09' }, 99.6, 'maid');
+observation(1, { camera: 'CAM03' }, 99.5, 'yandere');
 observation(1, { camera: 'CAM03', visibleCameraSource: null }, 100);
 
 const clown = scenario({ levels: { palhaca: 1 } });
 clown.at(0, { view: 'closet-back', closet: true, clownLight: true }, { type: 'closetEnter' });
 clown.at(2);
-near(clown.state().sanity, 98.3);
+near(clown.state().sanity, 96.06);
 near(clown.state().counter, 1);
+const entries = scenario();
+entries.at(0, {}, { type: 'closetEnter' });
+entries.at(0, {}, { type: 'closetEnter' });
+near(entries.state().sanity, 98);
+entries.at(0, {}, { type: 'closetExit' });
+entries.at(0, {}, { type: 'closetEnter' });
+near(entries.state().sanity, 96);
 const inactive = scenario({ input: { view: 'closet-back', closet: true, clownLight: true } });
 const cameraRoster = () => CAMERAS.flatMap(cam => inactive.game.cameraActors(cam.id)
   .map(({ key, level, position, stage }) => [cam.id, key, level, position, stage]));
@@ -181,7 +193,7 @@ const startingRoster = [
 ];
 assert.deepEqual(cameraRoster(), startingRoster);
 inactive.at(2);
-near(inactive.state().sanity, 99);
+near(inactive.state().sanity, 98.96);
 assert(inactive.at(5, { camera: 'CAM02' }, { type: 'cameraAudio' }));
 inactive.at(100, {}, { type: 'closetEnter' });
 inactive.at(1000);
@@ -210,10 +222,10 @@ for (const [sanity, seconds] of [[100, 60], [90, 60], [70, 105], [50, 150], [30,
 
 const dynamic = scenario({ input: { closet: true }, tune: config => { config.sanity.initial = 70; } });
 dynamic.at(10, { radio: true });
-near(dynamic.state().hours, Math.log(116.25 / 105) / 1.125);
+near(dynamic.state().hours, Math.log(116.7 / 105) / 1.17);
 const first = dynamic.state().hours;
 dynamic.at(20);
-near(dynamic.state().hours - first, Math.log(116.25 / 110.625) / .5625);
+near(dynamic.state().hours - first, Math.log(116.7 / 111.3) / .54);
 const testMovement = sanity => scenario({ levels: { padrao: 9, palhaca: 9 }, tune(config) { config.sanity.initial = sanity; } });
 const fast = testMovement(100);
 const slow = testMovement(10);
@@ -234,34 +246,49 @@ for (const key of [...Object.keys(base.characters), 'palhaca']) {
   }
 }
 
-const power = scenario({ input: { radio: true, corridorLight: true } });
-power.at(10, { radio: true, corridorLight: true }, { type: 'computerPower' });
-near(power.state().energy, 99.82);
+const powerInput = { radio: true, corridorLight: true, flashlight: true, gates: ['G01'] };
+const power = scenario({ input: powerInput });
+power.at(10, powerInput, { type: 'computerPower' });
+near(power.state().energy, 100 - 10 * (.025 + .30 + .05 + .12));
 power.at(20, {}, { type: 'gate', id: 'G01' });
 power.at(20, {}, { type: 'gate', id: 'G06' });
-near(power.state().energy, 99.82);
+power.at(20, {}, { type: 'gate', id: 'G01' });
+near(power.state().energy, 90.35);
 power.at(30, {}, { type: 'computerPower' });
-near(power.state().energy, 99.26);
+near(power.state().energy, 84.35);
 assert.equal(power.state().computerOn, true);
-near(power.state().sanity, 99);
+near(power.state().sanity, 98.8);
 
 const outage = scenario({ input: { gates: ['G01'], closet: true, radio: true }, tune(config) {
-  config.power.initial = .46;
+  config.power.initial = .375 * 10;
 } });
 outage.at(10, { closet: true });
 assert.equal(outage.state().blackout, true);
 assert.equal(outage.state().computerOn, false);
-near(outage.state().sanity, 96);
+near(outage.state().sanity, 95.6);
 outage.at(15, { closet: true, radio: true }, { type: 'computerPower' });
 assert.equal(outage.state().computerOn, false);
-near(outage.state().sanity, 90);
-outage.at(34.99, { closet: true, radio: true });
+near(outage.state().sanity, 89.2);
+outage.at(39.99, { closet: true, radio: true });
 assert.equal(outage.state().radioAvailable, true);
-outage.at(36, { closet: true, radio: true });
+outage.at(41, { closet: true, radio: true });
 assert.equal(outage.state().radioAvailable, false);
-near(outage.state().sanity, 68.8);
+near(outage.state().sanity, 60.92);
+outage.at(69.99);
+assert.equal(outage.state().flashlightAvailable, true);
+outage.at(70.01);
+assert.equal(outage.state().flashlightAvailable, false);
 outage.game.reset();
-assert.deepEqual([outage.state().energy, outage.state().sanity, outage.state().hours, outage.state().computerOn], [.46, 100, 0, true]);
+assert.deepEqual([outage.state().energy, outage.state().sanity, outage.state().hours, outage.state().computerOn], [3.75, 100, 0, true]);
+
+const flashlightInput = { flashlight: true, clownLight: true, view: 'closet-back', closet: true };
+const flashlight = scenario({ levels: { palhaca: 1 }, tune(config) { config.power.initial = .145; } });
+flashlight.at(0, flashlightInput, { type: 'closetEnter' });
+flashlight.at(60.99, flashlightInput);
+assert.equal(flashlight.state().energy, 0);
+near(flashlight.state().counter, 1);
+flashlight.at(62, flashlightInput);
+near(flashlight.state().counter, 1 + .88 * 3);
 
 const shadowTest = (level, sanity, draws = [0, .99], tune = () => {}) => scenario({
   levels: { shadow: level }, draws, tune(config) { config.sanity.initial = sanity; tune(config); }
@@ -323,7 +350,7 @@ found.returnAt(5, 'closet');
 assert.equal(found.state().shadow.phase, 'manifested');
 found.game.reset({ shadow: 1 });
 assert.equal(found.state().shadow.phase, 'inactive');
-const interrupted = shadowTest(10, 20, [0, .25], config => { config.power.initial = .018 * 3; });
+const interrupted = shadowTest(10, 20, [0, .25], config => { config.power.initial = .025 * 3; });
 interrupted.returnAt(0);
 interrupted.at(10);
 assert.equal(interrupted.state().blackout, true);
@@ -426,13 +453,19 @@ for (const level of [1, 4]) {
   run.at(first, { camera: 'CAM12' });
   assert.equal(run.state().electricalFault, false); // The attempt is still observed.
   const arrival = first + .5;
+  run.at(arrival, { camera: 'CAM12' });
+  const beforeFault = run.state();
   run.at(arrival, { radio: true });
+  near(run.state().energy, beforeFault.energy - 10);
+  near(run.state().sanity, beforeFault.sanity - 5);
   assert.deepEqual(run.events.map(([type]) => type), ['electricalFault', 'move']);
   assert.equal(run.game.diagnostics()[0].position, 21);
   assert.equal(run.state().computerOn, true);
   assert.equal(run.state().radioAvailable, true);
   assert.equal(run.game.camerasAvailable(), false);
   assert(!run.at(arrival, { camera: 'CAM01', radio: true }, { type: 'cameraAudio' }));
+  near(run.state().energy, beforeFault.energy - 10);
+  near(run.state().sanity, beforeFault.sanity - 5);
   assert(run.game.isGateClosed('G01') && run.game.isGateClosed('G09'));
   for (const { id, type } of window.NathGame.VENUE.openings) {
     if (type === 'portao') assert(!run.at(arrival, { camera: 'CAM01', radio: true }, { type: 'gate', id }));
@@ -478,6 +511,25 @@ assert.equal(faultDuringBlackout.state().blackout, true);
 faultDuringBlackout.at(8, {}, { type: 'computerPower' });
 assert.equal(faultDuringBlackout.state().electricalFault, true);
 assert.equal(faultDuringBlackout.state().computerOn, false);
+
+const faultCausesBlackout = scenario({ levels: { yandere: 1 }, tune(config) {
+  tuneElectrical(config);
+  config.power.initial = 5;
+  config.sanity.initial = 3;
+} });
+const sabotageAt = faultCausesBlackout.game.diagnostics()[0].remaining;
+faultCausesBlackout.at(sabotageAt);
+assert.equal(faultCausesBlackout.state().energy, 0);
+assert.equal(faultCausesBlackout.state().sanity, 0);
+assert.equal(faultCausesBlackout.state().computerOn, false);
+faultCausesBlackout.at(sabotageAt + 30 - .01);
+assert.equal(faultCausesBlackout.state().radioAvailable, true);
+faultCausesBlackout.at(sabotageAt + 30);
+assert.equal(faultCausesBlackout.state().radioAvailable, false);
+faultCausesBlackout.at(sabotageAt + 60 - .01);
+assert.equal(faultCausesBlackout.state().flashlightAvailable, true);
+faultCausesBlackout.at(sabotageAt + 60);
+assert.equal(faultCausesBlackout.state().flashlightAvailable, false);
 
 for (const find of [true, false]) {
   const run = scenario({

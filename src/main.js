@@ -66,6 +66,8 @@ const cameraApp = {
   task: $('#taskbar-cameras'),
   titlebar: $('#cameras-titlebar'),
   maximize: $('#maximize-cameras'),
+  launch: $('#camera-launch'),
+  launchEndAt: null,
   open: false
 };
 const desktopTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -76,7 +78,9 @@ const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
 const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
 const SHADOW_IMAGE = config.shadow.jumpscare;
 const JUMPSCARE_AUDIO = './public/audio/jumpscares/';
-const MONITOR_TRANSITION_MS = { boot: 3000, shutdown: 1500 };
+const MONITOR_TRANSITION_MS = { boot: 6500, shutdown: 2000 };
+const CAMERA_LAUNCH_MS = 1500;
+let computerTransitionTimer;
 const CLOWN_ART = './public/images/office/closet/clown/';
 const SMORES_ART = {
   vent: './public/images/office/characters/smores-vent.webp',
@@ -257,7 +261,7 @@ let officeViewKey;
 let closetArtKey;
 function updateOfficeView() {
   const closed = movement.isGateClosed(OFFICE.gate);
-  const lightBlocked = closed || state.officeRoom.size > 0;
+  const lightBlocked = closed || state.officeRoom.size > 0 || !movement.flashlightAvailable();
   if (lightBlocked && state.flashlight) {
     state.flashlight = state.flashlightKey = false;
     state.flashlightPointer = null;
@@ -524,9 +528,7 @@ function setMode(mode, withSound = true, force = false) {
   dom.office.hidden = mode !== 'office';
   dom.closet.hidden = !hiding;
   dom.desktop.hidden = mode !== 'desktop' && !watching;
-  if (state.monitorTransition) {
-    dom.game.style.setProperty('--monitor-elapsed', `-${performance.now() - state.monitorTransition.startedAt}ms`);
-  }
+  if (!watching) delete cameraApp.panel.dataset.opening;
   setStartMenu(false);
   if (!dom.desktop.hidden) {
     state.computerMode = mode;
@@ -549,7 +551,15 @@ function setMode(mode, withSound = true, force = false) {
 }
 
 function openComputer() {
-  if (state.mode === 'office' && !state.closetTransition) setMode(state.computerMode);
+  if (state.mode !== 'office' || state.closetTransition || state.complete) return;
+  if (state.monitorTransition || cameraApp.launchEndAt !== null) {
+    const now = performance.now();
+    advanceGame(now);
+    if (state.monitorTransition) {
+      dom.computerScreen.style.setProperty('--monitor-delay', `${state.monitorTransition.startedAt - now}ms`);
+    }
+  }
+  setMode(state.computerMode);
 }
 
 function closeComputer() {
@@ -560,30 +570,63 @@ function closeComputer() {
 }
 
 function toggleComputerPower() {
-  if (state.complete || state.closetTransition || state.monitorTransition) return;
+  if (state.complete || state.closetTransition) return;
   const now = performance.now();
+  if (state.monitorTransition) {
+    advanceGame(now);
+    if (state.monitorTransition || state.complete) return;
+  }
   const wasOn = movement.snapshot().computerOn;
   advanceGame(now, { type: 'computerPower' });
-  if (state.complete || wasOn === movement.snapshot().computerOn) return;
+  const { computerOn, blackout } = movement.snapshot();
+  if (state.complete || blackout || wasOn === computerOn) return;
 
   const phase = wasOn ? 'shutdown' : 'boot';
-  state.monitorTransition = { startedAt: now, endAt: now + MONITOR_TRANSITION_MS[phase] };
-  dom.game.style.setProperty('--monitor-duration', `${MONITOR_TRANSITION_MS[phase]}ms`);
-  dom.game.style.setProperty('--monitor-elapsed', '0ms');
+  const duration = MONITOR_TRANSITION_MS[phase];
+  clearCameraLaunch();
+  clearCameraGesture();
+  delete cameraApp.panel.dataset.opening;
+  state.monitorTransition = { startedAt: now, endAt: now + duration };
+  dom.computerScreen.style.setProperty('--monitor-duration', `${duration}ms`);
+  dom.computerScreen.style.setProperty('--monitor-delay', '0ms');
   dom.game.dataset.monitorTransition = phase;
   dom.computerScreen.inert = true;
   setStartMenu(false);
+  scheduleComputerTransition();
   if (!dom.desktop.hidden) dom.desktopPower.focus({ preventScroll: true });
   clearCameraInterference();
   imageCache.cancelPending();
 }
 
 function clearMonitorTransition() {
+  if (!state.monitorTransition) return;
+  clearTimeout(computerTransitionTimer);
   state.monitorTransition = null;
   delete dom.game.dataset.monitorTransition;
+  dom.computerScreen.style.setProperty('--monitor-duration', '');
+  dom.computerScreen.style.setProperty('--monitor-delay', '');
 }
 
-function advanceMonitorTransition(now) {
+function scheduleComputerTransition() {
+  const deadline = state.monitorTransition?.endAt ?? cameraApp.launchEndAt;
+  if (deadline === null) return;
+  computerTransitionTimer = setTimeout(() => {
+    advanceGame(performance.now());
+    scheduleComputerTransition();
+  }, Math.ceil(deadline - performance.now()));
+}
+
+function advanceComputerTransition(now) {
+  if (cameraApp.launchEndAt !== null && now >= cameraApp.launchEndAt) {
+    clearCameraLaunch();
+    cameraApp.open = true;
+    cameraApp.panel.hidden = false;
+    if (dom.desktop.hidden) state.computerMode = 'cameras';
+    else {
+      cameraApp.panel.dataset.opening = '';
+      setMode('cameras');
+    }
+  }
   if (!state.monitorTransition || now < state.monitorTransition.endAt) return;
   clearMonitorTransition();
   dom.computerScreen.inert = !movement.snapshot().computerOn;
@@ -618,13 +661,26 @@ function renderCameraApp() {
 }
 
 function showCameraApp() {
-  if (state.complete || dom.desktop.hidden || dom.computerScreen.inert) return;
+  const now = performance.now();
+  if (state.monitorTransition || cameraApp.launchEndAt !== null) advanceGame(now);
+  if (state.complete || dom.desktop.hidden || dom.computerScreen.inert || cameraApp.launchEndAt !== null) return;
   const fromStart = !dom.startMenu.hidden;
   setStartMenu(false);
-  cameraApp.open = true;
-  cameraApp.panel.hidden = false;
-  setMode('cameras');
+  if (cameraApp.open) {
+    cameraApp.panel.hidden = false;
+    setMode('cameras');
+  } else {
+    cameraApp.launchEndAt = now + CAMERA_LAUNCH_MS;
+    cameraApp.launch.hidden = false;
+    scheduleComputerTransition();
+  }
   if (fromStart) cameraApp.task.focus({ preventScroll: true });
+}
+
+function clearCameraLaunch() {
+  if (cameraApp.launchEndAt !== null) clearTimeout(computerTransitionTimer);
+  cameraApp.launchEndAt = null;
+  cameraApp.launch.hidden = true;
 }
 
 function setMaximized(maximized) {
@@ -636,6 +692,8 @@ function setMaximized(maximized) {
 }
 
 function resetCameraApp() {
+  clearCameraLaunch();
+  delete cameraApp.panel.dataset.opening;
   cameraApp.open = false;
   cameraApp.panel.hidden = true;
   setMaximized(false);
@@ -730,7 +788,7 @@ function setClosetView(view) {
 }
 
 function flashlightTarget() {
-  if (state.complete || state.closetTransition) return null;
+  if (state.complete || state.closetTransition || !movement.flashlightAvailable()) return null;
   if (state.mode === 'office' && !dom.officeLight.disabled) return dom.officeLight;
   if (state.mode === 'closet' && !dom.closetLight.hidden) return dom.closetLight;
   return null;
@@ -866,6 +924,8 @@ function stopShift() {
   state.closetGesture = null;
   clearClosetTransition();
   clearMonitorTransition();
+  clearCameraLaunch();
+  delete cameraApp.panel.dataset.opening;
 }
 
 function releaseShiftImages() {
@@ -1159,6 +1219,7 @@ function gameInput() {
     smoresLooking: office && officeCenter - officeHalf <= SMORES_VENT_CENTER && SMORES_VENT_CENTER <= officeCenter + officeHalf,
     corridorLight: office && state.flashlight && !movement.isGateClosed(OFFICE.gate) && corridorInView(),
     clownLight: state.mode === 'closet' && dom.closet.dataset.view === 'back' && !dom.closetBeam.hidden,
+    flashlight: (office && state.flashlight) || (closet && !dom.closetBeam.hidden),
     radio: state.radioPlaying,
     computer: !dom.desktop.hidden && !dom.computerScreen.inert,
     viewMoving: (office && state.pan !== state.targetPan) || (closet && state.closetPan !== state.closetTarget)
@@ -1180,7 +1241,10 @@ function advanceGame(now, action, measure = false) {
   const start = measure ? performance.now() : 0;
   const accepted = movement.advance((now - state.startedAt) / 1000, gameInput, action);
   const integrated = measure ? performance.now() : 0;
-  if (!state.complete) renderGameFrame(movement.snapshot(), now);
+  if (!state.complete) {
+    renderGameFrame(movement.snapshot(), now);
+    advanceComputerTransition(now);
+  }
   if (measure) {
     perfLogic += integrated - start;
     perfRender += performance.now() - integrated;
@@ -1247,21 +1311,30 @@ function renderResources({ sanity, energy }) {
 }
 
 let resourceStateKey;
-function renderResourceState({ energy, blackout, computerOn, radioAvailable }) {
+function renderResourceState({ energy, blackout, computerOn, radioAvailable, flashlightAvailable }) {
   const low = energy <= config.power.warningBelow;
-  const key = Number(low) + 2 * blackout + 4 * computerOn + 8 * radioAvailable;
+  const key = Number(low) + 2 * blackout + 4 * computerOn + 8 * radioAvailable + 16 * flashlightAvailable;
   if (key === resourceStateKey) return;
   resourceStateKey = key;
   dom.energyMeter.classList.toggle('low', low);
   dom.game.toggleAttribute('data-blackout', blackout);
   dom.game.toggleAttribute('data-computer-off', !computerOn);
-  if (blackout) clearMonitorTransition();
+  if (blackout) {
+    clearMonitorTransition();
+    clearCameraLaunch();
+    delete cameraApp.panel.dataset.opening;
+  }
   dom.computerScreen.inert = !computerOn || Boolean(state.monitorTransition);
   dom.officePower.disabled = dom.desktopPower.disabled = blackout;
   for (const button of [dom.officePower, dom.desktopPower]) {
     button.setAttribute('aria-pressed', String(computerOn));
   }
   dom.officeRadio.disabled = !radioAvailable;
+  if (dom.closetLight.disabled !== !flashlightAvailable) {
+    dom.closetLight.disabled = !flashlightAvailable;
+    if (flashlightAvailable) updateOfficeView();
+    else clearFlashlight();
+  }
 }
 
 let renderedShadow, renderedShadowOffice, renderedShadowFeed;
@@ -1399,7 +1472,6 @@ function tick(now) {
     }
     // Movement integrates elapsed time and resolves intermediate deadlines, even after dropped frames.
     advanceGame(time, action, Boolean(perf && !document.hidden && perfStart !== undefined));
-    advanceMonitorTransition(time);
     if (!dom.desktop.hidden && now >= nextDesktopUpdate) {
       nextDesktopUpdate = now + 1000;
       updateDesktopClock();
@@ -1471,6 +1543,9 @@ function bindCameraWindow() {
   $('#start-cameras').addEventListener('click', showCameraApp);
   app.task.addEventListener('click', () => state.mode === 'cameras' ? hideCameraApp() : showCameraApp());
   app.panel.addEventListener('focusin', showCameraApp);
+  app.panel.addEventListener('animationend', event => {
+    if (event.target === app.panel && event.animationName === 'camera-window-open') delete app.panel.dataset.opening;
+  });
   $('#minimize-cameras').addEventListener('click', () => hideCameraApp());
   $('#close-cameras').addEventListener('click', () => hideCameraApp(true));
 

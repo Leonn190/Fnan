@@ -67,9 +67,14 @@ function sanityObservation(config, actors, cameraActors, input) {
     || (inOffice && input.clownStage === config.threats.clown.stages.length - 1 && intersects(input.officeBounds, [1859, 2172]))
     || (input.view === 'closet-back' && input.clownLight && input.clownStage >= 0);
   const cam = CAMERAS.find(cam => cam.id === input.camera);
-  const frame = cam && cameraActorFrame(cam, cameraActors(cam.id), config, id => input.gates.has(id), input.cameraPreview);
+  const onCamera = cam ? cameraActors(cam.id) : [];
+  const frame = cam && cameraActorFrame(cam, onCamera, config, id => input.gates.has(id), input.cameraPreview);
+  const camera = frame?.occupied && (input.visibleCameraSource === undefined || frame.source === input.visibleCameraSource);
   return {
-    invasion, direct, camera: frame?.occupied && (input.visibleCameraSource === undefined || frame.source === input.visibleCameraSource),
+    invasion, direct, camera,
+    yandereCamera: camera && (frame.key === 'todas' || frame.key.split('-').includes('yandere'))
+      && onCamera.some(actor => actor.key === 'yandere' && actor.level > 0
+      && !config.controls.unillustratedCameraPositions.includes(actor.position)),
     centralGate: input.gates.has(OFFICE.gate), closet: input.closet
   };
 }

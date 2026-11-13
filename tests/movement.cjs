@@ -159,8 +159,8 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
   };
   const open = (_, edge) => Boolean(edge);
   const routing = createAttackRoutes(base, routes, () => 0, open, open);
-  assert.deepEqual([1, 3, 4, 7, 8, 10].map(level => routing.bonus(level)), [18, 18, 24, 24, 30, 30]);
-  assert.equal(routing.bonus(10, 120), 150);
+  assert.deepEqual([1, 3, 4, 7, 8, 10].map(level => routing.bonus(level)), [22, 22, 27, 27, 32, 32]);
+  assert.equal(routing.bonus(10, 120), 272);
   for (const [key, weights] of Object.entries(expected)) {
     const rule = base.characters[key];
     const actor = { key, rule, allowed: new Set(rule.positions), position: rule.start };
@@ -192,7 +192,7 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
   for (const time of [10, 20, 30, 40, 50]) {
     at(time);
     assert.equal(actor('gotica').approach, null);
-    assert.equal(actor('gotica').routeBonus, 18 + time / 10);
+    assert.equal(actor('gotica').routeBonus, 22 + 2 * time / 10);
   }
   at(60);
   assert.equal(actor('gotica').approach, 'approach');
@@ -213,7 +213,7 @@ for (const reason of ['observada', 'lotada']) {
   assert.equal(actor('gatinha').route, 'CV');
   at(15, input);
   assert.equal(actor('gatinha').route, 'EL');
-  assert.equal(actor('gatinha').routeBonus, 18);
+  assert.equal(actor('gatinha').routeBonus, 22);
   closeTo(actor('gatinha').remaining, 3.5);
   assert.deepEqual(output('move'), []);
 }
@@ -223,7 +223,7 @@ for (const reopen of [true, false]) {
     { random: () => 0 });
   at(10);
   assert.equal(actor('gatinha').position, 7);
-  assert.equal(actor('gatinha').routeBonus, 19);
+  assert.equal(actor('gatinha').routeBonus, 24);
   at(11, {}, { type: 'gate', id: 'G02' });
   at(20);
   assert.match(actor('gatinha').stopped, /porta fechada/);
@@ -235,7 +235,7 @@ for (const reopen of [true, false]) {
     at(25);
     assert.equal(actor('gatinha').position, 7);
     assert.equal(actor('gatinha').route, 'EL');
-    assert.equal(actor('gatinha').routeBonus, 18);
+    assert.equal(actor('gatinha').routeBonus, 22);
     closeTo(actor('gatinha').remaining, 3.5);
   }
 }
@@ -255,18 +255,28 @@ for (const reopen of [true, false]) {
 }
 
 {
-  let draw = .6;
+  let draw = .5;
   const { at, game, actor, output } = scenario({ gatinha: { start: 7, interval: 10, routes: { CV: 100 } } },
     { random: () => draw });
+  const odds = game.debugSnapshot().actors[0].odds;
+  const total = 1.22 + 1 + 1.05 + .25;
+  closeTo(odds['Corredor central — fundo'], 1.22 / total);
+  closeTo(odds['Fundo do salão (CAM 04)'], 1 / total);
+  closeTo(odds['Escondida na VIP 2'], 1.05 / total);
+  closeTo(odds.Ficar, .25 / total);
   at(10);
-  assert.equal(actor('gatinha').position, 25);
+  assert.equal(actor('gatinha').position, 3);
   assert.equal(actor('gatinha').lastReached, 7);
   assert.equal(actor('gatinha').checkpoint, 7);
-  closeTo(game.debugSnapshot().actors[0].odds['VIP 2'], 1.19 / (1.19 + .25));
+  const recoveryOdds = game.debugSnapshot().actors[0].odds;
+  closeTo(recoveryOdds['VIP 2'] / recoveryOdds.Recepção, 1.24);
+  draw = .99;
+  at(20);
+  assert.equal(actor('gatinha').routeBonus, 24);
   draw = 0;
-  at(30);
-  assert.deepEqual(output('move').map(({ to }) => to), [25, 7, 15]);
-  assert.equal(actor('gatinha').routeBonus, 21);
+  at(40);
+  assert.deepEqual(output('move').map(({ to }) => to), [3, 7, 15]);
+  assert.equal(actor('gatinha').routeBonus, 28);
   assert.equal(actor('gatinha').routeCompleted, true);
 }
 
@@ -405,7 +415,7 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
   at(35);
   assert.equal(actor('gotica').route, 'EL');
   assert.equal(actor('gotica').approach, null);
-  assert.equal(actor('gotica').routeBonus, 18);
+  assert.equal(actor('gotica').routeBonus, 22);
   closeTo(actor('gotica').remaining, 3.5);
   assert.deepEqual(output('move').map(({ to }) => to), [15, 14, 17]);
 }
@@ -519,7 +529,7 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
 }
 
 for (const level of [3, 4, 10]) {
-  let draw = .72;
+  let draw = 0;
   const { at, actor, game } = scenario({ yandere: { start: 19, interval: 20, routes: { EE: 24 } } },
     { levels: { yandere: level }, random: () => draw });
   const normal = 20 * (1 - .08 * base.movement.difficulty.oddSteps.filter(step => level >= step).length);
@@ -531,7 +541,6 @@ for (const level of [3, 4, 10]) {
   assert.equal(actor('yandere').lastRoute, 'EE');
   assert.equal(actor('yandere').freeMoves, 1);
   closeTo(actor('yandere').remaining, normal * 1.25);
-  draw = 0;
   at(due + normal * 1.25 + .000001);
   assert.equal(actor('yandere').position, 19);
   assert(Math.abs(actor('yandere').remaining - normal) < .00001);

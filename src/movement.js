@@ -117,7 +117,10 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     if (!attackRoutes.reach(actor, from)) return false;
     if (actor.route.objective === 'electrical') {
       recover(actor);
-      if (electrical.trip()) emit('electricalFault');
+      if (electrical.trip()) {
+        resources.applyEvent('electricalFault', now);
+        emit('electricalFault');
+      }
       return true;
     } else {
       approach.begin(actor, actor.route.objective);
@@ -131,17 +134,13 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   function navigationChoices(actor) {
     const { position: from } = actor;
     const target = actor.route?.paths ? actor.route.lastReached ?? actor.route.required : navigationTarget(actor);
-    const edgeTo = id => routes.connection(from, id);
-    const progress = new Set(target === undefined ? [] : attackRoutes.nextSteps(actor, target));
-    const choices = routes.neighbors.get(from).filter(id => {
-      const edge = edgeTo(id);
-      if (!attackRoutes.canNavigate(actor, id) || !canUse(actor, edge)) return false;
-      if (!actor.route || progress.has(id)) return true;
-      // A lure can cause a detour. While recovering, only take steps back to the last checkpoint.
-      return actor.route.paths && (actor.route.lastReached === null || actor.route.lastReached === from)
-        && clear(actor, edge, from, id)
-        && effects.weight(actor, id, now) > 1;
-    });
+    const next = target === undefined ? [] : attackRoutes.nextSteps(actor, target);
+    const progress = new Set(next);
+    const neighbors = routes.neighbors.get(from).filter(id =>
+      attackRoutes.canNavigate(actor, id) && canUse(actor, routes.connection(from, id)));
+    const choices = actor.route
+      ? [...neighbors.filter(id => progress.has(id)), ...neighbors.filter(id => !progress.has(id))]
+      : neighbors;
     const bonus = factor(navigationBonus(actor) * smores.targetBonusMultiplier());
     return weightedChoices([...choices, from], id => {
       if (id === from) return movement.weight * movement.stayFactor;
@@ -275,16 +274,20 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   }
 
   function settle(action) {
-    const { blackout, computerOn, radioAvailable } = resources.snapshot(now);
+    const { computerOn, radioAvailable, flashlightAvailable } = resources.snapshot(now);
     if (!movementPaused()) {
       const ventOpportunity = !input.smoresLooking
         && (input.leftLook || (input.computer && computerOn) || action?.type === 'closetExit');
       smores.resolve(input, input.radio && radioAvailable, ventOpportunity);
     }
-    if (action?.type === 'closetEnter' && threats.enterCloset(now)) effects.addNoiseEvent('closetEnter');
+    if (action?.type === 'closetEnter' && !threats.snapshot().hidden && threats.enterCloset(now)) {
+      effects.addNoiseEvent('closetEnter');
+      resources.applyEvent('closetEnter', now);
+    }
     if (movementPaused()) return;
     const radio = input.radio && radioAvailable;
-    threats.resolve(now, actor => withdraw(actor, 'office'), source => finish('loss', source), radio, input.clownLight);
+    threats.resolve(now, actor => withdraw(actor, 'office'), source => finish('loss', source),
+      radio, flashlightAvailable && input.clownLight);
     if (outcome) return;
     for (const actor of actors) {
       if (actor.pending || moveDue(actor) > now) continue;
@@ -318,20 +321,24 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       expire(actor);
     }
     const available = camerasAvailable();
-    if (shadow.update(now, available && input.findShadow !== false ? input.camera : null, blackout, available)) {
+    if (shadow.update(now, available && input.findShadow !== false ? input.camera : null,
+      resources.snapshot(now).blackout, available)) {
       finish('loss', 'shadow');
     }
   }
 
   function integrate(until) {
     const computerOn = resources.computerOn();
+    const flashlightAvailable = resources.flashlightAvailable(now);
+    const corridorLight = flashlightAvailable && input.corridorLight;
+    const clownLight = flashlightAvailable && input.clownLight;
     const observation = sanityEnabled && window.NathGame.sanityObservation(config, actors, cameraActors, {
       ...input, gates: gates.closed, camera: camerasAvailable() && !effects.staticActive(now) ? input.camera : null,
       view: !computerOn && input.computer ? 'office' : input.view,
-      clownStage: threats.clownStage()
+      corridorLight, clownLight, clownStage: threats.clownStage()
     });
     const { end, radio, won } = resources.segment(now, until, input, observation, gates.closed);
-    const activeInput = { ...input, radio, computer: computerOn && input.computer };
+    const activeInput = { ...input, radio, corridorLight, clownLight, computer: computerOn && input.computer };
     effects.integrate(end - now, activeInput);
     if (!movementPaused()) {
       threats.integrate(end - now, activeInput);
@@ -349,7 +356,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       if (!movementPaused()) {
         const radio = input.radio && resources.radioAvailable(now);
         due = Math.min(until, shadow.nextDeadline(), effects.staticDeadline(now),
-          threats.nextDeadline(now, radio, input.clownLight), smores.nextDeadline(now, radio));
+          threats.nextDeadline(now, radio, resources.flashlightAvailable(now) && input.clownLight), smores.nextDeadline(now, radio));
         for (const actor of actors) due = Math.min(due, actor.pending?.expires ?? moveDue(actor));
       }
       // A modifier or a power boundary can leave work due at this instant.
@@ -546,7 +553,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     reset, advance, cameraActors, diagnostics, debugSnapshot, stop: () => shadow.stop(),
     isGateClosed: id => gates.closed.has(id),
     electricalFault: () => electrical.failed(), gateControlsAvailable,
-    camerasAvailable,
+    camerasAvailable, flashlightAvailable: () => resources.flashlightAvailable(now),
     officeState: () => ({
       smores: smores.phase(),
       room: occupants(office).map(actor => actor.rule.artId),

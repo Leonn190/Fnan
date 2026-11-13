@@ -1,7 +1,11 @@
 {
   "initial": 100,
-  "computerDrain": 0.018,
-  "gateDrain": 0.028,
-  "radioGraceSeconds": 25,
+  "computerDrain": 0.025,
+  "gateDrain": 0.30,
+  "radioDrain": 0.05,
+  "flashlightDrain": 0.12,
+  "eventDrain": { "electricalFault": 10 },
+  "radioGraceSeconds": 30,
+  "flashlightGraceSeconds": 60,
   "warningBelow": 15
 }

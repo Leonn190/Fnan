@@ -98,7 +98,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 
 ## Como jogar
 
-- Pressione **S** ou clique no monitor para vê-lo, mesmo com a tela apagada. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela para voltar ao escritório. O botão ⏻ liga o computador em 3 s e o desliga em 1,5 s. O menu Iniciar também permite desligá-lo.
+- Pressione **S** ou clique no monitor para vê-lo, mesmo com a tela apagada. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela para voltar ao escritório. O botão ⏻ liga o computador em 6,5 s e o desliga em 2 s. O menu Iniciar também permite desligá-lo. O aplicativo Câmeras leva 1,5 s para abrir quando está fechado.
 - No escritório, pressione **A** ou **D** para ir até a extremidade esquerda ou direita. Também é possível usar as bordas do panorama ou arrastar no touch. A porta esquerda fica sempre aberta. Olhar para ela impede travessias na aproximação.
 - Clique no botão rosa à direita do portão principal para fechar ou abrir o G01. Segure **W** ou pressione e segure no breu do portão para iluminar o corredor quando ele está aberto e a sala está vazia. A luz reduz o avanço da Gótica e da Yandere, favorece a desistência delas e aumenta o avanço da Gatinha. A planta também controla o G01. O limite de portões fechados começa em zero na Noite 1 e aumenta em um por noite. Na Custom Night, o limite é três. Ao fechar outro portão no limite, o último que foi fechado reabre.
 - Use o botão **Reproduzir som nesta câmera** para atrair ou repelir personagens. O som dura 3 s na câmera de origem, inclusive depois de mudar de câmera, com recarga de 10 s desde o acionamento.
@@ -107,7 +107,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - Observe as barras no canto inferior esquerdo. Ver animatrônicas, ficar no armário e fechar o portão central reduzem a sanidade. A música ajuda a recuperá-la. Sanidade baixa favorece a Shadow e desacelera o relógio na Custom Night.
 - Ao ver **FIND ME**, abra as câmeras e encontre a Shadow antes do fim do prazo. Ela escolhe uma câmera por aparição e só pode se manifestar no retorno ao escritório.
 - Ao entrar na elétrica, a Yandere derruba os feeds e bloqueia os controles dos nove portões. Cada portão mantém sua posição física no momento da falha, e a Padrão ainda pode abri-lo. Quando a tela mostrar **SEM SINAL**, desligue e ligue o computador pelo botão ⏻. O rádio, a lanterna e o armário continuam disponíveis conforme suas próprias regras. O prazo de busca da Shadow pausa enquanto as câmeras estão indisponíveis.
-- O computador ligado e os portões fechados consomem energia. No apagão, o computador para, o rádio ainda pode funcionar por 25 s e as perdas de sanidade dobram. O armário e a lanterna continuam disponíveis.
+- O computador ligado, os portões fechados, o rádio e a lanterna consomem energia. No apagão, o computador para e as perdas contínuas de sanidade dobram. O rádio funciona por mais 30 s e a lanterna por mais 60 s.
 - Ative **Debug** antes de iniciar uma Custom Night para acompanhar posições, rotas, alvos, chances de movimento, bloqueios, Palhaça e Smores. As chances mostram o resultado de uma tentativa no estado atual. Enquanto uma tentativa está bloqueada, a linha de expiração mostra o que acontece se ela atingir o fim da janela. O parâmetro `?debug=1` também abre o painel na campanha e habilita **J** para testar os sustos.
 
 ## Configuração
