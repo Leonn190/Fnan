@@ -3,9 +3,9 @@
 
 const clampPercent = value => Math.min(100, Math.max(0, value));
 
-function sanityRate(rules, { camera, yandereCamera, direct, invasion, centralGate, closet, radio, blackout }) {
+function sanityRate(rules, { cameraLoss = 0, direct, invasion, centralGate, closet, radio, blackout }) {
   const { loss, recovery, blackoutLossMultiplier } = rules;
-  const totalLoss = (camera ? (yandereCamera ? loss.yandereCamera : loss.camera) : 0)
+  const totalLoss = cameraLoss
     + (invasion ? loss.invasion : 0) + (direct ? loss.direct : 0)
     + (centralGate ? loss.centralGate : 0) + (closet ? loss.closet : 0);
   return (radio ? recovery.music : 0) + (totalLoss === 0 ? recovery.passive : 0)
@@ -107,6 +107,7 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
     radioAvailable,
     flashlightAvailable,
     computerOn: () => computerOn,
+    turnComputerOff() { computerOn = false; },
     toggleComputer() { if (energy > 0) computerOn = !computerOn; },
     snapshot(now, input, observation, gates = input?.gates) {
       const radio = radioAvailable(now);

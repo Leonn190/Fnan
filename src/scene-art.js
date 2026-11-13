@@ -50,8 +50,29 @@ function cameraActorFrame(cam, actors, config, isGateClosed, preview) {
   return { ...frame, occupied: Boolean(activeActorVisible && (frame.gateKey ? variant?.[frame.gateKey] : variant)) };
 }
 
-function sanityObservation(config, actors, cameraActors, input) {
-  const { CAMERAS, OFFICE } = window.NathGame;
+function cameraObservation(config, cameraActors, input) {
+  const cam = window.NathGame.CAMERAS.find(cam => cam.id === input.camera);
+  if (!cam) return;
+  const onCamera = cameraActors(cam.id);
+  const frame = cameraActorFrame(cam, onCamera, config, id => input.gates.has(id), input.cameraPreview);
+  if (!frame.occupied || (input.visibleCameraSource !== undefined && frame.source !== input.visibleCameraSource)) return;
+
+  const illustrated = frame.key === 'todas' ? cam.allCharacters : frame.key.split('-');
+  const { loss, cameraLossOverrides } = config.sanity;
+  let cameraLoss = loss.camera;
+  let yandereVisible = false;
+  for (const actor of onCamera) {
+    if (actor.level === 0 || !illustrated.includes(actor.rule.artId)
+        || config.controls.unillustratedCameraPositions.includes(actor.position)) continue;
+    const yandere = actor.key === 'yandere';
+    yandereVisible ||= yandere;
+    cameraLoss = Math.max(cameraLoss, cameraLossOverrides[actor.key]?.[cam.id] ?? (yandere ? loss.yandereCamera : loss.camera));
+  }
+  return { cameraLoss, yandereVisible };
+}
+
+function sanityObservation(config, actors, input, camera) {
+  const { OFFICE } = window.NathGame;
   const { left, office, front, back } = config.map;
   const intersects = (viewport, [min, max]) => viewport && min < viewport[1] && max > viewport[0];
   const inOffice = input.view === 'office';
@@ -66,15 +87,8 @@ function sanityObservation(config, actors, cameraActors, input) {
       && actors.some(actor => actor.position === front || actor.position === back))
     || (inOffice && input.clownStage === config.threats.clown.stages.length - 1 && intersects(input.officeBounds, [1859, 2172]))
     || (input.view === 'closet-back' && input.clownLight && input.clownStage >= 0);
-  const cam = CAMERAS.find(cam => cam.id === input.camera);
-  const onCamera = cam ? cameraActors(cam.id) : [];
-  const frame = cam && cameraActorFrame(cam, onCamera, config, id => input.gates.has(id), input.cameraPreview);
-  const camera = frame?.occupied && (input.visibleCameraSource === undefined || frame.source === input.visibleCameraSource);
   return {
-    invasion, direct, camera,
-    yandereCamera: camera && (frame.key === 'todas' || frame.key.split('-').includes('yandere'))
-      && onCamera.some(actor => actor.key === 'yandere' && actor.level > 0
-      && !config.controls.unillustratedCameraPositions.includes(actor.position)),
+    invasion, direct, cameraLoss: camera?.cameraLoss,
     centralGate: input.gates.has(OFFICE.gate), closet: input.closet
   };
 }
@@ -89,6 +103,7 @@ function corridorSlots(front, back) {
 }
 
 Object.assign(window.NathGame, {
-  cameraStateKey, cameraFrame, cameraActorFrame, sanityObservation, characterStateImages, officeCharacterImage, corridorSlots
+  cameraStateKey, cameraFrame, cameraActorFrame, cameraObservation, sanityObservation,
+  characterStateImages, officeCharacterImage, corridorSlots
 });
 })();

@@ -160,7 +160,9 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
   const open = (_, edge) => Boolean(edge);
   const routing = createAttackRoutes(base, routes, () => 0, open, open);
   assert.deepEqual([1, 3, 4, 7, 8, 10].map(level => routing.bonus(level)), [22, 22, 27, 27, 32, 32]);
-  assert.equal(routing.bonus(10, 120), 272);
+  assert.deepEqual([1, 3, 4, 7, 8, 10].map(level => routing.bonus(level, 2)), [28, 28, 35, 35, 42, 42]);
+  assert.deepEqual([1, 3, 4, 7, 8, 10].map(level => routing.bonus(level, 2, 'padrao')), [29, 29, 36, 36, 43, 43]);
+  assert.equal(routing.bonus(10, 120), 632);
   for (const [key, weights] of Object.entries(expected)) {
     const rule = base.characters[key];
     const actor = { key, rule, allowed: new Set(rule.positions), position: rule.start };
@@ -194,7 +196,7 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
     assert.equal(actor('gotica').approach, null);
     assert.equal(actor('gotica').noise, 0);
     assert.equal(actor('gotica').light, 0);
-    assert.equal(actor('gotica').routeBonus, 22 + 2 * time / 10);
+    assert.equal(actor('gotica').routeBonus, 22 + 3 * time / 10);
   }
   at(60);
   assert.equal(actor('gotica').approach, 'approach');
@@ -226,7 +228,7 @@ for (const reopen of [true, false]) {
     { random: () => 0 });
   at(10);
   assert.equal(actor('gatinha').position, 7);
-  assert.equal(actor('gatinha').routeBonus, 24);
+  assert.equal(actor('gatinha').routeBonus, 25);
   at(11, {}, { type: 'gate', id: 'G02' });
   at(20);
   assert.match(actor('gatinha').stopped, /porta fechada/);
@@ -272,14 +274,14 @@ for (const reopen of [true, false]) {
   assert.equal(actor('gatinha').lastReached, 7);
   assert.equal(actor('gatinha').checkpoint, 7);
   const recoveryOdds = game.debugSnapshot().actors[0].odds;
-  closeTo(recoveryOdds['VIP 2'] / recoveryOdds.Recepção, 1.24);
+  closeTo(recoveryOdds['VIP 2'] / recoveryOdds.Recepção, 1.25);
   draw = .99;
   at(20);
-  assert.equal(actor('gatinha').routeBonus, 24);
+  assert.equal(actor('gatinha').routeBonus, 25);
   draw = 0;
   at(40);
   assert.deepEqual(output('move').map(({ to }) => to), [3, 7, 15]);
-  assert.equal(actor('gatinha').routeBonus, 28);
+  assert.equal(actor('gatinha').routeBonus, 31);
   assert.equal(actor('gatinha').routeCompleted, true);
 }
 
@@ -422,6 +424,22 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
   assert.equal(actor('gotica').routeBonus, 22);
   closeTo(actor('gotica').remaining, 3.5);
   assert.deepEqual(output('move').map(({ to }) => to), [15, 14, 17]);
+  assert.deepEqual(output('corridorAttack'), ['gotica']);
+}
+
+{
+  const { at, actor, output } = scenario({
+    gotica: { start: 7, positions: [7, 15, 14, 13], interval: 10, routes: { CV: 100 } }
+  },
+    { gates: ['G02'], random: () => 0 });
+  at(10, { corridorLight: true });
+  assert.equal(actor('gotica').position, 7);
+  assert.match(actor('gotica').stopped, /porta fechada/);
+  assert(output('corridorFlicker').length > 0);
+  assert.deepEqual(output('corridorAttack'), []);
+  at(11, { corridorLight: true }, { type: 'gate', id: 'G02' });
+  assert.equal(actor('gotica').position, 15);
+  assert.deepEqual(output('corridorAttack'), ['gotica']);
 }
 
 {
@@ -431,7 +449,7 @@ for (const [tier, chance] of base.characters.gotica.staticChance.entries()) {
   const quiet = { radio: false };
   at(0, quiet);
   at(20, quiet);
-  draw = .90;
+  draw = .84;
   at(30, quiet);
   assert.equal(actor('gotica').position, 14);
   draw = .99;
@@ -487,6 +505,24 @@ const corridorOdds = {
   padrao: [[.45, .80], [.60, .98]]
 };
 const attackPhases = ['approach', 'entry'];
+{
+  let draw;
+  const actor = { key: 'yandere', position: base.map.back, noise: 45, light: .5 };
+  const fx = createEffects(base, routes, [actor]);
+  const approach = window.NathGame.createApproach(base.map, fx, () => draw);
+  approach.begin(actor, 'corridor');
+  actor.noise = 45;
+  actor.light = .5;
+  const { advance } = fx.attackOdds(actor, 'corridor', 'approach');
+  draw = advance - .000001;
+  assert.deepEqual(approach.choose(actor), { to: base.map.front });
+  draw = advance;
+  assert.deepEqual(approach.choose(actor), { stay: true });
+  draw = advance + (1 - advance) * .30 - .000001;
+  assert.deepEqual(approach.choose(actor), { stay: true });
+  draw = advance + (1 - advance) * .30;
+  assert.deepEqual(approach.choose(actor), { abandon: 'corridor' });
+}
 for (const [key, corridor] of Object.entries(corridorOdds)) {
   const actor = { key, rule: base.characters[key], position: 15, noise: 0, light: 0,
     approach: { objective: 'corridor', phase: 'approach' } };
@@ -500,8 +536,8 @@ for (const [key, corridor] of Object.entries(corridorOdds)) {
         const odds = fx.attackOdds(actor, objective, phase);
         const expected = quiet + (loud - quiet) * noise / 100;
         closeTo(odds.advance, expected);
-        closeTo(odds.stay, (1 - expected) * .6);
-        closeTo(odds.abandon, (1 - expected) * .4);
+        closeTo(odds.stay, (1 - expected) * .3);
+        closeTo(odds.abandon, (1 - expected) * .7);
       }
     }
   }
@@ -520,7 +556,7 @@ for (const [key, corridor] of Object.entries(corridorOdds)) {
     const quiet = repelled ? [.05, .15][index] : attracted ? [.80, .90][index] : corridor[index][0];
     const odds = fx.attackOdds(actor, 'corridor', phase);
     closeTo(odds.advance, quiet);
-    closeTo(odds.stay, (1 - quiet) * (repelled ? .2 : .6));
+    closeTo(odds.stay, (1 - quiet) * .3);
     if (key !== 'maid') closeTo(fx.attackOdds(actor, 'stock', phase).advance, tables.stock[index][0]);
     actor.noise = 100;
     const loud = corridor[index][1] - (repelled ? .65 : 0);
@@ -576,7 +612,7 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
   at(11, beam);
   assert.equal(debug('gotica').noise, 16);
   const advance = .60 + .25 * .16 - .65 * .125;
-  const stay = (1 - advance) * (.60 - .40 * .125);
+  const stay = (1 - advance) * .30;
   closeTo(debug('gotica').attackOdds.advance, advance);
   closeTo(debug('gotica').attackOdds.stay, stay);
   closeTo(debug('gotica').attackOdds.abandon, 1 - advance - stay);
@@ -607,7 +643,7 @@ for (const key of ['gotica', 'yandere', 'gatinha']) {
   at(20, { ...quiet, leftLook: true });
   closeTo(debug('yandere').attackOdds.advance, 0);
   closeTo(debug('yandere').attackOdds.blocked, stockAdvance);
-  closeTo(debug('yandere').attackOdds.stay, (1 - stockAdvance) * .6);
+  closeTo(debug('yandere').attackOdds.stay, (1 - stockAdvance) * .3);
   at(20, quiet, { type: 'gate', id: 'G01' });
   assert.equal(debug('gotica').attackOdds.advance, 0);
   assert(debug('gotica').attackOdds.blocked > 0);

@@ -27,20 +27,32 @@ class SoundEngine {
     this.context = null;
     this.ambient = null;
     this.samples = new Map();
+    this.sampleVoices = new Map();
     this.tones = new Set();
     this.active = false;
   }
-  preloadSamples() {
-    for (const file of [...Object.values(sampleFiles), ...cameraMeows.flat()]) {
+  preloadSamples(extraFiles = []) {
+    for (const file of [...Object.values(sampleFiles), ...cameraMeows.flat(), ...extraFiles]) {
       if (this.samples.has(file)) continue;
       const audio = new Audio(`./public/${file}`);
       audio.preload = 'auto';
       this.samples.set(file, audio);
     }
   }
-  playSample(name, volume = .45) {
-    const audio = this.samples.get(sampleFiles[name] ?? name);
+  playSample(name, volume = .45, polyphony = 1) {
+    const file = sampleFiles[name] ?? name;
+    let audio = this.samples.get(file);
     if (!audio) return;
+    if (polyphony > 1 && !audio.paused) {
+      if (!this.sampleVoices.has(file)) this.sampleVoices.set(file, []);
+      const voices = this.sampleVoices.get(file);
+      const available = voices.find(voice => voice.paused);
+      if (available) audio = available;
+      else if (voices.length < polyphony - 1) {
+        audio = new Audio(audio.src);
+        voices.push(audio);
+      }
+    }
     audio.volume = volume;
     audio.currentTime = 0;
     audio.play().catch(() => {});
@@ -67,6 +79,7 @@ class SoundEngine {
   }
   stopSamples() {
     for (const file of this.samples.keys()) this.stopSample(file);
+    for (const voices of this.sampleVoices.values()) for (const audio of voices) audio.pause();
   }
   cameraMeow(sanity) {
     const clips = cameraMeows[Number(sanity < 50)];
@@ -189,9 +202,14 @@ class SoundEngine {
 
   stats() {
     let playingSamples = 0;
+    let samples = this.samples.size;
     for (const audio of this.samples.values()) if (!audio.paused) playingSamples++;
+    for (const voices of this.sampleVoices.values()) {
+      samples += voices.length;
+      for (const audio of voices) if (!audio.paused) playingSamples++;
+    }
     return { context: this.context?.state ?? 'unavailable', tones: this.tones.size,
-      ambience: Boolean(this.ambient), radio: Boolean(this.radio), playingSamples, samples: this.samples.size };
+      ambience: Boolean(this.ambient), radio: Boolean(this.radio), playingSamples, samples };
   }
 }
 

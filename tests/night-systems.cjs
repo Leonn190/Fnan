@@ -129,10 +129,10 @@ for (const { frame, moves } of progress) {
 }
 
 for (const [conditions, rate] of [
-  [{ camera: true }, -.20], [{ camera: true, yandereCamera: true }, -.25],
+  [{ cameraLoss: .20 }, -.20], [{ cameraLoss: .25 }, -.25],
   [{ direct: true }, -.45], [{ closet: true }, -.52],
   [{ direct: true, invasion: true }, -2.95], [{ centralGate: true }, -.12],
-  [{ radio: true, camera: true }, 0], [{}, .04], [{ radio: true }, .24],
+  [{ radio: true, cameraLoss: .20 }, 0], [{}, .04], [{ radio: true }, .24],
   [{ radio: true, direct: true, closet: true, blackout: true }, -1.74],
   [{ radio: true, blackout: true }, .24]
 ]) near(sanityRate(base.sanity, conditions), rate);
@@ -170,6 +170,86 @@ observation(front, { view: 'office', officeBounds: [800, 1300] }, 100);
 observation(16, { camera: 'CAM09' }, 99.6, 'maid');
 observation(1, { camera: 'CAM03' }, 99.5, 'yandere');
 observation(1, { camera: 'CAM03', visibleCameraSource: null }, 100);
+for (const [key, position, camera, loss] of [
+  ['yandere', 17, 'CAM10', .50], ['yandere', 4, 'CAM07', .50], ['yandere', 19, 'CAM12', .50],
+  ['padrao', 17, 'CAM10', .40], ['gotica', 18, 'CAM11', .40], ['gotica', 3, 'CAM04', .40]
+]) observation(position, { camera }, 100 - loss * 2, key);
+
+for (const [position, camera, gates, loss] of [
+  [17, 'CAM10', [], .50], [3, 'CAM04', ['G01'], .52]
+]) {
+  const test = scenario({ levels: { padrao: 1, gotica: 1, yandere: 1 }, input: { camera, gates }, tune(config) {
+    for (const key of ['padrao', 'gotica', 'yandere']) config.characters[key].start = position;
+  } });
+  near(test.hud().sanityLossPerSecond, loss);
+}
+
+function stareScenario() {
+  return scenario({ levels: { yandere: 1 }, tune(config) {
+    config.night.movementDelay = 40;
+    config.characters.yandere.start = 17;
+    config.characters.yandere.interval = 100;
+  } });
+}
+const kitchen = { camera: 'CAM10' };
+{
+  const test = stareScenario();
+  test.at(0, { ...kitchen, gates: ['G01'] }, { type: 'gate', id: 'G01' });
+  test.at(10, kitchen);
+  near(test.state().sanity, 93.8);
+  assert.equal(test.events.filter(([event]) => event === 'cameraScareStart').length, 0);
+  test.at(10.001, kitchen);
+  near(test.state().sanity, 78.8 - .00012);
+  assert.equal(test.state().computerOn, true);
+  test.at(11.211, kitchen);
+  assert.equal(test.state().computerOn, false);
+  assert.equal(test.state().electricalFault, false);
+  assert.equal(test.state().outcome, null);
+  assert(test.game.isGateClosed('G01'));
+  test.at(30, kitchen);
+  assert.deepEqual(test.events.filter(([event]) => event.startsWith('cameraScare')).map(([event]) => event),
+    ['cameraScareStart', 'cameraScareEnd']);
+  test.at(30, {}, { type: 'computerPower' });
+  test.at(36.5, kitchen);
+  test.at(46.5, kitchen);
+  assert.equal(test.events.filter(([event]) => event === 'cameraScareStart').length, 1);
+  test.at(46.501, kitchen);
+  assert.equal(test.events.filter(([event]) => event === 'cameraScareStart').length, 2);
+}
+for (const interruption of [
+  { camera: 'CAM07' }, {}, { ...kitchen, visibleCameraSource: null },
+  { ...kitchen, cameraObservationBlocked: true }
+]) {
+  const test = stareScenario();
+  test.at(0, kitchen);
+  test.at(9, interruption);
+  test.at(25, kitchen);
+  test.at(35, kitchen);
+  assert(!test.events.some(([event]) => event === 'cameraScareStart'));
+  test.at(35.001, kitchen);
+  assert(test.events.some(([event]) => event === 'cameraScareStart'));
+}
+{
+  const test = stareScenario();
+  test.at(0, kitchen);
+  test.at(20, kitchen);
+  assert.equal(test.state().computerOn, true);
+  assert(test.events.some(([event]) => event === 'cameraScareStart'));
+  assert(!test.events.some(([event]) => event === 'cameraScareEnd'));
+  test.at(21.21, kitchen);
+  assert.equal(test.state().computerOn, false);
+}
+{
+  const test = stareScenario();
+  test.at(0, kitchen);
+  test.game.interruptCameraObservation();
+  test.at(20, { ...kitchen, cameraObservationBlocked: true });
+  test.at(50, kitchen);
+  assert(!test.events.some(([event]) => event === 'cameraScareStart'));
+  test.game.reset({ yandere: 0 }, { camera: 'CAM03' });
+  test.at(20, { camera: 'CAM03' });
+  assert(!test.events.some(([event]) => event === 'cameraScareStart'));
+}
 
 const clown = scenario({ levels: { palhaca: 1 } });
 clown.at(0, { view: 'closet-back', closet: true, clownLight: true }, { type: 'closetEnter' });

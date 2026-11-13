@@ -8,7 +8,12 @@
     "closet": 0.52,
     "invasion": 2.50
   },
-  "eventLoss": { "closetEnter": 2, "electricalFault": 5 },
+  "cameraLossOverrides": {
+    "yandere": { "CAM10": 0.50, "CAM07": 0.50, "CAM12": 0.50 },
+    "padrao": { "CAM10": 0.40 },
+    "gotica": { "CAM11": 0.40, "CAM04": 0.40 }
+  },
+  "eventLoss": { "closetEnter": 2, "electricalFault": 5, "yandereCameraScare": 15 },
   "recovery": {
     "music": 0.20,
     "passive": 0.04

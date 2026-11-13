@@ -1,4 +1,9 @@
 {
+  "yandereCameraScare": {
+    "observationSeconds": 10,
+    "durationSeconds": 1.21,
+    "image": "./public/NNN_Yandere_Jumpscare_1080p.gif"
+  },
   "smores": {
     "name": "Smores",
     "radioSeconds": 15,

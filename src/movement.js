@@ -8,11 +8,13 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   const { map, movement, characters, night } = config;
   const { left, leftApproach, office, front, back } = map;
   const { difficulty, retreat, recovery } = movement;
+  const cameraScare = config.threats.yandereCameraScare;
   const routes = createRoutes(map);
   const officeGate = routes.gate(front, office);
   const cameraIds = CAMERAS.map(cam => cam.id);
   let roster, actors, effects, threats, resources, shadow, smores, gates, electrical, input, now, outcome, sanityEnabled;
   let movementDelay, maxClosedGates, approach;
+  let watchedCamera, watchedSince, cameraScareEnds;
 
   const movementPaused = () => now < movementDelay;
   const gateControlsAvailable = () => maxClosedGates > 0 && !electrical.failed();
@@ -26,6 +28,11 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   const passable = (actor, edge) => canUse(actor, edge) && !gates.closed.has(edge.gateId);
   const clear = (actor, edge, from, to) => passable(actor, edge) && !isFull(to) && !observed(from, to);
   const attackRoutes = createAttackRoutes(config, routes, random, passable, clear);
+
+  function flickerCorridor(from, to) {
+    if (input.corridorLight && resources.flashlightAvailable(now) && officeLightAvailable()
+        && (from === front || from === back || to === front || to === back)) emit('corridorFlicker');
+  }
 
   function interval(actor, first = false) {
     const initial = actor.rule.initialStationaryAttempts !== undefined && actor.position === actor.rule.start;
@@ -47,6 +54,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   function reset(levels = {}, initialInput = {}, rules = night) {
     now = 0;
     outcome = null;
+    watchedCamera = watchedSince = cameraScareEnds = undefined;
     sanityEnabled = rules.sanityEnabled;
     movementDelay = rules.movementDelay ?? 0;
     maxClosedGates = rules.maxClosedGates ?? map.maxClosedMapGates;
@@ -79,7 +87,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       schedule(actor, 1, true);
       actor.scheduledAt = movementDelay;
       actor.due += movementDelay;
-      approach.arrive(actor);
+      if (approach.arrive(actor)) emit('corridorAttack', actor.key);
     }
     smores = createSmores(config.threats.smores, levelFor('smores'), random, emit);
     threats = createThreats(config, { palhaca: levelFor('palhaca') }, random, emit, smores.reactionReduction);
@@ -109,6 +117,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const from = actor.position;
     const to = drawWeighted(random, retreatChoices(actor, kind));
     if (to !== undefined) {
+      flickerCorridor(from, to);
       actor.previous = from;
       actor.position = to;
     }
@@ -127,13 +136,15 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       }
       return true;
     } else {
-      approach.begin(actor, actor.route.objective);
+      const { objective } = actor.route;
+      if (approach.begin(actor, objective) && objective === 'corridor') emit('corridorAttack', actor.key);
     }
     return false;
   }
 
   const navigationTarget = actor => actor.rule.routes ? attackRoutes.checkpoint(actor) : back;
-  const navigationBonus = actor => actor.rule.routes ? attackRoutes.bonus(actor.level, actor.route?.moves) : actor.targetBonus;
+  const navigationBonus = actor => actor.rule.routes ? attackRoutes.bonus(actor.level, actor.route?.moves, actor.key) : actor.targetBonus;
+  const effectiveNavigationBonus = actor => navigationBonus(actor) * smores.targetBonusMultiplier();
 
   function navigationChoices(actor) {
     const { position: from } = actor;
@@ -145,7 +156,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     const choices = actor.route
       ? [...neighbors.filter(id => progress.has(id)), ...neighbors.filter(id => !progress.has(id))]
       : neighbors;
-    const bonus = factor(navigationBonus(actor) * smores.targetBonusMultiplier());
+    const bonus = factor(effectiveNavigationBonus(actor));
     return weightedChoices([...choices, from], id => {
       if (id === from) return movement.weight * movement.stayFactor;
       const progresses = progress.has(id);
@@ -182,13 +193,14 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     actor.pending = null;
     if (choice.stationary) actor.stage++;
     else {
+      flickerCorridor(from, to);
       actor.previous = from;
       actor.position = to;
       if (actor.route) actor.route.moves++;
     }
     if (choice.free) actor.freeMoves--;
     if (to === office) actor.due = Infinity;
-    approach.arrive(actor);
+    if (approach.arrive(actor)) emit('corridorAttack', actor.key);
     const recovered = reachCheckpoint(actor, from);
     if (to !== office && !recovered) schedule(actor);
     emit('move', { actor, from, to });
@@ -298,6 +310,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       actor.retreat = null;
       const choice = choose(actor);
       if (!choice) continue;
+      if (actor.approach || (!choice.stationary && !choice.stay)) flickerCorridor(actor.position, choice.to);
       if (choice.abandon) {
         withdraw(actor, choice.abandon);
         continue;
@@ -331,22 +344,55 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     }
   }
 
-  function observeSanity(computerOn, corridorLight, clownLight) {
-    return sanityEnabled && window.NathGame.sanityObservation(config, actors, cameraActors, {
-      ...input, gates: gates.closed, camera: camerasAvailable() && !effects.staticActive(now) ? input.camera : null,
+  function observeCamera() {
+    if (!input.camera || cameraScareEnds !== undefined || !camerasAvailable() || effects.staticActive(now)) return;
+    return window.NathGame.cameraObservation(config, cameraActors, { ...input, gates: gates.closed });
+  }
+
+  function updateCameraScare(camera, until = now) {
+    if (cameraScareEnds !== undefined) {
+      if (now >= cameraScareEnds || !resources.computerOn()) {
+        const wasOn = resources.computerOn();
+        resources.turnComputerOff();
+        electrical.powerChanged(wasOn, false);
+        cameraScareEnds = undefined;
+        emit('cameraScareEnd');
+      }
+      return cameraScareEnds ?? Infinity;
+    }
+    const observedCamera = !input.cameraObservationBlocked && camera?.yandereVisible ? input.camera : undefined;
+    if (observedCamera !== watchedCamera) {
+      watchedCamera = observedCamera;
+      watchedSince = now;
+    }
+    if (!watchedCamera) return Infinity;
+    const deadline = watchedSince + cameraScare.observationSeconds;
+    // At the exact threshold the player can still break observation.
+    if (now < deadline || until <= deadline) return deadline;
+    watchedCamera = undefined;
+    // Keep the full animation visible when a frame crosses the deadline late.
+    cameraScareEnds = until + cameraScare.durationSeconds;
+    resources.applyEvent('yandereCameraScare', now);
+    emit('cameraScareStart');
+    return cameraScareEnds;
+  }
+
+  function observeSanity(computerOn, corridorLight, clownLight, camera) {
+    return sanityEnabled && window.NathGame.sanityObservation(config, actors, {
+      ...input, gates: gates.closed,
       view: !computerOn && input.computer ? 'office' : input.view,
       corridorLight, clownLight, clownStage: threats.clownStage()
-    });
+    }, camera);
   }
 
   const noiseInput = (radio, computerOn) => ({ ...input, radio, computer: computerOn && input.computer });
 
-  function integrate(until) {
+  function integrate(until, camera) {
     const computerOn = resources.computerOn();
     const flashlightAvailable = resources.flashlightAvailable(now);
     const corridorLight = flashlightAvailable && input.corridorLight;
     const clownLight = flashlightAvailable && input.clownLight;
-    const observation = observeSanity(computerOn, corridorLight, clownLight);
+    const observation = observeSanity(computerOn, corridorLight, clownLight, camera);
     const { end, radio, won } = resources.segment(now, until, input, observation, gates.closed);
     const activeInput = { ...noiseInput(radio, computerOn), corridorLight, clownLight };
     effects.integrate(end - now, { ...activeInput,
@@ -370,9 +416,12 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
           threats.nextDeadline(now, radio, resources.flashlightAvailable(now) && input.clownLight), smores.nextDeadline(now, radio));
         for (const actor of actors) due = Math.min(due, actor.pending?.expires ?? moveDue(actor));
       }
+      const camera = observeCamera();
+      const scareDeadline = updateCameraScare(camera, until);
+      due = Math.min(due, scareDeadline);
       // A modifier or a power boundary can leave work due at this instant.
       // Resolve it without integrating backward or skipping intervening events.
-      integrate(Math.max(now, due));
+      integrate(Math.max(now, due), cameraScareEnds === undefined && camerasAvailable() ? camera : undefined);
       if (outcome) return;
       if (now < until) settle();
       if (outcome) return;
@@ -398,6 +447,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         accepted = gateControlsAvailable() && gates.toggle(action.id);
         break;
       case 'computerPower': {
+        if (cameraScareEnds !== undefined) break;
         const wasOn = resources.computerOn();
         resources.toggleComputer();
         const on = resources.computerOn();
@@ -412,6 +462,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       }
     }
     settle(action);
+    if (!outcome) updateCameraScare(observeCamera());
     return accepted;
   }
 
@@ -561,7 +612,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     return { key: actor.key, name: actor.rule.name, position, location: routes.positions.get(position).name,
       route: actor.rule.routes ? (actor.route?.id ?? 'A sortear') : 'Sem rota',
       routeOdds, required: actor.route?.required, lastReached: actor.route?.lastReached,
-      completed: actor.route?.completed, bonus: actor.level ? navigationBonus(actor) : null,
+      completed: actor.route?.completed, bonus: actor.level ? effectiveNavigationBonus(actor) : null,
       target, status, odds, expiryOdds, attackActive, attackPath: actor.approach?.objective ?? null,
       noise: actor.noise ?? 0, light: actor.light ?? 0, attackOdds };
   }
@@ -578,7 +629,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
   function hudSnapshot() {
     const computerOn = resources.computerOn();
     const lightAvailable = resources.flashlightAvailable(now);
-    const observation = observeSanity(computerOn, lightAvailable && input.corridorLight, lightAvailable && input.clownLight);
+    const observation = observeSanity(computerOn, lightAvailable && input.corridorLight, lightAvailable && input.clownLight, observeCamera());
     const frame = resources.snapshot(now, input, observation, gates.closed);
     return { ...frame, noiseIntensity: outcome ? 0 : effects.noiseIntensity(now,
       noiseInput(input.radio && frame.radioAvailable, computerOn)) };
@@ -586,7 +637,15 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
 
   reset();
   return {
-    reset, advance, cameraActors, diagnostics, debugSnapshot, stop: () => shadow.stop(),
+    reset, advance, cameraActors, diagnostics, debugSnapshot,
+    interruptCameraObservation() {
+      watchedCamera = undefined;
+      input.cameraObservationBlocked = true;
+    },
+    stop() {
+      shadow.stop();
+      watchedCamera = watchedSince = cameraScareEnds = undefined;
+    },
     isGateClosed: id => gates.closed.has(id),
     electricalFault: () => electrical.failed(), gateControlsAvailable,
     camerasAvailable, flashlightAvailable: () => resources.flashlightAvailable(now),

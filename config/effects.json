@@ -17,11 +17,16 @@
     }
   },
   "imageCache": { "limit": 16, "parallel": 3 },
+  "corridorAttackSound": {
+    "files": ["audio/metal01.mp3", "audio/metal02.mp3", "audio/metal03.mp3", "audio/metal04.mp3", "audio/metal05.mp3"],
+    "volume": 0.32
+  },
   "flashlight": {
+    "corridorFlickerMs": 160,
     "modifiers": {
-      "gotica": { "secondsToMax": 8, "advanceDelta": -0.65, "stayShareDelta": -0.40 },
-      "yandere": { "secondsToMax": 8, "advanceDelta": -0.65, "stayShareDelta": -0.40 },
-      "gatinha": { "secondsToMax": 6, "advanceDelta": 0.65, "stayShareDelta": 0 }
+      "gotica": { "secondsToMax": 8, "advanceDelta": -0.65 },
+      "yandere": { "secondsToMax": 8, "advanceDelta": -0.65 },
+      "gatinha": { "secondsToMax": 6, "advanceDelta": 0.65 }
     },
     "decayPerSecond": 0.20,
     "minimumAdvance": 0.05,

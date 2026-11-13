@@ -75,6 +75,18 @@ document.createElement = () => new Element();
 document.createElementNS = () => new Element();
 const window = new Element();
 window.location = { search: '?debug=1' };
+const scareDownloads = [];
+const activeScareUrls = new Set();
+let nextScareUrl = 0;
+class TestURL extends URL {
+  static createObjectURL(blob) {
+    assert.equal(blob, scareDownloads.at(-1));
+    const url = 'blob:camera-scare-' + ++nextScareUrl;
+    activeScareUrls.add(url);
+    return url;
+  }
+  static revokeObjectURL(url) { assert(activeScareUrls.delete(url)); }
+}
 let frame;
 let frameId = 0;
 let now = 0;
@@ -87,10 +99,12 @@ math.random = () => randomValue();
 const warnings = [];
 const samples = new Map();
 const playedSamples = [];
+const pendingTimers = new Map();
+let timerId = 0;
 const storage = new Map();
 const progressKey = 'nnn.campaign.completed';
 const context = vm.createContext({
-  window, document, Element, URLSearchParams, URL, Math: math, performance: { now: () => now },
+  window, document, Element, URLSearchParams, URL: TestURL, AbortController, Math: math, performance: { now: () => now },
   localStorage: {
     getItem: key => storage.get(key) ?? null,
     setItem: (key, value) => storage.set(key, value)
@@ -99,6 +113,7 @@ const context = vm.createContext({
     paused = true;
     constructor(source) {
       assert(fs.existsSync(path.join(root, source)), source);
+      this.src = source;
       this.file = source.replace('./public/', '');
       samples.set(this.file, this);
     }
@@ -120,6 +135,11 @@ const context = vm.createContext({
   },
   console: { warn: message => warnings.push(message), info() {}, error: console.error },
   async fetch(url) {
+    if (url === './public/NNN_Yandere_Jumpscare_1080p.gif') {
+      const blob = {};
+      scareDownloads.push(blob);
+      return { ok: true, blob: async () => blob };
+    }
     assert(url.pathname.startsWith('/NNN/config/'));
     const data = JSON.parse(fs.readFileSync(path.join(root, url.pathname.slice('/NNN/'.length)), 'utf8'));
     // Keep the layout and controls tests independent of random movement.
@@ -131,7 +151,11 @@ const context = vm.createContext({
     if (url.pathname.endsWith('/threats.json')) data.clown.growthIncreasePerLevel = 0;
     return { ok: true, json: async () => data };
   },
-  setTimeout: () => 1, clearTimeout() {},
+  setTimeout(callback, delay) {
+    pendingTimers.set(++timerId, { callback, delay });
+    return timerId;
+  },
+  clearTimeout(id) { pendingTimers.delete(id); },
   requestAnimationFrame(fn) { frame = fn; return ++frameId; },
   cancelAnimationFrame(id) { if (id === frameId) frame = undefined; },
   ResizeObserver: class { observe() {} }
@@ -1227,7 +1251,7 @@ assert.match(attackStatus.textContent, /Ataque inativo.*barulho 0\.0 \/ 100/);
 nodes['office-power'].fire('click');
 step(attackStart + 10_000);
 assert.match(attackStatus.textContent, /Ataque ativo · corredor · barulho 0\.0 \/ 100 · lanterna 0%/);
-assert.deepEqual(attackChances(), ['Avançar · 60%', 'Esperar · 24%', 'Desistir · 16%']);
+assert.deepEqual(attackChances(), ['Avançar · 60%', 'Permanecer · 12%', 'Recuar · 28%']);
 
 step(attackStart + 10_200);
 pressW();
@@ -1240,7 +1264,7 @@ nodes['office-power'].fire('click');
 assert(Math.abs(movement.diagnostics()[0].noise - 16) < 1e-8);
 step(attackStart + 10_400);
 assert.match(attackStatus.textContent, /barulho 15\.9 \/ 100/);
-assert.deepEqual(attackChances(), ['Avançar · 63,98%', 'Esperar · 21,61%', 'Desistir · 14,41%']);
+assert.deepEqual(attackChances(), ['Avançar · 63,98%', 'Permanecer · 10,81%', 'Recuar · 25,22%']);
 
 nodes['office-closet'].fire('click');
 step(attackStart + 11_900);
@@ -1252,6 +1276,105 @@ assert(Math.abs(movement.diagnostics()[0].noise - beforeClosetLight - 6.4) < 1e-
 assert.equal(movement.diagnostics()[0].light, 0);
 closetLight.fire('pointerup', pointer);
 console.log('PASS: attack debug, keyboard and pointer activation, closet flashlight and computer power noise.');
+
+const downloadsBefore = scareDownloads.length;
+window.location.protocol = 'https:';
+customStart({ yandere: 1 });
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(scareDownloads.length, downloadsBefore + 1);
+nodes['office-monitor'].fire('click');
+finishCameraLaunch();
+camera('CAM03');
+nodes['feed-art'].complete = true;
+nodes['feed-art'].naturalWidth = 1920;
+gate('G01');
+step(now);
+const stareStart = now;
+const scareArt = nodes['camera-scare'];
+const soundCount = playedSamples.length;
+step(stareStart + 10_000);
+assert.equal(scareArt.hidden, true);
+const sanityBeforeScare = movement.snapshot().sanity;
+step(stareStart + 10_001);
+assert.equal(scareArt.hidden, false);
+const firstScareUrl = scareArt.src;
+assert(activeScareUrls.has(firstScareUrl));
+assert.equal(nodes['cameras-view'].inert, true);
+assert.equal(playedSamples.length, soundCount);
+assert.equal(scream.paused, true);
+assert(movement.snapshot().sanity < sanityBeforeScare - 15);
+assert.equal(movement.snapshot().outcome, null);
+assert(isClosed('G01'));
+step(stareStart + 11_211);
+assert.equal(scareArt.hidden, true);
+assert.equal(scareArt.getAttribute('src'), null);
+assert.equal(activeScareUrls.size, 0);
+assert.equal(nodes.game.getAttribute('data-computer-off'), '');
+assert.equal(nodes.game.dataset.monitorTransition, undefined);
+assert.equal(nodes.game.dataset.defeat, undefined);
+assert.equal(movement.electricalFault(), false);
+assert(isClosed('G01'));
+nodes['desktop-power'].fire('click');
+assert.equal(nodes.game.dataset.monitorTransition, 'boot');
+const bootStart = now;
+step(bootStart + 6_499);
+assert.equal(nodes['computer-screen'].inert, true);
+step(bootStart + 6_500);
+assert.equal(nodes['computer-screen'].inert, false);
+assert.equal(nodes['feed-art'].hidden, false);
+step(now + 100);
+document.hidden = true;
+document.fire('visibilitychange');
+step(now + 20_000);
+document.hidden = false;
+document.fire('visibilitychange');
+assert.equal(scareArt.hidden, true);
+assert.equal(movement.snapshot().computerOn, true);
+step(now + 10_001);
+assert.equal(scareArt.hidden, false);
+assert.notEqual(scareArt.src, firstScareUrl);
+assert.equal(scareDownloads.length, downloadsBefore + 1);
+nodes['complete-menu'].fire('click');
+assert.equal(scareArt.hidden, true);
+assert.equal(scareArt.getAttribute('src'), null);
+assert.equal(nodes['cameras-view'].inert, false);
+assert.equal(activeScareUrls.size, 0);
+console.log('PASS: silent Yandere camera scare, exact threshold, instant shutdown, normal boot, visibility and cleanup.');
+
+characterRules.gotica.start = characterRules.padrao.start = 7;
+characterRules.gotica.routes = characterRules.padrao.routes = { CV: 100 };
+characterRules.gotica.interval = characterRules.padrao.interval = 12.5;
+customStart({ gotica: 1, padrao: 1 });
+const flickerStart = now;
+const officeView = nodes['office-view'];
+const metalPlays = () => playedSamples.filter(file => /^audio\/metal0[1-5]\.mp3$/.test(file));
+const metalsBefore = metalPlays().length;
+const firstMetalVoice = samples.get('audio/metal01.mp3');
+pressW();
+const litDrain = movement.snapshot({ hud: true }).energyLossPerSecond;
+step(flickerStart + 10_000);
+assert.equal(officeView.getAttribute('data-flashlight-flicker'), '');
+assert.equal(officeLight.attrs['aria-pressed'], 'true');
+assert.deepEqual(Array.from(movement.officeState().back).sort(), ['gotica', 'original']);
+assert.deepEqual(metalPlays().slice(metalsBefore), ['audio/metal01.mp3', 'audio/metal01.mp3']);
+assert.notEqual(samples.get('audio/metal01.mp3'), firstMetalVoice);
+assert.equal(firstMetalVoice.paused, false);
+assert.equal(samples.get('audio/metal01.mp3').volume, .32);
+const flickers = [...pendingTimers].filter(([, timer]) => timer.delay === 160);
+assert.equal(flickers.length, 1);
+flickers[0][1].callback();
+assert.equal(officeView.getAttribute('data-flashlight-flicker'), null);
+assert.equal(officeLight.attrs['aria-pressed'], 'true');
+step(flickerStart + 20_000);
+assert.equal(officeView.getAttribute('data-flashlight-flicker'), '');
+assert.equal(metalPlays().length, metalsBefore + 2);
+assert.equal(movement.snapshot({ hud: true }).energyLossPerSecond, litDrain);
+releaseW();
+assert.equal(officeView.getAttribute('data-flashlight-flicker'), null);
+nodes['complete-menu'].fire('click');
+assert.equal(firstMetalVoice.paused, true);
+assert.equal(samples.get('audio/metal01.mp3').paused, true);
+console.log('PASS: coalesced corridor flicker and one metal sample per corridor attack.');
 }
 
 test().catch(error => {

@@ -102,6 +102,15 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 
 .office-characters,.office-character{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .corridor-characters{position:absolute;inset:0;pointer-events:none}
+.office-view[data-flashlight-flicker][data-flashlight="true"] .office-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("../../public/images/office/states/open-dark.webp") center / 100% 100%;
+  clip-path: inset(34% 44% 32% 44%);
+  pointer-events: none;
+}
+.office-view[data-flashlight-flicker] .corridor-characters{visibility:hidden}
 .corridor-characters span{position:absolute;left:calc(100% * 956 / 2172);top:calc(100% * 234 / 724);width:calc(100% * 264 / 2172);height:calc(100% * 264 / 724);background-image:url("../../public/images/office/states/corridor-atlas.webp");background-size:500% 500%}
 .clown-peek{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mask-image:linear-gradient(to right,transparent 84%,#000 85.6%)}
 .scene-hotspot{position:absolute;border:0;background:transparent}
@@ -518,6 +527,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 }
 
 .camera-feed{position:absolute;inset:var(--titlebar-height) 0 0;overflow:hidden;background:#070b18}
+.camera-scare{position:absolute;inset:0;z-index:6;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .feed-art{width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.77) contrast(1.13) saturate(.70);transform:scale(1.015);pointer-events:none;transition:filter .3s}
 .shadow-feed{position:absolute;inset:0;z-index:4;pointer-events:none}
 .shadow-feed img{position:absolute;left:38%;top:47%;height:55%;max-width:46%;object-fit:contain;transform:translate(-50%,-50%);filter:brightness(1.18) drop-shadow(0 0 14px #b29cd14d)}

@@ -59,7 +59,7 @@ function createRoutes(map) {
 
 function createAttackRoutes(config, graph, random, passable, clear) {
   const { map, movement } = config;
-  const { definitions, bonusByLevel, bonusPerMove } = movement.routes;
+  const { definitions, bonusByLevel } = movement.routes;
   const permitsEdge = (actor, edge) => edge && (!edge.actors || edge.actors.includes(actor.key));
   function routeOptions(actor) {
     return Object.entries(actor.rule.routes ?? {}).map(([id, weight]) => {
@@ -178,8 +178,11 @@ function createAttackRoutes(config, graph, random, passable, clear) {
     return route.completed;
   }
 
-  const bonus = (level, moves = 0) =>
-    (bonusByLevel.findLast(({ minLevel }) => level >= minLevel)?.bonus ?? 0) + moves * bonusPerMove;
+  function bonus(level, moves = 0, key) {
+    const tier = bonusByLevel.findLast(({ minLevel }) => level >= minLevel);
+    if (!tier) return 0;
+    return tier.bonus + moves * (key === 'padrao' ? tier.padraoPerMove : tier.perMove);
+  }
   return { select, selectionOdds, checkpoint, reach, nextSteps, canNavigate, bonus };
 }
 

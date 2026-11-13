@@ -198,6 +198,7 @@ function createApproach(map, effects, random) {
     actor.noise = 0;
     actor.light = 0;
     actor.approach = { objective, phase: 'approach' };
+    return true;
   }
 
   function options(actor) {
@@ -219,7 +220,7 @@ function createApproach(map, effects, random) {
     } else if (actor.approach) {
       if (actor.position === stages[actor.approach.objective][1]) actor.approach.phase = 'entry';
     } else if (actor.key === 'maid' && actor.position === map.back) {
-      begin(actor, 'corridor');
+      return begin(actor, 'corridor');
     }
   }
 

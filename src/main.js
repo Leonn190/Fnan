@@ -45,7 +45,7 @@ const dom = {
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
   closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'),
   closetExtra: $('#closet-extra'),
-  feedArt: $('#feed-art'), tech: $('#technical-feed'),
+  feedArt: $('#feed-art'), tech: $('#technical-feed'), cameraScare: $('#camera-scare'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
   camNumber: $('#cam-number'), cameraOffline: $('#camera-offline'), cameraAudio: $('#camera-audio'),
   static: $('#camera-static'), threatAlert: $('#threat-alert'),
@@ -79,6 +79,9 @@ const CLOWN_RIGHT_IMAGE = './public/images/jumpscares/palhaca-direita.gif';
 const CLOWN_BOTTOM_IMAGE = './public/images/jumpscares/palhaca-baixo.gif';
 const SHADOW_IMAGE = config.shadow.jumpscare;
 const JUMPSCARE_AUDIO = './public/audio/jumpscares/';
+const { corridorAttackSound, flashlight } = config.effects;
+const corridorSoundVoices = Object.keys(config.characters).length;
+const cameraScareImage = config.threats.yandereCameraScare.image;
 const MONITOR_TRANSITION_MS = { boot: 6500, shutdown: 2000 };
 const CAMERA_LAUNCH_MS = 1500;
 let computerTransitionTimer;
@@ -142,6 +145,11 @@ let officeChanged = false;
 let officePreview = false;
 let goticaStaticAt;
 let renderedGoticaStaticAt;
+let corridorFlickerTimer;
+let cameraScareRequest;
+let cameraScareBlob;
+let cameraScareUrl;
+let cameraScarePlays = 0;
 const params = new URLSearchParams(window.location?.search);
 const developerDebug = params.get('debug') === '1';
 const debugEnabled = () => state.shift?.debug ?? developerDebug;
@@ -229,6 +237,29 @@ const movement = createMovement(config, {
       for (const position of [positions.get(value.from), positions.get(value.to)]) {
         for (const id of position.cameras) changedCameras.add(id);
       }
+    } else if (event === 'corridorFlicker') {
+      if (corridorFlickerTimer !== undefined || state.mode !== 'office' || document.hidden
+          || !state.flashlight || !corridorInView()) return;
+      dom.office.toggleAttribute('data-flashlight-flicker', true);
+      corridorFlickerTimer = setTimeout(clearCorridorFlicker, flashlight.corridorFlickerMs);
+    } else if (event === 'corridorAttack') {
+      const { files, volume } = corridorAttackSound;
+      sound.playSample(files[Math.floor(Math.random() * files.length)], volume, corridorSoundVoices);
+    } else if (event === 'cameraScareStart') {
+      nextHudUpdate = 0;
+      dom.cameraScare.hidden = false;
+      if (cameraScareBlob) cameraScareUrl = URL.createObjectURL(cameraScareBlob);
+      const replaySource = cameraScarePlays ? `${cameraScareImage}?replay=${cameraScarePlays % 2}` : cameraScareImage;
+      dom.cameraScare.src = cameraScareUrl ?? replaySource;
+      cameraScarePlays++;
+      cameraApp.panel.inert = true;
+    } else if (event === 'cameraScareEnd') {
+      clearCameraScare();
+      clearMonitorTransition();
+      clearCameraLaunch();
+      clearCameraInterference();
+      goticaStaticAt = undefined;
+      updateCameraFeed(CAMERAS[state.cameraIndex]);
     } else if (event === 'smores') {
       officeChanged = true;
       if (value === 'vent') sound.playSample('vent');
@@ -344,6 +375,21 @@ function currentCameraFrame(cam, actors = movement.cameraActors(cam.id)) {
   return cameraActorFrame(cam, actors, config, movement.isGateClosed, state.characterPreviews.get(cam.id));
 }
 
+function clearCorridorFlicker() {
+  if (corridorFlickerTimer === undefined) return;
+  clearTimeout(corridorFlickerTimer);
+  corridorFlickerTimer = undefined;
+  dom.office.toggleAttribute('data-flashlight-flicker', false);
+}
+
+function clearCameraScare() {
+  dom.cameraScare.hidden = true;
+  clearImageSource(dom.cameraScare);
+  if (cameraScareUrl) URL.revokeObjectURL(cameraScareUrl);
+  cameraScareUrl = undefined;
+  cameraApp.panel.inert = false;
+}
+
 // Prévia manual de arte, descartada na próxima alteração de ocupação da sala.
 function setCameraCharacterState(cam, key) {
   if (typeof key !== 'string' || (key !== 'vazia' && !Object.hasOwn(characterStateImages(cam), key))) {
@@ -444,8 +490,8 @@ function updateMovementDebug() {
     setText(attack, `Ataque ${actor.attackActive ? 'ativo' : 'inativo'} · ${path}`
       + ` · barulho ${actor.noise.toFixed(1)} / ${config.effects.noise.max} · lanterna ${debugPercent.format(actor.light)}`);
     const chances = actor.attackOdds;
-    renderDebugOdds(attackOdds, chances ? { Avançar: chances.advance, Esperar: chances.stay,
-      Desistir: chances.abandon, ...(chances.blocked > 0 && { Bloqueio: chances.blocked }) } : {});
+    renderDebugOdds(attackOdds, chances ? { Avançar: chances.advance, Permanecer: chances.stay,
+      Recuar: chances.abandon, ...(chances.blocked > 0 && { Bloqueio: chances.blocked }) } : {});
   }
   setText(debugClown, `Palhaça · ${clown.counter.toFixed(1)} / ${clown.max} · ${clown.status}`);
   debugProgress.max = clown.max;
@@ -509,6 +555,7 @@ function changeCamera(id, withSound = false) {
   const index = CAMERAS.findIndex(camera => camera.id === id);
   if (index < 0) return;
   const changed = state.cameraIndex !== index;
+  if (changed) movement.interruptCameraObservation();
   state.cameraIndex = index;
   const cam = CAMERAS[index];
   setText(dom.camNumber, cam.id.replace('CAM', 'CAM '));
@@ -528,6 +575,7 @@ function setMode(mode, withSound = true, force = false) {
   if (!force && (state.complete || state.mode === mode)) return;
   const watching = mode === 'cameras';
   const hiding = mode === 'closet';
+  if (state.mode === 'cameras' && !watching) movement.interruptCameraObservation();
   state.mode = mode;
   if (!watching) {
     clearCameraInterference();
@@ -581,7 +629,7 @@ function closeComputer() {
 }
 
 function toggleComputerPower() {
-  if (state.complete || state.closetTransition) return;
+  if (state.complete || state.closetTransition || !dom.cameraScare.hidden) return;
   const now = performance.now();
   if (state.monitorTransition) {
     advanceGame(now);
@@ -810,6 +858,7 @@ function updateFlashlight() {
   const target = flashlightTarget();
   const wasOn = state.flashlight || dom.closetLight.getAttribute('aria-pressed') === 'true';
   state.flashlight = held && target === dom.officeLight;
+  if (!state.flashlight) clearCorridorFlicker();
   setClosetLight(held && target === dom.closetLight);
   if (held && target && !wasOn) sound.playSample('flashlight');
   updateOfficeView();
@@ -921,6 +970,9 @@ function stopShift() {
   clearTimeout(toastTimeout);
   dom.toast.classList.remove('show');
   clearCameraInterference();
+  clearCorridorFlicker();
+  clearCameraScare();
+  releaseCameraScarePreload();
   imageCache.clear();
   map.clearAudioPulses();
   clearCameraGesture();
@@ -1065,6 +1117,9 @@ function prepareShift(shift) {
   measureViewport();
   cancelGameFrame();
   clearCameraInterference();
+  clearCorridorFlicker();
+  clearCameraScare();
+  releaseCameraScarePreload();
   goticaStaticAt = undefined;
   imageCache.clear();
   resetPerformance();
@@ -1082,7 +1137,7 @@ function prepareShift(shift) {
   clearTimeout(toastTimeout);
   dom.toast.classList.remove('show');
   dom.threatAlert.hidden = true;
-  sound.preloadSamples();
+  sound.preloadSamples(corridorAttackSound.files);
   sound.stopSamples();
   state.computerMode = 'desktop';
   clearMonitorTransition();
@@ -1226,6 +1281,7 @@ function gameInput() {
     cameraPreview: state.characterPreviews.get(camera),
     visibleCameraSource: camera && !dom.feedArt.hidden && dom.feedArt.complete && dom.feedArt.naturalWidth
       ? dom.feedArt.getAttribute('src') : null,
+    cameraObservationBlocked: document.hidden,
     findShadow: !document.hidden,
     view: office ? 'office' : closet && !state.closetTransition ? `closet-${dom.closet.dataset.view}` : camera ? 'cameras' : null,
     closet,
@@ -1400,6 +1456,8 @@ let gameFrame;
 let backgroundFrame;
 function requestGameFrame() {
   if (document.hidden) {
+    movement.interruptCameraObservation();
+    clearCorridorFlicker();
     backgroundFrame ??= setTimeout(() => {
       backgroundFrame = undefined;
       tick(performance.now());
@@ -1887,6 +1945,11 @@ window.NathGame.setOfficeCharacterState = (...args) => {
   return accepted;
 };
 
+function releaseCameraScarePreload() {
+  cameraScareRequest?.abort();
+  cameraScareRequest = cameraScareBlob = undefined;
+}
+
 function warmShiftImages(levels) {
   imageCache.warm([OFFICE.images.lit, OFFICE.images.closed]);
   if (levels.shadow > 0) {
@@ -1897,12 +1960,23 @@ function warmShiftImages(levels) {
     clearImageSource(dom.shadowSprite);
   }
   imageCache.warm([...JUMPSCARE_IMAGES, CLOWN_BOTTOM_IMAGE], false);
+  if (levels.yandere > 0 && /^https?:$/.test(window.location.protocol) && URL.createObjectURL) {
+    const request = cameraScareRequest = new AbortController();
+    // Reuse the downloaded bytes and give each playback a fresh animation identity.
+    fetch(cameraScareImage, { signal: request.signal, priority: 'low' }).then(response => {
+      if (response.ok) return response.blob();
+    }).then(blob => {
+      if (cameraScareRequest === request) cameraScareBlob = blob;
+    }).catch(() => {}).finally(() => {
+      if (cameraScareRequest === request) cameraScareRequest = undefined;
+    });
+  }
 }
 
 const menu = createNightMenu(config, {
   prepareShift,
   startShift,
-  onEnter: () => sound.preloadSamples()
+  onEnter: () => sound.preloadSamples(corridorAttackSound.files)
 });
 dom.game.style.setProperty('--shadow-manifest-duration', `${config.shadow.manifestSeconds}s`);
 dom.game.style.setProperty('--shadow-found-duration', `${config.shadow.foundSeconds}s`);

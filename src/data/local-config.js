@@ -298,22 +298,30 @@ window.NathGame.localConfig = {
       "limit": 16,
       "parallel": 3
     },
+    "corridorAttackSound": {
+      "files": [
+        "audio/metal01.mp3",
+        "audio/metal02.mp3",
+        "audio/metal03.mp3",
+        "audio/metal04.mp3",
+        "audio/metal05.mp3"
+      ],
+      "volume": 0.32
+    },
     "flashlight": {
+      "corridorFlickerMs": 160,
       "modifiers": {
         "gotica": {
           "secondsToMax": 8,
-          "advanceDelta": -0.65,
-          "stayShareDelta": -0.4
+          "advanceDelta": -0.65
         },
         "yandere": {
           "secondsToMax": 8,
-          "advanceDelta": -0.65,
-          "stayShareDelta": -0.4
+          "advanceDelta": -0.65
         },
         "gatinha": {
           "secondsToMax": 6,
-          "advanceDelta": 0.65,
-          "stayShareDelta": 0
+          "advanceDelta": 0.65
         }
       },
       "decayPerSecond": 0.2,
@@ -900,18 +908,23 @@ window.NathGame.localConfig = {
       "bonusByLevel": [
         {
           "minLevel": 1,
-          "bonus": 22
+          "bonus": 22,
+          "perMove": 3,
+          "padraoPerMove": 3.5
         },
         {
           "minLevel": 4,
-          "bonus": 27
+          "bonus": 27,
+          "perMove": 4,
+          "padraoPerMove": 4.5
         },
         {
           "minLevel": 8,
-          "bonus": 32
+          "bonus": 32,
+          "perMove": 5,
+          "padraoPerMove": 5.5
         }
       ],
-      "bonusPerMove": 2,
       "definitions": {
         "CV": {
           "objective": "corridor",
@@ -1075,7 +1088,7 @@ window.NathGame.localConfig = {
           0.99
         ]
       },
-      "stayShare": 0.6
+      "stayShare": 0.3
     },
     "retreat": {
       "stock": [
@@ -1324,9 +1337,24 @@ window.NathGame.localConfig = {
       "closet": 0.52,
       "invasion": 2.5
     },
+    "cameraLossOverrides": {
+      "yandere": {
+        "CAM10": 0.5,
+        "CAM07": 0.5,
+        "CAM12": 0.5
+      },
+      "padrao": {
+        "CAM10": 0.4
+      },
+      "gotica": {
+        "CAM11": 0.4,
+        "CAM04": 0.4
+      }
+    },
     "eventLoss": {
       "closetEnter": 2,
-      "electricalFault": 5
+      "electricalFault": 5,
+      "yandereCameraScare": 15
     },
     "recovery": {
       "music": 0.2,
@@ -1355,6 +1383,11 @@ window.NathGame.localConfig = {
     "jumpscare": "./public/images/jumpscares/shadow.webp"
   },
   "threats": {
+    "yandereCameraScare": {
+      "observationSeconds": 10,
+      "durationSeconds": 1.21,
+      "image": "./public/NNN_Yandere_Jumpscare_1080p.gif"
+    },
     "smores": {
       "name": "Smores",
       "radioSeconds": 15,

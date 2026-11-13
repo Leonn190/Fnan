@@ -59,9 +59,8 @@ function createEffects(config, routes, actors) {
     const light = objective === 'corridor' && actor.light > 0 && flashlight.modifiers[actor.key];
     const advance = clamp(quiet + (loud - quiet) * intensity + (light ? light.advanceDelta * actor.light : 0),
       light ? flashlight.minimumAdvance : 0, light ? flashlight.maximumAdvance : 1);
-    const share = clamp(stayShare + (light ? light.stayShareDelta * actor.light : 0), 0, 1);
-    const stay = (1 - advance) * share;
-    return { advance, stay, abandon: 1 - advance - stay };
+    const failure = 1 - advance;
+    return { advance, stay: failure * stayShare, abandon: failure * (1 - stayShare) };
   }
 
   function weight(actor, to, now) {
