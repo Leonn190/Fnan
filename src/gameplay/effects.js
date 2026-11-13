@@ -12,6 +12,9 @@ function createEffects(config, routes, actors) {
   let lure;
   let readyAt = 0;
   let staticUntil = 0;
+  let volumePeak = 0;
+  let volumePeakAt = 0;
+  const transientVolume = now => volumePeak * Math.exp(-(now - volumePeakAt) / .22);
 
   function startAudio(now, camera) {
     if (!camera || now < readyAt) return false;
@@ -29,10 +32,14 @@ function createEffects(config, routes, actors) {
 
   const noiseMultiplier = actor => actor.approach.objective === 'corridor' ? noise.corridorMultiplier : 1;
 
-  function integrate(dt, input) {
+  function noiseRate(input) {
     let rate = 0;
     for (const [key, value] of noiseRates) if (input[key]) rate += value;
-    const equilibrium = rate * noise.max / noise.decay;
+    return rate;
+  }
+
+  function integrate(dt, input) {
+    const equilibrium = noiseRate(input) * noise.max / noise.decay;
     const blend = -Math.expm1(-dt * noise.decay / noise.max);
     for (const actor of actors) {
       if (!actor.approach) continue;
@@ -76,8 +83,12 @@ function createEffects(config, routes, actors) {
     staticDeadline: now => now < staticUntil ? staticUntil : Infinity,
     triggerStatic: now => { staticUntil = now + config.effects.static.duration; },
     audioStatus: now => ({ remaining: Math.max(0, readyAt - now), camera: now < lure?.ends ? lure.camera : null }),
-    addNoiseEvent(event) {
+    // HUD gains map continuous rates and brief events onto the same 0–100 scale.
+    noiseIntensity: (now, input) => clamp(noiseRate(input) * 12 + transientVolume(now), 0, 100),
+    addNoiseEvent(event, now = volumePeakAt) {
       const amount = noise.events[event] ?? 0;
+      volumePeak = transientVolume(now) + amount * 7;
+      volumePeakAt = now;
       for (const actor of actors) {
         if (actor.approach) addNoise(actor, amount * noiseMultiplier(actor));
       }

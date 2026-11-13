@@ -12,7 +12,8 @@ class Element {
     const properties = new Map();
     this.style = {
       setProperty: (name, value) => properties.set(name, value),
-      getPropertyValue: name => properties.get(name) ?? ''
+      getPropertyValue: name => properties.get(name) ?? '',
+      removeProperty: name => properties.delete(name)
     };
     const classes = new Set();
     this.classList = {
@@ -1143,12 +1144,14 @@ for (let number = 1; number <= 9; number++) {
   assert.equal(nodes['sanity-label'].hidden, !sanityVisible);
   assert.equal(nodes['energy-meter'].hidden, !energyVisible);
   assert.equal(nodes['energy-label'].hidden, !energyVisible);
-  assert.equal(nodes['resource-hud'].hidden, !energyVisible && !sanityVisible);
+  assert.equal(nodes['resource-hud'].hidden, false);
+  assert.equal(nodes['volume-detector'].getAttribute('aria-valuenow'), '0');
   assert.equal(movement.snapshot().energy, 100);
   assert.equal(movement.snapshot().sanity, 100);
   radioButton.fire('click');
   radio.fire('playing');
   step(start + 1);
+  assert.equal(nodes['volume-detector'].getAttribute('aria-valuenow'), '72');
   const winAfter = ([50, 55][number - 1] ?? 60) * (number === 9 ? 7000 : 6000);
   if (number === 9) {
     step(start + 360_000);
@@ -1160,6 +1163,8 @@ for (let number = 1; number <= 9; number++) {
   step(start + winAfter);
   const hour = number === 9 ? 7 : 6;
   assert.equal(nodes['shift-complete'].hidden, false);
+  assert.equal(nodes['resource-hud'].hidden, true);
+  assert.equal(nodes['volume-detector'].getAttribute('aria-valuenow'), '0');
   assert.equal(nodes['clock-label'].innerHTML, `${hour} <small>AM</small>`);
   assert.equal(nodes['shift-time'].innerHTML, `${hour}:00 <small>AM</small>`);
   assert.equal(nodes['next-shift'].hidden, number === 9);
@@ -1188,6 +1193,7 @@ console.log('PASS: nine campaign intros and wins, fixed start time, retry, conti
 
 customStart({});
 const blackoutStart = now;
+assert.equal(nodes['energy-meter'].style.getPropertyValue('--meter-color'), 'rgb(95, 218, 125)');
 radioButton.fire('click');
 radio.fire('playing');
 nodes['office-monitor'].fire('click');
@@ -1196,8 +1202,12 @@ gate('G04');
 gate('G05');
 gate('G06');
 nodes['monitor-exit'].fire('click');
+step(now + 100);
+assert.equal(nodes['energy-meter'].style.getPropertyValue('--meter-color'), '#F04B56');
 step(blackoutStart + 105_000);
 assert.equal(movement.snapshot().blackout, true);
+assert.equal(nodes['energy-meter'].classList.contains('low'), true);
+assert.equal(nodes['energy-meter'].style.getPropertyValue('--meter-color'), '#46D987');
 assert.equal(nodes['office-light'].disabled, false);
 pressW();
 office('lit');

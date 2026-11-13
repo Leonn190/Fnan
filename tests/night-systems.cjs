@@ -22,7 +22,8 @@ function scenario({ levels, input, draws = [], tune = () => {}, nightNumber } = 
     const { levels: campaignLevels, ...rules } = config.night.campaign[nightNumber - 1];
     game.reset(campaignLevels, input, { ...config.night, ...rules });
   } else game.reset(levels, input);
-  return { game, events, calls: () => calls, state: game.snapshot, at: (time, next = {}, action) => game.advance(time, next, action),
+  return { game, events, calls: () => calls, state: game.snapshot, hud: () => game.snapshot({ hud: true }),
+    at: (time, next = {}, action) => game.advance(time, next, action),
     returnAt: (time, source = 'computer') => game.advance(time, { view: 'office' }, { type: 'returnToOffice', source }) };
 }
 
@@ -154,6 +155,7 @@ function observation(start, input, expected, key = 'padrao') {
     config.characters[key].start = start;
     config.characters[key].interval = 100;
   } });
+  near(test.hud().sanityLossPerSecond, (100 - expected) / 2);
   test.at(2);
   near(test.state().sanity, expected);
 }
@@ -266,20 +268,70 @@ outage.at(10, { closet: true });
 assert.equal(outage.state().blackout, true);
 assert.equal(outage.state().computerOn, false);
 near(outage.state().sanity, 95.6);
+near(outage.hud().energyLossPerSecond, 0);
+near(outage.hud().sanityLossPerSecond, 1.28);
 outage.at(15, { closet: true, radio: true }, { type: 'computerPower' });
 assert.equal(outage.state().computerOn, false);
 near(outage.state().sanity, 89.2);
+near(outage.hud().sanityLossPerSecond, 1.08);
+near(outage.hud().noiseIntensity, 72);
 outage.at(39.99, { closet: true, radio: true });
 assert.equal(outage.state().radioAvailable, true);
 outage.at(41, { closet: true, radio: true });
 assert.equal(outage.state().radioAvailable, false);
 near(outage.state().sanity, 60.92);
+near(outage.hud().noiseIntensity, 0);
 outage.at(69.99);
 assert.equal(outage.state().flashlightAvailable, true);
 outage.at(70.01);
 assert.equal(outage.state().flashlightAvailable, false);
 outage.game.reset();
 assert.deepEqual([outage.state().energy, outage.state().sanity, outage.state().hours, outage.state().computerOn], [3.75, 100, 0, true]);
+
+const hudGates = scenario({ input: { gates: ['G01', 'G06', 'G09'] } });
+near(hudGates.hud().energyLossPerSecond, .925);
+hudGates.at(0, { radio: true, flashlight: true });
+near(hudGates.hud().energyLossPerSecond, 1.095);
+hudGates.at(0, { radio: true }, { type: 'computerPower' });
+hudGates.at(0, { radio: true }, { type: 'computerPower' });
+near(hudGates.hud().noiseIntensity, 100);
+
+const hudCamera = scenario({ levels: { padrao: 1, gotica: 1 }, input: stageFeed });
+near(hudCamera.hud().sanityLossPerSecond, .20);
+hudCamera.at(0, { ...stageFeed, radio: true });
+near(hudCamera.hud().sanityLossPerSecond, 0);
+
+for (const nightNumber of [1, 2]) {
+  const test = scenario({ nightNumber });
+  near(test.hud().noiseIntensity, 0);
+  test.at(0, { viewMoving: true });
+  near(test.hud().noiseIntensity, 3);
+  test.at(0, { computer: true });
+  near(test.hud().noiseIntensity, 9);
+  test.at(0, { radio: true });
+  near(test.hud().noiseIntensity, 72);
+  near(test.hud().energyLossPerSecond, 0);
+  near(test.hud().sanityLossPerSecond, 0);
+  test.at(1);
+  near(test.hud().noiseIntensity, 0);
+}
+
+const hudPeaks = scenario();
+assert.deepEqual(hudPeaks.game.diagnostics(), []);
+hudPeaks.at(0, {}, { type: 'computerPower' });
+hudPeaks.at(0, {}, { type: 'computerPower' });
+near(hudPeaks.hud().noiseIntensity, 84);
+hudPeaks.at(.22);
+near(hudPeaks.hud().noiseIntensity, 84 / Math.E);
+hudPeaks.at(5, {}, { type: 'closetEnter' });
+near(hudPeaks.hud().noiseIntensity, 35, 1e-6);
+hudPeaks.at(10, {}, { type: 'closetExit' });
+near(hudPeaks.hud().noiseIntensity, 35, 1e-6);
+hudPeaks.at(15, { flashlight: true });
+near(hudPeaks.hud().noiseIntensity, 56, 1e-6);
+hudPeaks.game.reset();
+near(hudPeaks.hud().noiseIntensity, 0);
+near(hudPeaks.hud().energyLossPerSecond, .025);
 
 const flashlightInput = { flashlight: true, clownLight: true, view: 'closet-back', closet: true };
 const flashlight = scenario({ levels: { palhaca: 1 }, tune(config) { config.power.initial = .145; } });

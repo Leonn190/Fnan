@@ -62,15 +62,19 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
     drainEnergy(power.eventDrain[event] ?? 0, now);
   }
 
+  const energyDrain = (input, gates, radio) => powerEnabled && energy > 0
+    ? (computerOn ? power.computerDrain : 0) + gates.size * power.gateDrain
+      + (radio ? power.radioDrain : 0) + (input.flashlight ? power.flashlightDrain : 0) : 0;
+  const sanityChange = (observation, radio) => sanityEnabled
+    ? sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 }) : 0;
+
   function segment(now, until, input, observation, gates = input.gates) {
     const radioUntil = blackoutAt + power.radioGraceSeconds;
     const flashlightUntil = blackoutAt + power.flashlightGraceSeconds;
     const radio = input.radio && radioAvailable(now);
-    const drain = powerEnabled && energy > 0
-      ? (computerOn ? power.computerDrain : 0) + gates.size * power.gateDrain
-        + (radio ? power.radioDrain : 0) + (input.flashlight ? power.flashlightDrain : 0) : 0;
+    const drain = energyDrain(input, gates, radio);
     const powerEnds = drain > 0 ? now + energy / drain : Infinity;
-    const rate = sanityEnabled ? sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 }) : 0;
+    const rate = sanityChange(observation, radio);
     const progress = seconds => dynamicClock ? clockProgress(clock, sanity, rate, seconds)
       : seconds / fastestHour;
     const limit = Math.min(until, powerEnds, radioUntil > now ? radioUntil : Infinity,
@@ -104,8 +108,17 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
     flashlightAvailable,
     computerOn: () => computerOn,
     toggleComputer() { if (energy > 0) computerOn = !computerOn; },
-    snapshot: now => ({ sanity, energy, hours, computerOn, blackout: energy === 0,
-      radioAvailable: radioAvailable(now), flashlightAvailable: flashlightAvailable(now) })
+    snapshot(now, input, observation, gates = input?.gates) {
+      const radio = radioAvailable(now);
+      const frame = { sanity, energy, hours, computerOn, blackout: energy === 0,
+        radioAvailable: radio, flashlightAvailable: flashlightAvailable(now) };
+      if (input) {
+        const radioActive = input.radio && radio;
+        frame.energyLossPerSecond = energyDrain(input, gates, radioActive);
+        frame.sanityLossPerSecond = Math.max(0, -sanityChange(observation, radioActive));
+      }
+      return frame;
+    }
   };
 }
 

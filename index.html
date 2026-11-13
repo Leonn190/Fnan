@@ -225,6 +225,16 @@
       </header>
 
       <div class="resource-hud" id="resource-hud" hidden>
+        <div class="volume-detector" id="volume-detector" role="meter" aria-labelledby="volume-label"
+          aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="volume-label">VOLUME</span>
+          <svg viewBox="0 0 120 14" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 7H120" class="volume-baseline"/>
+            <g transform="translate(0 7)">
+              <path id="volume-trace" d="M0 0L8 0L12 -2L16 3L20 -4L24 1L29 0L34 -1L39 3L44 -5L49 4L54 -2L59 0L64 1L69 -3L74 6L79 -5L84 2L89 0L94 -1L99 3L104 -4L109 2L114 0L120 0"/>
+            </g>
+          </svg>
+        </div>
         <label id="sanity-label" for="sanity-meter">Sanidade <span id="sanity-value" aria-hidden="true">100%</span></label>
         <meter id="sanity-meter" min="0" max="100" value="100"></meter>
         <label id="energy-label" for="energy-meter">Energia <span id="energy-value" aria-hidden="true">100%</span></label>

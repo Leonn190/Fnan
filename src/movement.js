@@ -285,7 +285,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       smores.resolve(input, input.radio && radioAvailable, ventOpportunity);
     }
     if (action?.type === 'closetEnter' && !threats.snapshot().hidden && threats.enterCloset(now)) {
-      effects.addNoiseEvent('closetEnter');
+      effects.addNoiseEvent('closetEnter', now);
       resources.applyEvent('closetEnter', now);
     }
     if (movementPaused()) return;
@@ -331,18 +331,24 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     }
   }
 
+  function observeSanity(computerOn, corridorLight, clownLight) {
+    return sanityEnabled && window.NathGame.sanityObservation(config, actors, cameraActors, {
+      ...input, gates: gates.closed, camera: camerasAvailable() && !effects.staticActive(now) ? input.camera : null,
+      view: !computerOn && input.computer ? 'office' : input.view,
+      corridorLight, clownLight, clownStage: threats.clownStage()
+    });
+  }
+
+  const noiseInput = (radio, computerOn) => ({ ...input, radio, computer: computerOn && input.computer });
+
   function integrate(until) {
     const computerOn = resources.computerOn();
     const flashlightAvailable = resources.flashlightAvailable(now);
     const corridorLight = flashlightAvailable && input.corridorLight;
     const clownLight = flashlightAvailable && input.clownLight;
-    const observation = sanityEnabled && window.NathGame.sanityObservation(config, actors, cameraActors, {
-      ...input, gates: gates.closed, camera: camerasAvailable() && !effects.staticActive(now) ? input.camera : null,
-      view: !computerOn && input.computer ? 'office' : input.view,
-      corridorLight, clownLight, clownStage: threats.clownStage()
-    });
+    const observation = observeSanity(computerOn, corridorLight, clownLight);
     const { end, radio, won } = resources.segment(now, until, input, observation, gates.closed);
-    const activeInput = { ...input, radio, corridorLight, clownLight, computer: computerOn && input.computer };
+    const activeInput = { ...noiseInput(radio, computerOn), corridorLight, clownLight };
     effects.integrate(end - now, { ...activeInput,
       corridorLight: corridorLight && officeLightAvailable() });
     if (!movementPaused()) {
@@ -376,14 +382,14 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     input = { ...current };
     if (flashlightActivated && resources.flashlightAvailable(now)
         && (input.clownLight || officeLightAvailable())) {
-      effects.addNoiseEvent('flashlightOn');
+      effects.addNoiseEvent('flashlightOn', now);
     }
     if (action?.type === 'closetEnter') input.smoresLooking = false;
     let accepted = false;
     switch (action?.type) {
       case 'closetExit':
         threats.exitCloset();
-        effects.addNoiseEvent('closetExit');
+        effects.addNoiseEvent('closetExit', now);
         break;
       case 'cameraAudio':
         accepted = camerasAvailable() && effects.startAudio(now, input.camera);
@@ -395,7 +401,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         const wasOn = resources.computerOn();
         resources.toggleComputer();
         const on = resources.computerOn();
-        if (!wasOn && on) effects.addNoiseEvent('computerOn');
+        if (!wasOn && on) effects.addNoiseEvent('computerOn', now);
         if (electrical.powerChanged(wasOn, on)) emit('electricalRestored');
         break;
       }
@@ -569,6 +575,15 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     };
   }
 
+  function hudSnapshot() {
+    const computerOn = resources.computerOn();
+    const lightAvailable = resources.flashlightAvailable(now);
+    const observation = observeSanity(computerOn, lightAvailable && input.corridorLight, lightAvailable && input.clownLight);
+    const frame = resources.snapshot(now, input, observation, gates.closed);
+    return { ...frame, noiseIntensity: outcome ? 0 : effects.noiseIntensity(now,
+      noiseInput(input.radio && frame.radioAvailable, computerOn)) };
+  }
+
   reset();
   return {
     reset, advance, cameraActors, diagnostics, debugSnapshot, stop: () => shadow.stop(),
@@ -582,7 +597,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
       front: occupants(front).map(actor => actor.rule.artId),
       back: occupants(back).map(actor => actor.rule.artId)
     }),
-    snapshot: () => ({ now, outcome, ...resources.snapshot(now), shadow: shadow.snapshot(), ...threats.snapshot(),
+    snapshot: ({ hud = false } = {}) => ({ now, outcome, ...(hud ? hudSnapshot() : resources.snapshot(now)),
+      shadow: shadow.snapshot(), ...threats.snapshot(),
       electricalFault: electrical.failed(),
       audio: effects.audioStatus(now), static: effects.staticActive(now) })
   };

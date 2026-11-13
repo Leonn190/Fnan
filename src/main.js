@@ -53,6 +53,7 @@ const dom = {
   taskTime: $('#task-time'), taskDate: $('#task-date'),
   clock: $('#clock-label'),
   resourceHud: $('#resource-hud'), sanityMeter: $('#sanity-meter'), sanityValue: $('#sanity-value'),
+  volumeDetector: $('#volume-detector'), volumeTrace: $('#volume-trace'),
   energyMeter: $('#energy-meter'), energyValue: $('#energy-value'),
   shadowManifest: $('#shadow-manifest'), shadowOfficeArt: $('#shadow-office-art'),
   shadowFeed: $('#shadow-feed'), shadowSprite: $('#shadow-sprite'),
@@ -926,6 +927,10 @@ function stopShift() {
   goticaStaticAt = undefined;
   cancelGameFrame();
   dom.resourceHud.hidden = dom.shadowManifest.hidden = dom.shadowOfficeArt.hidden = dom.shadowFeed.hidden = true;
+  renderVolume(0);
+  dom.sanityMeter.style.removeProperty('--meter-color');
+  dom.energyMeter.style.removeProperty('--meter-color');
+  dom.energyMeter.classList.remove('low');
   delete dom.shadowFeed.dataset.phase;
   clearFlashlight();
   stopRadio();
@@ -1087,10 +1092,11 @@ function prepareShift(shift) {
   const { powerEnabled, sanityEnabled } = shift.rules;
   dom.energyMeter.hidden = $('#energy-label').hidden = !powerEnabled;
   dom.sanityMeter.hidden = $('#sanity-label').hidden = !sanityEnabled;
-  dom.resourceHud.hidden = !powerEnabled && !sanityEnabled;
-  const frame = movement.snapshot();
+  dom.resourceHud.hidden = false;
+  const frame = movement.snapshot({ hud: true });
   renderResourceState(frame);
   renderResources(frame);
+  renderVolume(frame.noiseIntensity);
   movementChanged = officeChanged = true;
   changedGates.clear();
   changedCameras.clear();
@@ -1252,7 +1258,7 @@ function advanceGame(now, action, measure = false) {
   const accepted = movement.advance((now - state.startedAt) / 1000, gameInput, action);
   const integrated = measure ? performance.now() : 0;
   if (!state.complete) {
-    renderGameFrame(movement.snapshot(), now);
+    renderGameFrame(movement.snapshot({ hud: now >= nextHudUpdate }), now);
     advanceComputerTransition(now);
   }
   if (measure) {
@@ -1291,6 +1297,7 @@ function renderGameFrame(frame, now) {
   if (now >= nextHudUpdate) {
     nextHudUpdate = now + 100;
     renderResources(frame);
+    renderVolume(frame.noiseIntensity);
     updateAudioControl(frame.audio);
     renderWarnings(frame);
   }
@@ -1308,15 +1315,40 @@ function renderWarnings(frame) {
   if (dom.threatAlert.hidden !== hidden) dom.threatAlert.hidden = hidden;
 }
 
-function renderResources({ sanity, energy }) {
-  for (const [meter, label, value] of [[dom.sanityMeter, dom.sanityValue, sanity], [dom.energyMeter, dom.energyValue, energy]]) {
+const energyLossStops = [0, .12, .32, .65, .95];
+const sanityLossStops = [0, .20, .45, .90, 1.50];
+const lossColors = [[70, 217, 135], [190, 221, 89], [230, 185, 39], [243, 139, 67], [240, 75, 86]];
+
+function lossColor(rate, stops) {
+  const end = stops.findIndex(stop => stop >= rate);
+  if (end === 0) return '#46D987';
+  if (end === -1) return '#F04B56';
+  const fraction = (rate - stops[end - 1]) / (stops[end] - stops[end - 1]);
+  const channels = lossColors[end - 1].map((start, i) => Math.round(start + (lossColors[end][i] - start) * fraction));
+  return `rgb(${channels.join(', ')})`;
+}
+
+function renderVolume(intensity) {
+  const value = String(Math.round(intensity));
+  if (dom.volumeDetector.getAttribute('aria-valuenow') === value) return;
+  dom.volumeDetector.setAttribute('aria-valuenow', value);
+  dom.volumeTrace.style.transform = `scaleY(${Math.max(.025, Number(value) / 100)})`;
+}
+
+function renderResources({ sanity, energy, sanityLossPerSecond, energyLossPerSecond }) {
+  for (const [meter, label, value, rate, stops] of [
+    [dom.sanityMeter, dom.sanityValue, sanity, sanityLossPerSecond, sanityLossStops],
+    [dom.energyMeter, dom.energyValue, energy, energyLossPerSecond, energyLossStops]
+  ]) {
+    if (meter.hidden) continue;
+    const color = lossColor(rate, stops);
+    if (meter.style.getPropertyValue('--meter-color') !== color) meter.style.setProperty('--meter-color', color);
     const rounded = Math.round(value * 10) / 10;
     const text = value > 0 && rounded === 0 ? '<0,1%' : `${String(rounded).replace('.', ',')}%`;
     if (label.textContent === text) continue;
     label.textContent = text;
     meter.value = rounded;
     meter.style.setProperty('--meter-fill', `${rounded}%`);
-    if (meter === dom.sanityMeter) meter.style.setProperty('--meter-hue', 338 - rounded * .62);
   }
 }
 
