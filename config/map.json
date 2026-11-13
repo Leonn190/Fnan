@@ -24,15 +24,14 @@
     {"id": 22, "name": "Saída do corredor", "cameras": [], "room": "corredor_servico", "point": [31.5, 27.3]},
     {"id": 23, "name": "Ponto cego do salão principal", "cameras": [], "room": "salao", "point": [25.9, 19]},
     {"id": 24, "name": "Banheiro — esconderijo da Gatinha", "cameras": [], "room": "wc_m", "point": [29.1, 16.7]},
-    {"id": 25, "name": "Escondida na VIP 2", "cameras": [], "room": "vip2", "point": [10.2, 15.1]},
-    {"id": 26, "name": "Circulação dos banheiros", "cameras": [], "room": "circ_wc", "point": [29.9, 12.2]}
+    {"id": 25, "name": "Escondida na VIP 2", "cameras": [], "room": "vip2", "point": [10.2, 15.1]}
   ],
   "edges": [
     {"from": 1, "to": 2, "type": "room"},
     {"from": 2, "to": 3, "type": "room"},
     {"from": 2, "to": 6, "type": "gate", "gateId": "G05"},
     {"from": 2, "to": 7, "type": "gate", "gateId": "G03"},
-    {"from": 2, "to": 19, "type": "gate", "gateId": "G06"},
+    {"from": 1, "to": 19, "type": "gate", "gateId": "G06"},
     {"from": 3, "to": 5, "type": "gate", "gateId": "G08"},
     {"from": 3, "to": 7, "type": "gate", "gateId": "G03"},
     {"from": 3, "to": 23, "type": "room"},
@@ -54,15 +53,14 @@
     {"from": 15, "to": 16, "type": "free", "openingId": "P04"},
     {"from": 15, "to": 17, "type": "free", "openingId": "P07"},
     {"from": 15, "to": 18, "type": "free", "openingId": "P10"},
-    {"from": 15, "to": 19, "type": "room"},
     {"from": 16, "to": 17, "type": "free", "openingId": "P06"},
     {"from": 17, "to": 18, "type": "free", "openingId": "P09"},
-    {"from": 19, "to": 20, "type": "free", "openingId": "P11"},
+    {"from": 19, "to": 20, "type": "free", "openingId": "P11", "actors": ["padrao"]},
     {"from": 19, "to": 21, "type": "free", "openingId": "P12", "actors": ["yandere"]},
     {"from": 19, "to": 22, "type": "room"},
-    {"from": 3, "to": 26, "type": "gate", "gateId": "G07"},
-    {"from": 4, "to": 26, "type": "free", "openingId": "P14"},
-    {"from": 24, "to": 26, "type": "free", "openingId": "P15"}
+    {"from": 3, "to": 4, "type": "gate", "gateId": "G07", "via": ["P14"], "through": ["circ_wc"]},
+    {"from": 3, "to": 24, "type": "gate", "gateId": "G07", "via": ["P15"], "through": ["circ_wc"], "actors": ["gatinha"]},
+    {"from": 4, "to": 24, "type": "free", "openingId": "P14", "via": ["P15"], "through": ["circ_wc"], "actors": ["gatinha"]}
   ],
   "stage": 1,
   "office": 13,
@@ -70,6 +68,7 @@
   "front": 14,
   "back": 15,
   "leftApproach": 10,
+  "stockRequired": {"origin": 19, "via": 10, "destination": 15},
   "capacities": {
     "12": 1,
     "14": 2,

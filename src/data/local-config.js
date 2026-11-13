@@ -25,8 +25,7 @@ window.NathGame.localConfig = {
         18,
         19,
         20,
-        22,
-        26
+        22
       ],
       "cameras": [
         "CAM01",
@@ -77,9 +76,7 @@ window.NathGame.localConfig = {
         15,
         17,
         18,
-        19,
-        20,
-        26
+        19
       ],
       "cameras": [
         "CAM01",
@@ -130,9 +127,7 @@ window.NathGame.localConfig = {
         17,
         18,
         19,
-        20,
-        21,
-        26
+        21
       ],
       "cameras": [
         "CAM01",
@@ -177,8 +172,7 @@ window.NathGame.localConfig = {
         15,
         23,
         24,
-        25,
-        26
+        25
       ],
       "cameras": [
         "CAM01",
@@ -661,16 +655,6 @@ window.NathGame.localConfig = {
           10.2,
           15.1
         ]
-      },
-      {
-        "id": 26,
-        "name": "Circulação dos banheiros",
-        "cameras": [],
-        "room": "circ_wc",
-        "point": [
-          29.9,
-          12.2
-        ]
       }
     ],
     "edges": [
@@ -697,7 +681,7 @@ window.NathGame.localConfig = {
         "gateId": "G03"
       },
       {
-        "from": 2,
+        "from": 1,
         "to": 19,
         "type": "gate",
         "gateId": "G06"
@@ -842,11 +826,6 @@ window.NathGame.localConfig = {
         "openingId": "P10"
       },
       {
-        "from": 15,
-        "to": 19,
-        "type": "room"
-      },
-      {
         "from": 16,
         "to": 17,
         "type": "free",
@@ -862,7 +841,10 @@ window.NathGame.localConfig = {
         "from": 19,
         "to": 20,
         "type": "free",
-        "openingId": "P11"
+        "openingId": "P11",
+        "actors": [
+          "padrao"
+        ]
       },
       {
         "from": 19,
@@ -880,21 +862,45 @@ window.NathGame.localConfig = {
       },
       {
         "from": 3,
-        "to": 26,
+        "to": 4,
         "type": "gate",
-        "gateId": "G07"
+        "gateId": "G07",
+        "via": [
+          "P14"
+        ],
+        "through": [
+          "circ_wc"
+        ]
+      },
+      {
+        "from": 3,
+        "to": 24,
+        "type": "gate",
+        "gateId": "G07",
+        "via": [
+          "P15"
+        ],
+        "through": [
+          "circ_wc"
+        ],
+        "actors": [
+          "gatinha"
+        ]
       },
       {
         "from": 4,
-        "to": 26,
+        "to": 24,
         "type": "free",
-        "openingId": "P14"
-      },
-      {
-        "from": 24,
-        "to": 26,
-        "type": "free",
-        "openingId": "P15"
+        "openingId": "P14",
+        "via": [
+          "P15"
+        ],
+        "through": [
+          "circ_wc"
+        ],
+        "actors": [
+          "gatinha"
+        ]
       }
     ],
     "stage": 1,
@@ -903,6 +909,11 @@ window.NathGame.localConfig = {
     "front": 14,
     "back": 15,
     "leftApproach": 10,
+    "stockRequired": {
+      "origin": 19,
+      "via": 10,
+      "destination": 15
+    },
     "capacities": {
       "12": 1,
       "14": 2,
@@ -968,8 +979,13 @@ window.NathGame.localConfig = {
           "paths": [
             [
               1,
-              2,
               19,
+              1,
+              2,
+              3,
+              5,
+              9,
+              10,
               15,
               14,
               13
@@ -996,9 +1012,12 @@ window.NathGame.localConfig = {
           "paths": [
             [
               1,
-              2,
               19,
-              15,
+              1,
+              2,
+              3,
+              5,
+              9,
               10,
               12,
               13
@@ -1021,7 +1040,6 @@ window.NathGame.localConfig = {
             ],
             [
               1,
-              2,
               19,
               22,
               11,
@@ -1036,7 +1054,6 @@ window.NathGame.localConfig = {
           "paths": [
             [
               1,
-              2,
               19,
               21
             ]

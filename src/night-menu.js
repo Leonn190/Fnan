@@ -16,6 +16,8 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   const continueLabel = $('#continue-game-label');
   const customButton = $('#open-custom');
   const customScreen = $('#custom-night');
+  const debugButton = $('#custom-debug');
+  let debug = false;
   const fields = $('#custom-levels');
   const settings = config.controls.menuMusic;
   const { campaign, levels: [min, max], defaultLevel, ...defaults } = config.night;
@@ -143,10 +145,15 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   continueButton.addEventListener('click', () => playCampaign(Math.min(completed + 1, campaign.length)));
   customButton.addEventListener('click', () => showCustom(true, inputs.values().next().value));
   $('#close-custom').addEventListener('click', () => showCustom(false, customButton));
+  debugButton.addEventListener('click', () => {
+    debug = !debug;
+    debugButton.setAttribute('aria-pressed', String(debug));
+    debugButton.textContent = debug ? 'Debug ativado' : 'Debug desativado';
+  });
   $('#custom-form').addEventListener('submit', event => {
     event.preventDefault();
     const levels = Object.fromEntries([...inputs].map(([id, select]) => [id, Number(select.value)]));
-    play({ label: 'CUSTOM NIGHT', levels, rules: defaults });
+    play({ label: 'CUSTOM NIGHT', levels, rules: defaults, debug });
   });
   entryButton.disabled = false;
   music.addEventListener('playing', startMusicFade);

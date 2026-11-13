@@ -18,11 +18,11 @@
     "definitions": {
       "C1": { "objective": "corridor", "paths": [[1, 2, 6, 15, 14, 13]] },
       "C2": { "objective": "corridor", "paths": [[1, 2, 7, 15, 14, 13]] },
-      "C3": { "objective": "corridor", "paths": [[1, 2, 19, 15, 14, 13]] },
+      "C3": { "objective": "corridor", "paths": [[1, 19, 1, 2, 3, 5, 9, 10, 15, 14, 13]] },
       "E1": { "objective": "stock", "paths": [[1, 2, 3, 5, 9, 10, 12, 13]] },
-      "E2": { "objective": "stock", "paths": [[1, 2, 19, 15, 10, 12, 13]] },
-      "E3": { "objective": "stock", "paths": [[1, 2, 3, 5, 8, 11, 10, 12, 13], [1, 2, 19, 22, 11, 10, 12, 13]] },
-      "electrical": { "objective": "electrical", "paths": [[1, 2, 19, 21]] }
+      "E2": { "objective": "stock", "paths": [[1, 19, 1, 2, 3, 5, 9, 10, 12, 13]] },
+      "E3": { "objective": "stock", "paths": [[1, 2, 3, 5, 8, 11, 10, 12, 13], [1, 19, 22, 11, 10, 12, 13]] },
+      "electrical": { "objective": "electrical", "paths": [[1, 19, 21]] }
     }
   },
   "attack": {

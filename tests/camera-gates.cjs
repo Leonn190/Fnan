@@ -212,7 +212,7 @@ const startNewGame = () => {
 };
 startNewGame();
 assert.deepEqual(nodes['office-characters'].children.filter(image => !image.hidden), []);
-assert.match(nodes['movement-debug'].textContent, /Palhaça · 0\.0/);
+assert.match(nodes['movement-debug-clown'].textContent, /Palhaça · 0\.0/);
 assert.equal(nodes['office-gate'].disabled, true);
 const initialMap = nodes['map-canvas'].children[0].children;
 assert(initialMap.find(node => node.attrs['aria-label'] === 'Portões')
@@ -232,7 +232,7 @@ assert.equal(nodes['shadow-manifest'].hidden, true);
 initialMap.find(node => node.attrs['data-cam'] === 'CAM09').fire('click');
 assert.equal(nodes['shadow-feed'].hidden, true);
 nodes['monitor-exit'].fire('click');
-const customStart = levels => {
+const customStart = (levels, debug = true) => {
   if (!nodes.game.hidden) nodes['complete-menu'].fire('click');
   nodes['open-custom'].fire('click');
   const selectors = nodes['custom-levels'].children.map(label => label.children[1]);
@@ -240,9 +240,13 @@ const customStart = levels => {
     assert.deepEqual(select.children.map(option => option.value), Array.from({ length: 11 }, (_, level) => String(level)));
     select.value = String(levels[select.name] ?? 0);
   }
+  const button = nodes['custom-debug'];
+  if ((button.attrs['aria-pressed'] === 'true') !== debug) button.fire('click');
   nodes['custom-form'].fire('submit');
   finishIntro('CUSTOM NIGHT');
+  assert.equal(nodes['movement-debug'].hidden, !debug);
 };
+customStart({}, false);
 customStart({ padrao: 1, gotica: 1, yandere: 1, maid: 1, gatinha: 1 });
 const nightStart = now;
 assert.equal(nodes['title-screen'].hidden, true);
@@ -250,7 +254,12 @@ assert.equal(nodes.game.hidden, false);
 assert.equal(music.paused, true);
 step(nightStart + 100);
 assert.match(nodes['clock-label'].innerHTML, /^12 /);
-assert.match(nodes['movement-debug'].textContent, /Padrão.*918\.4 s/);
+const debugGroups = nodes['movement-debug-actors'].children;
+assert.deepEqual(debugGroups.map(group => group.dataset.actor), ['padrao', 'gotica', 'yandere', 'gatinha', 'maid']);
+const padraoDebug = debugGroups[0];
+const padraoStatus = padraoDebug.children[1].children[0].children[0];
+assert.equal(padraoDebug.children[0].children[1].textContent, 'Palco');
+assert.match(padraoStatus.textContent, /918\.4 s/);
 const svg = nodes['map-canvas'].children[0];
 const cameras = svg.children.filter(node => node.attrs['data-cam']);
 const gates = svg.children.find(node => node.attrs['aria-label'] === 'Portões').children;
@@ -874,7 +883,7 @@ console.log('PASS: three radio tracks, clown poses, music reduction, peek and au
 
 nodes['return-to-menu'].fire('click');
 randomValue = () => 0;
-Object.assign(characterRules.padrao, { start: 2, positions: [2, 19], interval: 10 });
+Object.assign(characterRules.padrao, { start: 1, positions: [1, 19], interval: 10 });
 customStart({ padrao: 4 });
 const forcedGateStart = now;
 nodes['office-monitor'].fire('click');
@@ -884,7 +893,9 @@ gate('G06'); checkBackstage(false);
 step(forcedGateStart + 9000);
 assert(isClosed('G06'));
 checkBackstage(false);
-assert.match(nodes['movement-debug'].textContent, /c.mera observada/);
+assert.equal(nodes['movement-debug'].hidden, false);
+assert.match(padraoStatus.textContent, /c.mera observada/);
+assert.equal(padraoDebug.children[0].children[3].textContent, 'Corredor da CAM 12');
 camera('CAM05');
 step(forcedGateStart + 9200);
 assert(!isClosed('G06'));
@@ -961,7 +972,7 @@ assert.match(scream.src, /shadow\.ogg$/);
 assert(fs.existsSync(path.join(root, scream.src)));
 
 nodes['return-to-menu'].fire('click');
-Object.assign(characterRules.padrao, { start: 10, positions: [10, 12], interval: 5 });
+Object.assign(characterRules.padrao, { start: 10, positions: [10, 12], interval: 5, routes: undefined, targetBonus: 0 });
 customStart({ padrao: 1 });
 const approachStart = now;
 const doorCreak = '04_FNAF4_Door_Creak.mp3';
@@ -976,7 +987,7 @@ Object.assign(characterRules.yandere, {
   start: 19, positions: [19, 21], interval: 10, routes: ['electrical'],
   routePaths: { electrical: [[19, 21]] }
 });
-Object.assign(characterRules.padrao, { start: 2, positions: [2, 19], interval: 14 });
+Object.assign(characterRules.padrao, { start: 1, positions: [1, 19], interval: 14 });
 customStart({ yandere: 1, padrao: 1 });
 const faultStart = now;
 radioButton.fire('click');

@@ -1,12 +1,12 @@
 (() => {
 'use strict';
 
-const { factor, uniform, weighted, createRoutes, createAttackRoutes, createEffects, createApproach, createThreats, createSmores,
+const { factor, uniform, weightedChoices, drawWeighted, createRoutes, createAttackRoutes, createEffects, createApproach, createThreats, createSmores,
   createResources, createShadow, shadowDifficulty, createGates, createElectrical, CAMERAS } = window.NathGame;
 
 function createMovement(config, { random = Math.random, emit = () => {} } = {}) {
   const { map, movement, characters, night } = config;
-  const { left, leftApproach, office, front, back } = map;
+  const { left, leftApproach, office, front, back, stockRequired } = map;
   const { difficulty, retreat, recovery } = movement;
   const routes = createRoutes(map);
   const cameraIds = CAMERAS.map(cam => cam.id);
@@ -71,7 +71,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
         reaction: rule.reaction * (level >= difficulty.reactionLevel ? factor(-difficulty.reactionReduction) : 1),
         routeBonus: rule.routes ? attackRoutes.bonus(level)
           : rule.targetBonus * factor(bonuses * difficulty.maidTargetBonusIncreasePerStep),
-        route: null, lastRoute: null, approach: null, freeMoves: 0
+        route: null, lastRoute: null, approach: null, freeMoves: 0, retreat: null,
+        stockRequired: rule.start === stockRequired?.origin
       };
     });
     actors = roster.filter(actor => actor.level > 0);
@@ -101,15 +102,19 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     schedule(actor, recovery.intervalFactor);
   }
 
+  function retreatChoices(actor, kind) {
+    return weightedChoices(retreat[kind].filter(id => actor.allowed.has(id) && !isFull(id)), () => 1);
+  }
+
   function withdraw(actor, kind) {
     const from = actor.position;
-    const destinations = retreat[kind].filter(id => actor.allowed.has(id) && !isFull(id));
-    const to = weighted(random, destinations, () => 1);
+    const to = drawWeighted(random, retreatChoices(actor, kind));
     if (to !== undefined) {
       actor.previous = from;
       actor.position = to;
     }
     recover(actor);
+    actor.retreat = kind;
     if (to !== undefined) emit('move', { actor, from, to, retreat: kind });
   }
 
@@ -125,29 +130,34 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     return false;
   }
 
-  function navigate(actor, free) {
+  function navigationTarget(actor) {
+    const target = attackRoutes.checkpoint(actor) ?? (actor.rule.routes ? undefined : back);
+    if (actor.stockRequired && (target === stockRequired.destination
+        || (target !== undefined && !attackRoutes.distances(actor, target).has(actor.position)))) return stockRequired.via;
+    return target;
+  }
+
+  function navigationChoices(actor) {
     const { position: from } = actor;
-    const target = attackRoutes.checkpoint(actor);
-    if (actor.route?.counterattack) return { to: target };
+    const target = navigationTarget(actor);
     const canEnterAttack = !actor.route;
     const allowed = id => actor.allowed.has(id) && id !== office
       && (canEnterAttack || (id !== front && id !== left))
+      && !(actor.stockRequired && id === stockRequired.destination)
       && !(actor.rule.initialStationaryAttempts !== undefined && id === actor.rule.start);
     const edgeTo = id => routes.connection(from, id);
     const choices = routes.neighbors.get(from).filter(id => allowed(id) && canUse(actor, edgeTo(id)));
-    const distances = target !== undefined ? attackRoutes.distances(actor, target)
-      : actor.rule.routes ? null : attackRoutes.distances(actor, back);
+    const distances = target === undefined ? null : attackRoutes.distances(actor, target);
     const currentDistance = distances?.get(from);
     const closer = id => distances?.get(id) < currentDistance;
     const openProgress = choices.some(id => closer(id) && passable(actor, edgeTo(id)));
     const bonus = factor(actor.routeBonus * smores.targetBonusMultiplier());
-    const to = weighted(random, [...choices, from], id => {
+    return weightedChoices([...choices, from], id => {
       if (id === from) return movement.weight / 2;
       const progresses = closer(id) && (!openProgress || passable(actor, edgeTo(id)));
       return movement.weight * (id === actor.previous ? movement.backtrackFactor : 1)
         * (progresses ? bonus : 1) * effects.weight(actor, id, now);
     });
-    return { to, stay: to === from, free };
   }
 
   function choose(actor) {
@@ -157,7 +167,9 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     if (actor.rule.routes && !actor.route && !free) attackRoutes.select(actor);
     if (reachCheckpoint(actor)) return null;
     if (actor.approach) return approach.choose(actor);
-    return navigate(actor, free);
+    if (actor.route?.counterattack) return { to: attackRoutes.checkpoint(actor) };
+    const to = drawWeighted(random, navigationChoices(actor));
+    return { to, stay: to === actor.position, free };
   }
 
   function cameraObserves(position) {
@@ -175,6 +187,8 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     else {
       actor.previous = from;
       actor.position = to;
+      if (to === stockRequired?.origin) actor.stockRequired = true;
+      if (to === stockRequired?.via) actor.stockRequired = false;
     }
     if (choice.free) actor.freeMoves--;
     if (to === office) actor.due = Infinity;
@@ -185,33 +199,48 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     if (to === office) threats.invade(actor, now);
   }
 
-  function tryPending(actor) {
-    const choice = actor.pending;
+  function attemptConditions(actor, choice) {
     const from = actor.position;
     const to = choice.to;
     const edge = routes.connection(from, to);
     if (!routes.positions.has(from) || !routes.positions.has(to) || !actor.allowed.has(to)
-        || (choice.stationary ? to !== from : !canUse(actor, edge))) {
+        || (choice.stationary ? to !== from : !canUse(actor, edge))
+        || (actor.stockRequired && to === stockRequired.destination)) return null;
+    const gate = edge?.gateId;
+    const observed = camerasAvailable() && input.camera && !effects.staticActive(now) && (cameraObserves(from) || cameraObserves(to));
+    return {
+      gate, observed,
+      staticChance: observed && !choice.rolledStatic ? actor.rule.staticChance?.[actor.abilityTier] : undefined,
+      doorChance: gates.closed.has(gate) && actor.key === 'padrao' && choice.rolledGate !== gate
+        ? actor.rule.doorChance?.[actor.abilityTier] : undefined,
+      leftLook: input.leftLook && (from === left || to === left),
+      full: !choice.stationary && isFull(to),
+      invasion: from === leftApproach && to === left && occupants(office).length > 0
+    };
+  }
+
+  function tryPending(actor) {
+    const choice = actor.pending;
+    const conditions = attemptConditions(actor, choice);
+    if (!conditions) {
       choice.reason = 'passagem indisponível';
       return false;
     }
-    const gate = edge?.gateId;
-    const observed = camerasAvailable() && input.camera && !effects.staticActive(now) && (cameraObserves(from) || cameraObserves(to));
-    if (observed && actor.rule.staticChance && !choice.rolledStatic) {
+    const { gate, observed, staticChance, doorChance, leftLook, full, invasion } = conditions;
+    if (staticChance !== undefined) {
       choice.rolledStatic = true;
-      if (random() * 100 < actor.rule.staticChance[actor.abilityTier]) {
+      if (random() * 100 < staticChance) {
         effects.triggerStatic(now);
         emit('cameraInterference', now);
       }
     }
     const blockers = [
       observed && !effects.staticActive(now) && 'câmera observada',
-      input.leftLook && (from === left || to === left) && 'porta esquerda observada'
+      leftLook && 'porta esquerda observada'
     ].filter(Boolean);
-    if (!blockers.length && gates.closed.has(gate) && actor.key === 'padrao'
-        && actor.rule.doorChance && choice.rolledGate !== gate) {
+    if (!blockers.length && doorChance !== undefined) {
       choice.rolledGate = gate;
-      if (random() * 100 < actor.rule.doorChance[actor.abilityTier]) {
+      if (random() * 100 < doorChance) {
         gates.open(gate);
         emit('openGate', gate);
       }
@@ -222,13 +251,13 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     } else {
       choice.closedSince = null;
     }
-    if (!choice.stationary && isFull(to)) blockers.push('posição lotada');
-    if (from === leftApproach && to === left && occupants(office).length) blockers.push('invasão em andamento');
+    if (full) blockers.push('posição lotada');
+    if (invasion) blockers.push('invasão em andamento');
     if (blockers.length) {
       choice.reason = blockers.join(' · ');
       return false;
     }
-    transition(actor, choice, to);
+    transition(actor, choice, choice.to);
     return true;
   }
 
@@ -275,6 +304,7 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     if (outcome) return;
     for (const actor of actors) {
       if (actor.pending || moveDue(actor) > now) continue;
+      actor.retreat = null;
       const choice = choose(actor);
       if (!choice) continue;
       if (choice.abandon) {
@@ -401,9 +431,130 @@ function createMovement(config, { random = Math.random, emit = () => {} } = {}) 
     });
   }
 
+  function attemptOdds(actor, choice) {
+    const conditions = attemptConditions(actor, choice);
+    if (!conditions) return { pass: 0, reasons: ['passagem indisponível'] };
+    const { gate, observed, staticChance, doorChance, leftLook, full, invasion } = conditions;
+    const reasons = [
+      observed && 'câmera observada', leftLook && 'porta esquerda observada',
+      gates.closed.has(gate) && gate, full && 'posição lotada', invasion && 'invasão em andamento'
+    ].filter(Boolean);
+    const signalOdds = observed ? (staticChance ?? 0) / 100 : 1;
+    const gateOdds = gates.closed.has(gate) ? (doorChance ?? 0) / 100 : 1;
+    return { pass: leftLook || full || invasion ? 0 : signalOdds * gateOdds, reasons };
+  }
+
+  function addOdds(odds, label, probability) {
+    if (probability > 0) odds[label] = (odds[label] ?? 0) + probability;
+  }
+
+  function addAttempt(odds, actor, choice, probability) {
+    const { pass, reasons } = attemptOdds(actor, choice);
+    const destination = routes.positions.get(choice.to)?.name;
+    addOdds(odds, choice.stationary ? 'Ficar' : destination, probability * pass);
+    addOdds(odds, `Bloqueio em ${destination} (${reasons.join(', ')})`, probability * (1 - pass));
+  }
+
+  function addRetreat(odds, actor, kind, probability) {
+    const { items, weights, total } = retreatChoices(actor, kind);
+    if (!total) addOdds(odds, 'Ficar (recuo sem destino)', probability);
+    items.forEach((id, index) => addOdds(odds, `Recuar para ${routes.positions.get(id).name}`, probability * weights[index] / total));
+  }
+
+  function plannedOdds(odds, actor, probability) {
+    if (actor.stage < actor.rule.initialStationaryAttempts) {
+      addAttempt(odds, actor, { to: actor.position, stationary: true }, probability);
+      return;
+    }
+    if (!actor.approach && attackRoutes.checkpoint(actor) === actor.position) {
+      // Advance an independent route cursor exactly as choose() does.
+      actor = { ...actor, route: { ...actor.route } };
+      if (attackRoutes.reach(actor)) {
+        if (actor.route.objective === 'electrical') {
+          addOdds(odds, 'Ficar (ação na elétrica)', probability);
+          return;
+        }
+        approach.begin(actor, actor.route.objective);
+      }
+    }
+    if (actor.approach) {
+      const { to, objective, advance, stay } = approach.options(actor);
+      addAttempt(odds, actor, { to }, probability * advance);
+      addOdds(odds, 'Ficar', probability * stay);
+      addRetreat(odds, actor, objective, probability * (1 - (advance + stay)));
+      return;
+    }
+    if (actor.route?.counterattack) {
+      addAttempt(odds, actor, { to: attackRoutes.checkpoint(actor) }, probability);
+      return;
+    }
+    const { items, weights, total } = navigationChoices(actor);
+    if (!total) addOdds(odds, 'Ficar', probability);
+    items.forEach((to, index) => {
+      const share = total ? probability * weights[index] / total : 0;
+      if (to === actor.position) addOdds(odds, 'Ficar', share);
+      else if (share > 0) addAttempt(odds, actor, { to }, share);
+    });
+  }
+
+  function actorDebug(actor) {
+    const { pending, position } = actor;
+    const odds = { Ficar: 0 };
+    const expiryOdds = {};
+    let status;
+    let target;
+    if (!actor.level || outcome) {
+      status = actor.level ? 'turno encerrado' : 'parada · nível 0';
+      addOdds(odds, 'Ficar', 1);
+    } else if (position === office) {
+      const invasion = threats.invasionStatus(actor, now);
+      status = invasion?.retreat ? `invasão · recuo em ${invasion.remaining.toFixed(1)} s`
+        : invasion ? `invasão · ataque em ${invasion.remaining.toFixed(1)} s` : 'invasão';
+      if (invasion?.retreat) addRetreat(odds, actor, 'office', 1);
+      else addOdds(odds, 'Ficar', 1);
+    } else if (pending) {
+      target = pending.to;
+      status = `bloqueada · ${pending.reason} · ${Math.max(0, pending.expires - now).toFixed(1)} s`;
+      addAttempt(odds, actor, pending, 1);
+      const counter = movement.attack.stockCounterattack;
+      if (position === front && target === office && pending.closedSince === pending.started
+          && routes.gate(position, target) === counter.gate) {
+        const option = actor.rule.routes && attackRoutes.counterattackOption(actor);
+        const chance = option ? counter.chance : 0;
+        addOdds(expiryOdds, `Ficar (contra-ataque ${option?.id ?? ''})`, chance);
+        addRetreat(expiryOdds, actor, 'corridor', 1 - chance);
+      } else addOdds(expiryOdds, 'Ficar', 1);
+    } else {
+      const remaining = Math.max(0, moveDue(actor) - now).toFixed(1);
+      const phase = actor.retreat ? 'recuou · recuperação' : actor.approach?.phase === 'entry' ? 'entrada'
+        : actor.approach ? 'aproximação' : actor.route?.counterattack ? 'contra-ataque'
+        : actor.freeMoves ? 'movimento livre' : movementPaused() ? 'pausa inicial'
+        : actor.stage < actor.rule.initialStationaryAttempts ? 'parada inicial' : 'aguardando tentativa';
+      status = `${phase} · ${remaining} s`;
+      target = actor.approach ? approach.options(actor).to : navigationTarget(actor);
+      if (actor.rule.routes && !actor.route && !actor.approach && !actor.freeMoves) {
+        const selections = attackRoutes.selectionOdds(actor);
+        if (!selections.length) plannedOdds(odds, actor, 1);
+        for (const { route, probability } of selections) plannedOdds(odds, { ...actor, route }, probability);
+      } else plannedOdds(odds, actor, 1);
+    }
+    return { key: actor.key, name: actor.rule.name, position, location: routes.positions.get(position).name,
+      route: actor.rule.routes ? (actor.route?.id ?? 'A sortear') : 'Sem rota',
+      target, status, odds, expiryOdds };
+  }
+
+  function debugSnapshot() {
+    const radio = input.radio && resources.radioAvailable(now);
+    return {
+      actors: roster.map(actorDebug),
+      clown: { ...threats.snapshot(), max: config.threats.clown.max, status: threats.clownStatus(radio, input.clownLight) },
+      smores: smores.diagnostics(radio)
+    };
+  }
+
   reset();
   return {
-    reset, advance, cameraActors, diagnostics, stop: () => shadow.stop(),
+    reset, advance, cameraActors, diagnostics, debugSnapshot, stop: () => shadow.stop(),
     isGateClosed: id => gates.closed.has(id),
     electricalFault: () => electrical.failed(), gateControlsAvailable,
     camerasAvailable,

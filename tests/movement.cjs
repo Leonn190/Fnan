@@ -40,10 +40,15 @@ function scenario(overrides = {}, { levels, random = () => .5, gates = [], tune 
 }
 
 const routes = createRoutes(base.map);
-assert.equal(routes.positions.size, 26);
-assert.equal(base.map.edges.length, 35);
-assert.deepEqual(routes.neighbors.get(2).sort((a, b) => a - b), [1, 3, 6, 7, 19]);
-assert.equal(routes.gate(19, 2), 'G06');
+assert.equal(routes.positions.size, 25);
+assert.equal(base.map.edges.length, 34);
+assert.deepEqual(routes.neighbors.get(2).sort((a, b) => a - b), [1, 3, 6, 7]);
+assert.equal(routes.gate(19, 1), 'G06');
+assert.equal(routes.connection(19, 15), undefined);
+assert.equal(routes.connection(15, 19), undefined);
+assert.deepEqual(routes.connection(19, 20).actors, ['padrao']);
+assert.deepEqual(Object.keys(base.characters).filter(key => base.characters[key].positions.includes(20)), ['padrao']);
+assert.deepEqual(Object.keys(base.characters).filter(key => base.characters[key].positions.includes(24)), ['gatinha']);
 assert.deepEqual([...routes.positions.keys()].filter(from => routes.connection(from, 14)), [15]);
 assert.equal(routes.gate(15, 7), 'G02');
 assert.equal(routes.connection(10, 15).openingId, 'P03');
@@ -79,7 +84,7 @@ function crosses(opening, roomA, roomB) {
   return sides.some((point, index) => inside(point, byRoom.get(roomA)) && inside(sides[1 - index], byRoom.get(roomB)));
 }
 for (const { point, room } of base.map.positions) assert(inside(point, byRoom.get(room)), room);
-for (const { from, to, type, gateId, openingId, exits } of base.map.edges) {
+for (const { from, to, type, gateId, openingId, exits, through = [], via = [] } of base.map.edges) {
   const a = routes.positions.get(from).room, b = routes.positions.get(to).room;
   if (type === 'room') assert.equal(a, b);
   else if (type === 'exterior') {
@@ -92,14 +97,19 @@ for (const { from, to, type, gateId, openingId, exits } of base.map.edges) {
       assert.equal(sides.filter(point => [...byRoom.values()].some(points => inside(point, points))).length, 1);
     }
   } else {
-    const opening = byOpening.get(gateId ?? openingId);
-    assert.equal(opening.type, type === 'gate' ? 'portao' : 'livre');
-    assert(crosses(opening, a, b), opening.id);
+    const rooms = [a, ...through, b];
+    const openings = [gateId ?? openingId, ...via];
+    assert.equal(openings.length, rooms.length - 1);
+    openings.forEach((id, i) => {
+      const opening = byOpening.get(id);
+      assert.equal(opening.type, i === 0 && type === 'gate' ? 'portao' : 'livre');
+      assert(crosses(opening, rooms[i], rooms[i + 1]), id);
+    });
   }
 }
 const gateCrossings = {
   G01: [[14, 13]], G02: [[7, 15]], G03: [[2, 7], [3, 7]], G04: [[15, 6]], G05: [[2, 6]],
-  G06: [[2, 19]], G07: [[3, 26]], G08: [[3, 5]], G09: [[9, 10]]
+  G06: [[1, 19]], G07: [[3, 4], [3, 24]], G08: [[3, 5]], G09: [[9, 10]]
 };
 for (const [id, crossings] of Object.entries(gateCrossings)) {
   for (const [a, b] of crossings) for (const [from, to] of id === 'G01' ? [[a, b]] : [[a, b], [b, a]]) {
@@ -117,18 +127,14 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
 }
 
 {
-  let draw = 0;
-  const { at, actor, output } = scenario({ gatinha: { start: 3, interval: 10, positions: [3, 4, 24, 26] } },
-    { random: () => draw, gates: ['G07'] });
-  for (const [from, to] of [[3, 4], [3, 24], [4, 24]]) assert(!routes.connection(from, to));
+  const { at, actor, output } = scenario({ gatinha: { start: 3, interval: 10, positions: [3, 4] } },
+    { random: () => 0, gates: ['G07'] });
   at(10);
   assert.equal(actor('gatinha').position, 3);
   at(12, {}, { type: 'gate', id: 'G07' });
-  draw = .4;
   at(22);
-  at(32);
-  assert.deepEqual(output('move').map(({ from, to }) => [from, to]), [[3, 26], [26, 4], [4, 26]]);
-  const hiding = scenario({ gatinha: { start: 26, interval: 10, positions: [24, 26] } });
+  assert.deepEqual(output('move').map(({ from, to }) => [from, to]), [[3, 4], [4, 3]]);
+  const hiding = scenario({ gatinha: { start: 4, interval: 10, positions: [4, 24] } });
   hiding.at(10);
   assert.equal(hiding.actor('gatinha').position, 24);
   assert.equal(hiding.game.cameraActors('CAM07').length, 0);
@@ -169,7 +175,7 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
     }
   }
 
-  for (const [draw, checkpoints] of [[.2, [2, 3, 5, 8, 11, 10]], [.8, [2, 19, 22, 11, 10]]]) {
+  for (const [draw, checkpoints] of [[.2, [2, 3, 5, 8, 11, 10]], [.8, [19, 22, 11, 10]]]) {
     const routing = createAttackRoutes(base, routes, () => draw, () => 0, () => true);
     const rule = base.characters.padrao;
     const actor = { key: 'padrao', allowed: new Set(rule.positions), position: 1, lastRoute: null };
@@ -189,7 +195,7 @@ for (const [id, crossings] of Object.entries(gateCrossings)) {
 
 // A deviation keeps the checkpoint. A return to the route gets the weight bonus.
 for (const [level, expected] of [[2, 1], [8, 3]]) {
-  let draw = .177;
+  let draw = .214;
   const { at, actor } = scenario({ gotica: { start: 2, interval: 10, routes: ['E1'] } },
     { levels: { gotica: level }, random: () => draw });
   at(10);
@@ -242,24 +248,24 @@ for (const input of [{ camera: 'CAM06' }, {}]) {
 }
 
 {
-  const { at, actor } = scenario({ yandere: { start: 2, interval: 10, positions: [2, 19] } }, { gates: ['G06'] });
+  const { at, actor } = scenario({ yandere: { start: 1, interval: 10, positions: [1, 19] } }, { gates: ['G06'] });
   at(10);
   assert.match(actor('yandere').stopped, /porta fechada/);
   at(13);
   closeTo(actor('yandere').remaining, 5);
   at(17.99, {}, { type: 'gate', id: 'G06' });
-  assert.equal(actor('yandere').position, 2);
+  assert.equal(actor('yandere').position, 1);
   at(18);
   assert.equal(actor('yandere').position, 19);
 }
 
 for (const [level, roll, opens] of [[3, .6999, true], [3, .70, false], [4, .9399, true], [4, .94, false]]) {
   let draw = 0;
-  const { game, at, actor, output } = scenario({ padrao: { start: 2, interval: 10, positions: [2, 19] } },
+  const { game, at, actor, output } = scenario({ padrao: { start: 1, interval: 10, positions: [1, 19] } },
     { levels: { padrao: level }, random: () => draw, gates: ['G06'] });
   at(0, { camera: 'CAM12' });
   at(9, { camera: 'CAM12' });
-  assert.equal(actor('padrao').position, 2);
+  assert.equal(actor('padrao').position, 1);
   assert.match(actor('padrao').stopped, /c.mera observada/);
   assert(game.isGateClosed('G06'));
   assert.deepEqual(output('openGate'), []);
@@ -268,16 +274,16 @@ for (const [level, roll, opens] of [[3, .6999, true], [3, .70, false], [4, .9399
   assert.equal(game.isGateClosed('G06'), !opens);
   assert.deepEqual(output('openGate'), opens ? ['G06'] : []);
   assert.deepEqual(output('gatesChanged'), opens ? [[{ id: 'G06', closed: false }]] : []);
-  assert.equal(actor('padrao').position, opens ? 19 : 2);
+  assert.equal(actor('padrao').position, opens ? 19 : 1);
 }
 
 {
-  const { game, at, actor, output } = scenario({ padrao: { start: 2, interval: 10, positions: [2, 19] } },
+  const { game, at, actor, output } = scenario({ padrao: { start: 1, interval: 10, positions: [1, 19] } },
     { gates: ['G06'], tune(config) { config.map.capacities[19] = 0; } });
   at(10);
   assert(!game.isGateClosed('G06'));
   assert.deepEqual(output('openGate'), ['G06']);
-  assert.equal(actor('padrao').position, 2);
+  assert.equal(actor('padrao').position, 1);
   assert.match(actor('padrao').stopped, /lotada/);
 }
 
@@ -285,7 +291,7 @@ for (const [level, roll, opens] of [[3, .6999, true], [3, .70, false], [4, .9399
   const { game, at, actor } = scenario({
     padrao: { start: 1, interval: 10, positions: [1, 2] },
     gotica: { start: 1, interval: 11, positions: [1, 2] },
-    yandere: { start: 2, interval: 11, positions: [2, 19] }
+    yandere: { start: 1, interval: 11, positions: [1, 19] }
   }, { random: () => .5, gates: ['G06'] });
   at(10, { camera: 'CAM03' });
   assert.equal(actor('padrao').position, 1);
@@ -293,7 +299,7 @@ for (const [level, roll, opens] of [[3, .6999, true], [3, .70, false], [4, .9399
   assert.equal(game.snapshot().static, true);
   assert.equal(actor('padrao').position, 2);
   assert.equal(actor('gotica').position, 2);
-  assert.equal(actor('yandere').position, 2);
+  assert.equal(actor('yandere').position, 1);
   at(12.99, { camera: 'CAM03' });
   assert.equal(game.snapshot().static, true);
   at(13, { camera: 'CAM03' });
@@ -714,7 +720,7 @@ for (const key of Object.keys(base.characters).filter(key => key !== 'yandere'))
 }
 
 {
-  const { game, at } = scenario({ padrao: { interval: 5 } });
+  const { game, at } = scenario({ padrao: { interval: 5, positions: [1, 2] } });
   at(5);
   const cam = CAMERAS.find(x => x.id === 'CAM03');
   assert.equal(cameraStateKey(cam, game.cameraActors(cam.id), base.map.stage), 'palco-vazio--salao-original');
@@ -775,7 +781,7 @@ for (const key of Object.keys(base.characters).filter(key => key !== 'yandere'))
   const rules = { ...base.night, powerEnabled: false, sanityEnabled: false };
   const levels = { ...base.night.campaign[8].levels, palhaca: 0, shadow: 0, smores: 0 };
   const input = { closet: true, corridorLight: true };
-  function run(step) {
+  function run(step, inspect = false) {
     const events = [];
     let seed = 912;
     const random = () => {
@@ -787,16 +793,79 @@ for (const key of Object.keys(base.characters).filter(key => key !== 'yandere'))
     } });
     game.reset(levels, input, rules);
     game.advance(0, input, { type: 'closetEnter' });
-    for (let time = step; time < 240; time += step) game.advance(time, input);
+    for (let time = step; time < 240; time += step) {
+      game.advance(time, input);
+      if (inspect) {
+        const previousSeed = seed;
+        const debug = game.debugSnapshot();
+        for (const { odds } of debug.actors) closeTo(Object.values(odds).reduce((a, b) => a + b, 0), 1);
+        assert.equal(seed, previousSeed);
+      }
+    }
     game.advance(240, input);
     return { events, snapshot: game.snapshot() };
   }
   const continuous = run(.125);
+  assert.deepEqual(run(.125, true), continuous);
   const resumed = run(240);
   assert(continuous.events.length > 10);
   assert.deepEqual(resumed.events, continuous.events);
   closeTo(resumed.snapshot.hours, continuous.snapshot.hours);
   assert.equal(resumed.snapshot.now, 240);
+}
+
+for (const [key, rule] of Object.entries(base.characters)) {
+  for (const id of rule.routes ?? []) {
+    const config = structuredClone(base);
+    config.characters = { [key]: { ...rule, routes: [id] } };
+    for (const objective of ['corridor', 'stock']) {
+      for (const phase of ['approach', 'entry']) config.movement.attack[objective][phase].base = 1;
+    }
+    const levels = { [key]: 10, palhaca: 0, smores: 0, shadow: 0 };
+    const rules = { ...base.night, secondsPerHour: 600, powerEnabled: false, sanityEnabled: false };
+    let seed = 912;
+    let stockRequired = false;
+    let reached = false;
+    const game = createMovement(config, {
+      random: () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32,
+      emit(type, data) {
+        if (type === 'electricalFault') reached = true;
+        if (type !== 'move' || data.retreat) return;
+        if (data.to === 19) stockRequired = true;
+        if (data.to === 10) stockRequired = false;
+        if (data.to === 15) assert.equal(stockRequired, false, `${key} ${id} bypassed stock`);
+        if (data.to === 13 && data.actor.route) {
+          assert.equal(data.actor.route.id, id);
+          assert.equal(data.from, config.movement.routes.definitions[id].objective === 'corridor' ? 14 : 12);
+          reached = true;
+        }
+      }
+    });
+    game.reset(levels, { closet: true }, rules);
+    game.advance(0, { closet: true }, { type: 'closetEnter' });
+    for (let time = 1; time <= 1500 && !reached; time++) game.advance(time, { closet: true });
+    assert(reached, `${key} ${id} never reached its objective`);
+  }
+}
+
+{
+  const { game, at } = scenario({ padrao: { start: 1, interval: 10, positions: [1, 19] } },
+    { gates: ['G06'], random: () => .8 });
+  const odds = () => game.debugSnapshot().actors[0].odds;
+  closeTo(odds().Ficar, 1 / 3);
+  closeTo(odds()['Corredor da CAM 12'], 2 / 3 * .7);
+  closeTo(odds()['Bloqueio em Corredor da CAM 12 (G06)'], 2 / 3 * .3);
+  at(0, { camera: 'CAM12' });
+  closeTo(odds()['Bloqueio em Corredor da CAM 12 (câmera observada, G06)'], 2 / 3);
+}
+
+{
+  const { game, at } = scenario({ gotica: { start: 1, interval: 10, positions: [1, 2] } },
+    { random: () => 0 });
+  at(0, { camera: 'CAM03' });
+  const { odds } = game.debugSnapshot().actors[0];
+  closeTo(odds['Meio do salão'], 2 / 3 * .75);
+  closeTo(odds['Bloqueio em Meio do salão (câmera observada)'], 2 / 3 * .25);
 }
 
 console.log('PASS: physical graph, route checkpoints, blocked moves, attack probabilities, recovery, static, clown and deadline catch-up.');

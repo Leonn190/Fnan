@@ -108,7 +108,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 - Ao ver **FIND ME**, abra as câmeras e encontre a Shadow antes do fim do prazo. Ela escolhe uma câmera por aparição e só pode se manifestar no retorno ao escritório.
 - Ao entrar na elétrica, a Yandere derruba os feeds e bloqueia os controles dos nove portões. Cada portão mantém sua posição física no momento da falha, e a Padrão ainda pode abri-lo. Quando a tela mostrar **SEM SINAL**, desligue e ligue o computador pelo botão ⏻. O rádio, a lanterna e o armário continuam disponíveis conforme suas próprias regras. O prazo de busca da Shadow pausa enquanto as câmeras estão indisponíveis.
 - O computador ligado e os portões fechados consomem energia. No apagão, o computador para, o rádio ainda pode funcionar por 25 s e as perdas de sanidade dobram. O armário e a lanterna continuam disponíveis.
-- Abra `?debug=1` para acompanhar posições, dificuldades, bloqueios, contadores e o estado da câmera. Nesse modo, **J** testa os sustos.
+- Ative **Debug** antes de iniciar uma Custom Night para acompanhar posições, rotas, alvos, chances de movimento, bloqueios, Palhaça e Smores. As chances mostram o resultado de uma tentativa no estado atual. Enquanto uma tentativa está bloqueada, a linha de expiração mostra o que acontece se ela atingir o fim da janela. O parâmetro `?debug=1` também abre o painel na campanha e habilita **J** para testar os sustos.
 
 ## Configuração
 
@@ -118,7 +118,7 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | `sanity.json` | Perdas, recuperação e multiplicador do apagão |
 | `power.json` | Energia inicial, consumo, aviso e prazo do rádio |
 | `shadow.json` | Dificuldade, chance, prazos e recursos visuais da Shadow |
-| `map.json` | 26 posições, 35 ligações físicas, câmeras, capacidades e aberturas da planta |
+| `map.json` | 25 posições, 34 ligações físicas, câmeras, capacidades e aberturas da planta |
 | `characters.json` | Posições permitidas, partida, IA, reação e habilidades individuais |
 | `movement.json` | Sorteio, variação dos intervalos, efeitos dos níveis, bloqueios e recuo |
 | `effects.json` | Alcance e recarga do áudio, estática, lanterna, fontes e dissipação do barulho |
@@ -136,12 +136,14 @@ As posições têm sala e coordenadas na planta. Cada ligação em `config/map.j
 | G03 | Entrada leste da VIP 2 | 2 ↔ 7 e 3 ↔ 7 |
 | G04 | Entrada oeste da VIP 1 | 6 ↔ 15 |
 | G05 | Entrada leste da VIP 1 | 2 ↔ 6 |
-| G06 | Bastidores do palco e corredor da CAM12 | 2 ↔ 19 |
-| G07 | Salão e circulação dos banheiros | 3 ↔ 26 |
+| G06 | Bastidores do palco e corredor da CAM12 | 1 ↔ 19 |
+| G07 | Salão e circulação dos banheiros | 3 ↔ 4 e 3 ↔ 24 |
 | G08 | Salão e recepção | 3 ↔ 5 |
 | G09 | Lojinha e estoque | 9 ↔ 10 |
 
-A circulação 26 fica fora do enquadramento da CAM07. A passagem P14 liga 26 ao fliperama (4), e P15 liga 26 ao esconderijo 24, no banheiro masculino. Foram removidas as ligações diretas 3 ↔ 4, 3 ↔ 24 e 4 ↔ 24. O esconderijo 25 fica dentro da VIP 2 e se liga a 7. O trajeto até o corredor oeste passa por 7 e G02.
+Do fundo do salão (3), G07 e P14 levam ao fliperama (4), e G07 e P15 levam ao banheiro (24). As duas passagens livres também ligam o fliperama ao banheiro pela circulação física. Só a Gatinha pode ocupar o banheiro. O esconderijo 25 fica dentro da VIP 2 e se liga a 7.
+
+As rotas C3 e E2 passam por 19 e voltam pelo G06. Do palco seguem por 2, 3, 5 e 9 até o estoque (10). A C3 entra no corredor recuado pela P03 e a E2 segue para a porta esquerda. Depois de passar por 19, a IA precisa visitar o estoque antes de entrar em 15, inclusive em desvios. P11 liga 19 à Sala da Nath (20), exclusiva da Padrão.
 
 O corredor avançado (14) recebe animatrônicas pelo corredor recuado (15). P03 liga o estoque (10) ao corredor recuado. O ataque pelo estoque passa pela porta esquerda (12) e por P02 até o escritório (13). Uma invasora no escritório faz quem estiver no estoque esperar antes de ocupar 12. A Maid segue sua navegação tradicional e ataca pelo corredor. As saídas externas conectam 8, 11 e 22 pelo perímetro e são exclusivas da Padrão. O acesso à elétrica (21) passa por P12 e é exclusivo da Yandere.
 

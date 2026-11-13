@@ -129,6 +129,7 @@ function scenario() {
         click(selected === 1 ? '#start-game' : '#continue-game');
       } else {
         click('#open-custom');
+        if ($('#custom-debug')?.getAttribute('aria-pressed') === 'false') click('#custom-debug');
         [...document.querySelectorAll('#custom-levels select')].forEach((select, i) => {
           select.value = selected === 'zero' ? '0' : selected === 'max' ? '10' : String(i % 2 ? 0 : 5);
         });

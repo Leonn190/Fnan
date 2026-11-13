@@ -138,8 +138,14 @@ let officePreview = false;
 let goticaStaticAt;
 let renderedGoticaStaticAt;
 const params = new URLSearchParams(window.location?.search);
-const debugEnabled = params.get('debug') === '1';
-dom.debug.hidden = !debugEnabled;
+const developerDebug = params.get('debug') === '1';
+const debugEnabled = () => state.shift?.debug ?? developerDebug;
+const debugRows = new Map();
+const debugActors = $('#movement-debug-actors');
+const debugClown = $('#movement-debug-clown');
+const debugProgress = $('#movement-debug-progress');
+const debugSmores = $('#movement-debug-smores');
+const debugPercent = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 2 });
 
 const officeLayers = ['doorway', 'room'].flatMap(location => OFFICE.characters.map(character => {
   const image = document.createElement('img');
@@ -382,26 +388,65 @@ function updateCameraFeed(cam, warm = false) {
   }
 }
 
-function updateMovementDebug(frame) {
-  if (!debugEnabled) return;
-  const cam = CAMERAS[state.cameraIndex];
-  const { key, gateKey, source } = currentCameraFrame(cam);
-  let feed = 'Monitor abaixado';
-  if (state.mode === 'cameras') {
-    const detail = movement.electricalFault() ? 'sem sinal'
-      : `${key ?? 'sem estado'}${gateKey ? ` · ${gateKey}` : ''}${!source || dom.feedArt.hidden ? ' · planta técnica' : ''}`;
-    feed = `${cam.id} · ${detail}`;
+function updateMovementDebug() {
+  if (!debugEnabled()) return;
+  const { actors, clown, smores } = movement.debugSnapshot();
+  for (const actor of actors) {
+    if (!debugRows.has(actor.key)) {
+      const group = document.createElement('tbody');
+      group.className = 'debug-actor';
+      group.dataset.actor = actor.key;
+      const row = document.createElement('tr');
+      const name = document.createElement('th');
+      name.setAttribute('scope', 'rowgroup');
+      name.textContent = actor.name.replace(/^Nathzinha /, '');
+      const cells = Array.from({ length: 3 }, () => document.createElement('td'));
+      row.append(name, ...cells);
+      const detail = document.createElement('tr');
+      const details = document.createElement('td');
+      details.setAttribute('colspan', '4');
+      const status = document.createElement('div');
+      status.className = 'debug-status';
+      const odds = document.createElement('div');
+      odds.className = 'debug-odds';
+      const expiry = document.createElement('div');
+      expiry.className = 'debug-odds debug-expiry';
+      details.append(status, odds, expiry);
+      detail.append(details);
+      group.append(row, detail);
+      debugActors.append(group);
+      debugRows.set(actor.key, [...cells, status, odds, expiry]);
+    }
+    const [position, route, target, status, odds, expiry] = debugRows.get(actor.key);
+    setText(position, actor.location);
+    setText(route, actor.route);
+    setText(target, positions.get(actor.target)?.name ?? '—');
+    setText(status, actor.status);
+    renderDebugOdds(odds, actor.odds);
+    renderDebugOdds(expiry, actor.expiryOdds, 'Se expirar');
   }
-  const lines = movement.diagnostics().map(actor => {
-    const status = state.complete ? 'turno encerrado' : actor.stopped;
-    const route = actor.route ? ` | Rota: ${actor.route}${actor.routeCompleted ? ' (concluída)' : ''}`
-      : actor.freeMoves ? ' | Movimento livre' : '';
-    return `${actor.name} [${actor.level}] · ${actor.location} · ${actor.camera} · ${actor.remaining.toFixed(1)} s\n`
-      + `  Anterior: ${actor.previous ?? '—'} | Destino: ${actor.destination ?? '—'}\n`
-      + `  ${status}${route}${actor.checkpoint ? ` | Próxima posição: ${actor.checkpoint}` : ''}`;
-  });
-  const { counter, floor } = frame ?? movement.snapshot();
-  dom.debug.textContent = [`IA · ${feed}`, `Palhaça · ${counter.toFixed(1)} · piso ${floor}`, ...lines].join('\n');
+  setText(debugClown, `Palhaça · ${clown.counter.toFixed(1)} / ${clown.max} · ${clown.status}`);
+  debugProgress.max = clown.max;
+  debugProgress.value = clown.counter;
+  const phase = {
+    disabled: 'inativo', idle: 'inativo', 'pre-vent': 'aguardando acesso à ventilação',
+    vent: smores.retreatReady ? 'ventilação · pronto para recuar' : 'ventilação',
+    room: 'sala'
+  }[smores.phase];
+  const timer = { idle: 'teste com rádio', vent: 'silêncio restante', room: 'saída' }[smores.phase];
+  const remaining = smores.remaining > 0
+    ? ` · ${timer} ${smores.remaining.toFixed(1)} s${smores.phase === 'vent' && smores.radio ? ' (rádio ligado)' : ''}`
+    : '';
+  setText(debugSmores, `Smores · ${phase}${smores.phase === 'vent' && smores.looking ? ' · sob observação' : ''}${remaining}`);
+}
+
+function renderDebugOdds(container, odds, prefix) {
+  const labels = Object.entries(odds).map(([label, value]) => `${label} · ${debugPercent.format(value)}`);
+  if (prefix && labels.length) labels.unshift(prefix);
+  if (container.children.length !== labels.length) {
+    container.replaceChildren(...labels.map(() => document.createElement('span')));
+  }
+  labels.forEach((label, index) => setText(container.children[index], label));
 }
 
 function syncMovement(now) {
@@ -933,6 +978,7 @@ function advanceDefeat(now) {
 
 function prepareShift(shift) {
   state.shift = shift;
+  dom.debug.hidden = !debugEnabled();
   dom.game.hidden = false;
   measureViewport();
   cancelGameFrame();
@@ -1167,9 +1213,9 @@ function renderGameFrame(frame, now) {
     updateAudioControl(frame.audio);
     renderWarnings(frame);
   }
-  if (debugEnabled && now >= nextDebugUpdate) {
-    nextDebugUpdate = now + 200;
-    updateMovementDebug(frame);
+  if (debugEnabled() && now >= nextDebugUpdate) {
+    nextDebugUpdate = now + 150;
+    updateMovementDebug();
   }
 }
 
@@ -1655,7 +1701,7 @@ for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 document.addEventListener('keydown', event => {
   if (dom.game.hidden || state.complete || event.altKey || event.ctrlKey || event.metaKey) return;
   const key = event.key.toLowerCase();
-  if (debugEnabled && key === 'j' && (!state.closetTransition || state.mode === 'closet')) {
+  if (developerDebug && key === 'j' && (!state.closetTransition || state.mode === 'closet')) {
     event.preventDefault();
     if (!event.repeat) {
       const source = state.mode === 'closet' ? CLOWN_BOTTOM_IMAGE

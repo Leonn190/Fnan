@@ -6,6 +6,7 @@ const { factor, uniform } = window.NathGame;
 function createSmores(rules, level, random, emit) {
   if (!rules || level <= 0) return {
     integrate() {}, resolve() {}, nextDeadline: () => Infinity, phase: () => 'idle',
+    diagnostics: () => ({ phase: 'disabled' }),
     intervalReduction: () => 0, reactionReduction: () => 0, targetBonusMultiplier: () => 1
   };
 
@@ -76,6 +77,12 @@ function createSmores(rules, level, random, emit) {
 
   return {
     integrate, nextDeadline, resolve, phase: () => phase,
+    diagnostics: radio => ({
+      phase, looking, retreatReady, radio,
+      remaining: phase === 'idle' && radio ? Math.max(0, rules.radioSeconds - radioTime)
+        : phase === 'vent' ? Math.max(0, rules.silenceSeconds - silenceTime)
+        : phase === 'room' ? Math.max(0, roomRemaining / roomSpeed(radio)) : null
+    }),
     intervalReduction: () => phase === 'room' ? intervalReduction : 0,
     reactionReduction: () => phase === 'room' ? reactionReduction : 0,
     targetBonusMultiplier: () => phase === 'room' ? rules.targetBonusMultiplier : 1
@@ -165,7 +172,18 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
   return {
     enterCloset, exitCloset: () => { hidden = false; },
     invade, integrate, nextDeadline, resolve, clownStage,
-    snapshot: () => ({ hidden, counter, floor, clownStage: clownStage() })
+    snapshot: () => ({ hidden, counter, floor, clownStage: clownStage() }),
+    invasionStatus(actor, now) {
+      const invasion = invasions.get(actor);
+      if (!invasion) return null;
+      const deadline = hidden ? invasion.leaveAt : invasion.reactionEnds - reactionReduction();
+      return { retreat: hidden, remaining: Math.max(0, deadline - now) };
+    },
+    clownStatus: (radio, light) => !clownEnabled ? 'dormindo'
+      : clownDeath || counter >= clown.max ? 'ataque'
+      : hidden && light ? 'contida pela lanterna'
+      : radio ? (counter > floor ? 'recuando com a música' : 'no piso')
+      : 'avançando'
   };
 }
 
@@ -184,11 +202,16 @@ function createApproach(map, effects, random) {
     }
   }
 
-  function choose(actor) {
+  function options(actor) {
     const { objective, phase } = actor.approach;
     const { advance, stay } = effects.attackOdds(actor, objective, phase);
+    return { to: stages[objective][phase === 'approach' ? 1 : 2], objective, advance, stay };
+  }
+
+  function choose(actor) {
+    const { to, objective, advance, stay } = options(actor);
     const draw = random();
-    if (draw < advance) return { to: stages[objective][phase === 'approach' ? 1 : 2] };
+    if (draw < advance) return { to };
     return draw < advance + stay ? { stay: true } : { abandon: objective };
   }
 
@@ -204,7 +227,7 @@ function createApproach(map, effects, random) {
     }
   }
 
-  return { begin, choose, arrive };
+  return { begin, choose, options, arrive };
 }
 
 Object.assign(window.NathGame, { createThreats, createSmores, createApproach });

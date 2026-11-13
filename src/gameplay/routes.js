@@ -3,13 +3,19 @@
 
 const factor = percent => 1 + percent / 100;
 const uniform = (random, { min, max }) => min + random() * (max - min);
-function weighted(random, items, weight) {
+function weightedChoices(items, weight) {
   const weights = items.map(item => Math.max(0, weight(item)));
   const total = weights.reduce((sum, value) => sum + value, 0);
+  return { items, weights, total };
+}
+
+function drawWeighted(random, { items, weights, total }) {
   if (total === 0) return undefined;
   let ticket = random() * total;
   return items.find((_, index) => (ticket -= weights[index]) < 0);
 }
+
+const weighted = (random, items, weight) => drawWeighted(random, weightedChoices(items, weight));
 
 function createRoutes(map) {
   const positions = new Map(map.positions.map(position => [position.id, position]));
@@ -67,7 +73,8 @@ function createAttackRoutes(config, graph, random, gateVersion, passable) {
   }));
 
   function navigationDistances(actor, target, openOnly) {
-    return graph.distances([target], id => actor.allowed.has(id) && id !== map.office && id !== map.left, Infinity,
+    return graph.distances([target], id => actor.allowed.has(id) && id !== map.office && id !== map.left
+      && !(actor.stockRequired && id === map.stockRequired.destination), Infinity,
       edge => openOnly ? passable(actor, edge) : permitsEdge(actor.key, edge), true);
   }
 
@@ -94,12 +101,16 @@ function createAttackRoutes(config, graph, random, gateVersion, passable) {
     return checkpoints.slice(join);
   }
 
-  function assign(actor, id, objective, checkpoints, counterattack = false) {
-    actor.route = { id, objective, checkpoints, index: 0, completed: false, counterattack };
+  const makeRoute = ({ id, objective }, checkpoints, counterattack = false) =>
+    ({ id, objective, checkpoints, index: 0, completed: false, counterattack });
+
+  function assign(actor, option, checkpoints, counterattack = false) {
+    actor.route = makeRoute(option, checkpoints, counterattack);
+    const { id } = option;
     actor.lastRoute = id;
   }
 
-  function select(actor) {
+  function candidates(actor) {
     const options = catalog[actor.key].filter(({ id, objective }) => id !== actor.lastRoute
       && (objective !== 'electrical' || electricalChance > 0))
       .map(option => ({
@@ -108,19 +119,41 @@ function createAttackRoutes(config, graph, random, gateVersion, passable) {
       })).filter(({ paths }) => paths.length);
     const electrical = options.find(option => option.objective === 'electrical');
     const regular = options.filter(option => option !== electrical);
+    return { electrical, regular };
+  }
+
+  function select(actor) {
+    const { electrical, regular } = candidates(actor);
     const selected = electrical && (!regular.length || random() < electricalChance)
       ? electrical : weighted(random, regular, () => 1);
     if (!selected) return;
-    const { id, objective, paths } = selected;
-    assign(actor, id, objective, paths.length === 1 ? paths[0] : weighted(random, paths, () => 1));
+    const { paths } = selected;
+    assign(actor, selected, paths.length === 1 ? paths[0] : weighted(random, paths, () => 1));
+  }
+
+  function selectionOdds(actor) {
+    const { electrical, regular } = candidates(actor);
+    const electricalShare = electrical ? (regular.length ? electricalChance : 1) : 0;
+    const variants = (option, share) => option.paths.map(path => ({
+      route: makeRoute(option, path), probability: share / option.paths.length
+    }));
+    return [
+      ...(electrical ? variants(electrical, electricalShare) : []),
+      ...regular.flatMap(option => variants(option, (1 - electricalShare) / regular.length))
+    ];
+  }
+
+  function counterattackOption(actor) {
+    const options = catalog[actor.key].filter(({ id, objective }) => objective === 'stock' && id !== actor.lastRoute);
+    const selected = options.find(({ id }) => id === movement.attack.stockCounterattack.route) ?? options[0];
+    if (selected && permitsEdge(actor.key, graph.connection(map.front, map.back))
+        && permitsEdge(actor.key, graph.connection(map.back, map.leftApproach))) return selected;
   }
 
   function counterattack(actor) {
-    const options = catalog[actor.key].filter(({ id, objective }) => objective === 'stock' && id !== actor.lastRoute);
-    const selected = options.find(({ id }) => id === movement.attack.stockCounterattack.route) ?? options[0];
-    if (!selected || !permitsEdge(actor.key, graph.connection(map.front, map.back))
-        || !permitsEdge(actor.key, graph.connection(map.back, map.leftApproach))) return false;
-    assign(actor, selected.id, 'stock', [map.back, map.leftApproach], true);
+    const selected = counterattackOption(actor);
+    if (!selected) return false;
+    assign(actor, selected, [map.back, map.leftApproach], true);
     return true;
   }
 
@@ -134,8 +167,9 @@ function createAttackRoutes(config, graph, random, gateVersion, passable) {
   function distances(actor, target) {
     const version = gateVersion();
     let entry = cache.get(actor);
-    if (entry?.target !== target || entry.version !== version) {
-      entry = { target, version, open: navigationDistances(actor, target, true), physical: null };
+    if (entry?.target !== target || entry.version !== version || entry.stockRequired !== actor.stockRequired) {
+      entry = { target, version, stockRequired: actor.stockRequired,
+        open: navigationDistances(actor, target, true), physical: null };
       cache.set(actor, entry);
     }
     if (entry.open.has(actor.position)) return entry.open;
@@ -144,8 +178,8 @@ function createAttackRoutes(config, graph, random, gateVersion, passable) {
   }
 
   const bonus = level => bonusByLevel.findLast(({ minLevel }) => level >= minLevel)?.bonus ?? 0;
-  return { select, counterattack, checkpoint, reach, distances, bonus };
+  return { select, selectionOdds, counterattack, counterattackOption, checkpoint, reach, distances, bonus };
 }
 
-Object.assign(window.NathGame, { factor, uniform, weighted, createRoutes, createAttackRoutes });
+Object.assign(window.NathGame, { factor, uniform, weighted, weightedChoices, drawWeighted, createRoutes, createAttackRoutes });
 })();

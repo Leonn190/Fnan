@@ -48,7 +48,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 #custom-levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:8px}
 #custom-levels label{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);background:var(--panel)}
 #custom-levels select,.custom-actions button{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:#261b31;color:var(--cream)}
-.custom-actions{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+.custom-actions{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:16px}
+#custom-debug[aria-pressed="true"]{border-color:#b8e0db;color:#d0fff6}
 @media(max-aspect-ratio:1/1){
   .title-art{height:75%;object-position:right top}
   .title-glitch--middle{object-position:74% top}
@@ -152,7 +153,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .closet-exit{inset:17% 5% 11%}
 .closet-light-hotspot{inset:16% 30% 12%}
 .game[data-mode="closet"] .hud-top{visibility:hidden}
-.game[data-mode="closet"]:has(.closet-view:not([data-view="door"])) :is(.screen-grain,.movement-debug,.toast){visibility:hidden}
+.game[data-mode="closet"]:has(.closet-view:not([data-view="door"])) :is(.screen-grain,.toast){visibility:hidden}
 .closet-blackout{display:none;position:absolute;inset:0;z-index:31;background:#000}
 .game[data-closet-transition] .closet-blackout{display:block;animation:closet-blackout var(--closet-duration) both}
 .game[data-closet-transition="enter"] .office-view{animation:closet-duck var(--closet-duration) both}
@@ -221,7 +222,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .computer-screen[inert] { pointer-events: none; }
 .game[data-computer-off]:not([data-monitor-transition="shutdown"]) .computer-screen,
 .game[data-computer-off]:not([data-monitor-transition="shutdown"]):is([data-mode="desktop"], [data-mode="cameras"])
-  :is(.hud-top, .resource-hud, .threat-alert, .toast, .movement-debug) {
+  :is(.hud-top, .resource-hud, .threat-alert, .toast) {
   visibility: hidden;
 }
 .game[data-monitor-transition="boot"] .computer-screen {
@@ -601,7 +602,29 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .threat-alert{position:absolute;z-index:24;top:12px;left:12px;max-width:60%;padding:8px;background:#290e1bed;border:1px solid #f69fbb;font:700 11px var(--mono);color:#ffd1df;pointer-events:none}
 .game[data-defeat] .threat-alert{display:none}
 .night-clock{text-align:right;display:flex;flex-direction:column;gap:3px;font-family:var(--mono)}
-.movement-debug{position:absolute;left:12px;bottom:76px;z-index:22;max-width:min(440px,52%);padding:8px 10px;border:1px solid #d4bdd766;border-radius:4px;background:#0c0c18e8;color:#fff3fa;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.3 var(--mono);pointer-events:none}
+.movement-debug{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));z-index:33;width:min(790px,calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));padding:7px 9px;border:1px solid #d4bdd766;border-radius:4px;background:#0c0c18dc;color:#fff3fa;font:clamp(9px,1.45cqw,11px)/1.25 var(--mono);pointer-events:none}
+.movement-debug table{width:100%;border-collapse:collapse;text-align:left}
+.movement-debug caption{text-align:left;color:#ddd0e8;margin-bottom:4px}
+.movement-debug th,.movement-debug td{padding:3px 7px;vertical-align:top}
+.movement-debug thead th{color:#ddd0e8}
+.movement-debug .debug-actor{--actor-color:#ddd0e8;border:1px solid #d4bdd766;border-left:3px solid var(--actor-color);background:#f2d8ff08}
+.movement-debug .debug-actor:nth-of-type(even){background:#f2d8ff12}
+.movement-debug .debug-actor th{color:var(--actor-color)}
+.movement-debug td[colspan]{color:#dfd8e6;padding-top:0}
+.debug-status{color:#c9bbd5;margin-bottom:2px}
+.debug-odds{display:flex;flex-wrap:wrap;gap:2px 0}
+.debug-odds span{max-width:100%;padding-inline:6px;border-left:1px solid #d4bdd766}
+.debug-odds span:first-child{padding-left:0;border-left:0}
+.debug-expiry{color:#eecda8}
+.debug-expiry:not(:empty){margin-top:2px}
+.playfield:has(.movement-debug:not([hidden])) .threat-alert{left:auto;right:12px;top:78px;max-width:35%}
+.movement-debug .debug-actor[data-actor="padrao"]{--actor-color:#ffd4ad}
+.movement-debug .debug-actor[data-actor="gotica"]{--actor-color:#dec7ff}
+.movement-debug .debug-actor[data-actor="yandere"]{--actor-color:#ffb8c1}
+.movement-debug .debug-actor[data-actor="gatinha"]{--actor-color:#f6e4aa}
+.movement-debug .debug-actor[data-actor="maid"]{--actor-color:#b9e6e1}
+.debug-threat{display:flex;align-items:center;gap:6px;border-top:1px solid #f3e3ff33;margin-top:3px;padding-top:4px}
+.debug-threat progress{width:66px;height:7px;accent-color:#e0a5cd}
 .clock-time{font-size:34px;font-weight:700;letter-spacing:-.06em;line-height:1;color:#fff5fb}
 .clock-time small{font-size:17px;letter-spacing:.05em}
 .night-clock>span{font-size:12px;letter-spacing:.18em;color:#f7d7e6}
@@ -731,7 +754,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   .feed-heading{left:12px}.feed-heading-first{font-size:10px;gap:6px}.feed-heading-first strong{font-size:17px}.feed-room{font-size:10px;margin-left:18px}
   .camera-controls{right:12px}
   .map-panel{width:min(350px,calc(100cqw - 24px),54cqh,calc((100cqh - var(--titlebar-height) - 62px)*1.14))}
-  .movement-debug{left:8px;bottom:69px;max-width:min(420px,calc(100% - 16px));font-size:9px}
   .technical-frame{width:92cqw}
 }
 @container(max-width:480px){
