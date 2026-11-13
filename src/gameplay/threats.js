@@ -103,7 +103,7 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
   function enterCloset(now) {
     if (clownEnabled && counter > clown.entryDeathAbove) {
       clownDeath = true;
-      return;
+      return false;
     }
     hidden = true;
     if (clownEnabled) {
@@ -111,6 +111,7 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
       if (!thresholds.includes(threshold)) thresholds.push(threshold);
     }
     for (const invasion of invasions.values()) if (invasion.leaveAt === null) protect(invasion, now);
+    return true;
   }
 
   function invade(actor, now) {
@@ -120,31 +121,37 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
     emit('invasion', actor);
   }
 
-  function clownRate(input) {
-    if (hidden && input.clownLight) return 0;
-    if (input.radio) return -clown.musicReduction;
+  function clownRate(radio, light) {
+    if (hidden && light) return 0;
+    if (radio) return -clown.musicReduction;
     return growth * (hidden ? clown.closetGrowthFactor : 1);
   }
 
   function integrate(dt, input) {
     if (!clownEnabled) return;
-    const next = Math.max(floor, Math.min(clown.max, counter + dt * clownRate(input)));
+    const next = Math.max(floor, Math.min(clown.max, counter + dt * clownRate(input.radio, input.clownLight)));
     for (const threshold of thresholds) {
       if (counter <= threshold && next > threshold) floor = Math.max(floor, threshold);
     }
     counter = next;
   }
 
-  function nextDeadline(now, input) {
-    const rate = clownEnabled ? clownRate(input) : 0;
-    const deathAt = rate > 0 ? now + (clown.max - counter) / rate : Infinity;
-    return Math.min(deathAt, ...[...invasions.values()].map(invasion =>
-      hidden ? invasion.leaveAt : invasion.reactionEnds - reactionReduction()
-    ));
+  function clownDeadline(now, radio, light) {
+    const rate = clownEnabled ? clownRate(radio, light) : 0;
+    return rate > 0 ? now + (clown.max - counter) / rate : Infinity;
   }
 
-  function resolve(now, retreat, lose) {
-    if (clownEnabled && (clownDeath || clown.max - counter <= Number.EPSILON * clown.max)) return lose('palhaca');
+  function nextDeadline(now, radio, light) {
+    let due = clownDeadline(now, radio, light);
+    for (const invasion of invasions.values()) {
+      due = Math.min(due, hidden ? invasion.leaveAt : invasion.reactionEnds - reactionReduction());
+    }
+    return due;
+  }
+
+  function resolve(now, retreat, lose, radio, light) {
+    if (clownEnabled && (clownDeath || clown.max - counter <= Number.EPSILON * clown.max
+        || clownDeadline(now, radio, light) <= now)) return lose('palhaca');
     for (const [actor, invasion] of invasions) {
       if (!hidden && now >= invasion.reactionEnds - reactionReduction()) return lose(actor.key);
       if (hidden && now >= invasion.leaveAt) {
@@ -162,5 +169,43 @@ function createThreats(config, levels, random, emit, reactionReduction = () => 0
   };
 }
 
-Object.assign(window.NathGame, { createThreats, createSmores });
+function createApproach(map, effects, random) {
+  const stages = {
+    corridor: [map.back, map.front, map.office],
+    stock: [map.leftApproach, map.left, map.office]
+  };
+
+  function begin(actor, objective) {
+    const [preparation, imminent] = stages[objective];
+    if (actor.position === preparation) actor.approach = { objective, phase: 'approach' };
+    if (actor.position === imminent) {
+      actor.approach = { objective, phase: 'entry' };
+      if (actor.route) actor.route.completed = true;
+    }
+  }
+
+  function choose(actor) {
+    const { objective, phase } = actor.approach;
+    const { advance, stay } = effects.attackOdds(actor, objective, phase);
+    const draw = random();
+    if (draw < advance) return { to: stages[objective][phase === 'approach' ? 1 : 2] };
+    return draw < advance + stay ? { stay: true } : { abandon: objective };
+  }
+
+  function arrive(actor) {
+    if (actor.position === map.office) {
+      if (actor.approach) actor.approach.phase = 'invasion';
+    } else if (actor.approach) {
+      begin(actor, actor.approach.objective);
+    } else if (actor.position === map.front || (!actor.rule.routes && actor.position === map.back)) {
+      begin(actor, 'corridor');
+    } else if (actor.position === map.left) {
+      begin(actor, 'stock');
+    }
+  }
+
+  return { begin, choose, arrive };
+}
+
+Object.assign(window.NathGame, { createThreats, createSmores, createApproach });
 })();

@@ -70,7 +70,7 @@
         <div class="office-scene" id="office-scene">
           <img class="office-art" id="office-art" src="./public/images/office/states/open-dark.webp" alt="Escritório de segurança, portão principal aberto e corredor escuro" draggable="false">
           <img class="office-art shadow-office-art" id="shadow-office-art" alt="Nathzinha Shadow no escritório" draggable="false" hidden>
-          <img class="office-art office-monitor-off" src="./public/images/office/NNN_escritorio_monitor_desligado.png" width="2048" height="682" alt="" draggable="false">
+          <img class="office-monitor-off" src="./public/images/office/monitor-off.webp" width="358" height="240" alt="" draggable="false">
           <img class="office-character" id="smores-vent" alt="Smores espiando pela ventilação" draggable="false" hidden>
           <div class="corridor-characters" id="corridor-characters" aria-hidden="true"></div>
           <img class="clown-peek" id="clown-peek" src="./public/images/office/characters/clown-peek.webp" alt="Palhaça espiando pela porta do armário" fetchpriority="low" draggable="false" hidden>
@@ -90,11 +90,15 @@
       </section>
 
       <section class="closet-view" id="closet-view" data-view="door" aria-label="Interior do armário técnico" aria-description="Use A para olhar pelas frestas, D para olhar o fundo e W para a lanterna." tabindex="-1" hidden>
-        <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
-        <div id="closet-extra" aria-hidden="true"></div>
-        <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/clown/sleeping.webp" alt="Palhaça dormindo no fundo do armário" fetchpriority="low" draggable="false" hidden>
-        <button class="scene-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
-        <button class="scene-hotspot closet-light-hotspot" id="closet-light" type="button" aria-label="Segurar para iluminar a Palhaça" aria-keyshortcuts="W" aria-pressed="false" hidden></button>
+        <div class="closet-angle closet-door">
+          <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
+          <div id="closet-extra" aria-hidden="true"></div>
+          <button class="scene-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
+        </div>
+        <div class="closet-angle closet-back">
+          <img class="closet-beam" id="closet-beam" src="./public/images/office/closet/clown/sleeping.webp" alt="Palhaça dormindo no fundo do armário" fetchpriority="low" draggable="false" hidden>
+          <button class="scene-hotspot closet-light-hotspot" id="closet-light" type="button" aria-label="Segurar para iluminar a Palhaça" aria-keyshortcuts="W" aria-pressed="false" hidden></button>
+        </div>
       </section>
 
       <section class="computer-view" id="computer-desktop" aria-label="Monitor do escritório" hidden>
@@ -102,7 +106,7 @@
         <div class="monitor-frame">
           <img class="monitor-art" src="./public/images/computer/monitor-frame.webp" width="1672" height="941" alt="" draggable="false">
           <button class="scene-hotspot desktop-power" id="desktop-power" type="button" aria-label="Energia do computador" aria-pressed="true"></button>
-          <div class="computer-screen" role="group" aria-label="Área de trabalho do computador">
+          <div class="computer-screen" id="computer-screen" role="group" aria-label="Área de trabalho do computador">
             <svg class="desktop-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <symbol id="icon-cameras" viewBox="0 0 48 48">
                 <path fill="#1476b8" d="M32 20l11-6v21l-11-6z"/>

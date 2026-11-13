@@ -43,15 +43,18 @@ window.NathGame.localConfig = {
       ],
       "interval": 24,
       "reaction": 3.5,
-      "target": 10,
-      "targetBonus": 10,
+      "routes": [
+        "C1",
+        "C2",
+        "C3",
+        "E1",
+        "E2",
+        "E3"
+      ],
       "audioModifier": -30,
       "doorChance": [
         70,
         94
-      ],
-      "extraRetreat": [
-        11
       ]
     },
     "gotica": {
@@ -93,8 +96,13 @@ window.NathGame.localConfig = {
       ],
       "interval": 26,
       "reaction": 4.5,
-      "target": 10,
-      "targetBonus": 10,
+      "routes": [
+        "C1",
+        "C2",
+        "C3",
+        "E1",
+        "E2"
+      ],
       "audioModifier": 50,
       "staticChance": [
         75,
@@ -141,8 +149,14 @@ window.NathGame.localConfig = {
       ],
       "interval": 21,
       "reaction": 4.5,
-      "target": 21,
-      "targetBonus": 20,
+      "routes": [
+        "C1",
+        "C2",
+        "C3",
+        "E1",
+        "E2",
+        "electrical"
+      ],
       "audioModifier": 50,
       "firstIntervalFactor": 0.6
     },
@@ -176,8 +190,42 @@ window.NathGame.localConfig = {
       ],
       "interval": 19,
       "reaction": 4.5,
-      "target": 10,
-      "targetBonus": 10,
+      "routes": [
+        "C2",
+        "E1",
+        "E2"
+      ],
+      "routePaths": {
+        "C2": [
+          [
+            3,
+            7,
+            15,
+            14,
+            13
+          ]
+        ],
+        "E1": [
+          [
+            3,
+            5,
+            9,
+            10,
+            12,
+            13
+          ]
+        ],
+        "E2": [
+          [
+            3,
+            7,
+            15,
+            10,
+            12,
+            13
+          ]
+        ]
+      },
       "audioModifier": 20,
       "hidingPlaces": [
         23,
@@ -185,7 +233,6 @@ window.NathGame.localConfig = {
         25
       ],
       "hidingBonus": 5,
-      "corridorAdvancePenalty": -40,
       "extraIntervalReduction": 5
     },
     "maid": {
@@ -211,7 +258,6 @@ window.NathGame.localConfig = {
       ],
       "interval": 29,
       "reaction": 2.5,
-      "target": 13,
       "targetBonus": 10,
       "audioModifier": 20,
       "initialStationaryAttempts": 1,
@@ -223,10 +269,6 @@ window.NathGame.localConfig = {
       "enter": {
         "swap": 980,
         "duration": 1450
-      },
-      "turn": {
-        "swap": 320,
-        "duration": 640
       },
       "exit": {
         "swap": 650,
@@ -302,35 +344,40 @@ window.NathGame.localConfig = {
       "parallel": 3
     },
     "flashlight": {
-      "rates": {
+      "modifiers": {
         "gotica": {
-          "advance": -4,
-          "retreat": 4
+          "approach": -0.58,
+          "entry": -0.65,
+          "stayShareDelta": -0.4
         },
         "yandere": {
-          "advance": -4,
-          "retreat": 4
+          "approach": -0.58,
+          "entry": -0.65,
+          "stayShareDelta": -0.4
         },
         "gatinha": {
-          "advance": 6,
-          "retreat": 0
+          "approach": 0.18,
+          "entry": 0.12,
+          "stayShareDelta": 0
         }
       },
-      "min": -90,
-      "max": 90,
-      "recovery": 1.5
+      "buildPerSecond": 0.25,
+      "decayPerSecond": 0.2,
+      "minimumAdvance": 0.05,
+      "maximumAdvance": 0.995
     },
     "noise": {
       "rates": {
-        "radio": 3,
-        "computer": 1.5,
-        "viewMoving": 0.2
+        "radio": 6,
+        "computer": 0.75,
+        "viewMoving": 0.25
       },
       "events": {
-        "closetRoundTrip": 15
+        "closetEnter": 5,
+        "closetExit": 5
       },
-      "decay": 2,
-      "max": null
+      "decay": 3,
+      "max": 40
     }
   },
   "map": {
@@ -691,7 +738,7 @@ window.NathGame.localConfig = {
       },
       {
         "from": 7,
-        "to": 14,
+        "to": 15,
         "type": "gate",
         "gateId": "G02"
       },
@@ -742,7 +789,7 @@ window.NathGame.localConfig = {
       },
       {
         "from": 10,
-        "to": 14,
+        "to": 15,
         "type": "free",
         "openingId": "P03"
       },
@@ -765,10 +812,11 @@ window.NathGame.localConfig = {
         "openingId": "P02"
       },
       {
-        "from": 13,
-        "to": 14,
+        "from": 14,
+        "to": 13,
         "type": "gate",
-        "gateId": "G01"
+        "gateId": "G01",
+        "oneWay": true
       },
       {
         "from": 14,
@@ -872,16 +920,179 @@ window.NathGame.localConfig = {
     "retryWindow": 3,
     "failedIntervalFactor": 0.5,
     "failedModifierRetention": 0.75,
-    "leftAttackChance": 75,
-    "leftApproachFactor": 0.45,
+    "routes": {
+      "bonusByLevel": [
+        {
+          "minLevel": 1,
+          "bonus": 12
+        },
+        {
+          "minLevel": 4,
+          "bonus": 16
+        },
+        {
+          "minLevel": 8,
+          "bonus": 20
+        }
+      ],
+      "electricalChance": 0.15,
+      "definitions": {
+        "C1": {
+          "objective": "corridor",
+          "paths": [
+            [
+              1,
+              2,
+              6,
+              15,
+              14,
+              13
+            ]
+          ]
+        },
+        "C2": {
+          "objective": "corridor",
+          "paths": [
+            [
+              1,
+              2,
+              7,
+              15,
+              14,
+              13
+            ]
+          ]
+        },
+        "C3": {
+          "objective": "corridor",
+          "paths": [
+            [
+              1,
+              2,
+              19,
+              15,
+              14,
+              13
+            ]
+          ]
+        },
+        "E1": {
+          "objective": "stock",
+          "paths": [
+            [
+              1,
+              2,
+              3,
+              5,
+              9,
+              10,
+              12,
+              13
+            ]
+          ]
+        },
+        "E2": {
+          "objective": "stock",
+          "paths": [
+            [
+              1,
+              2,
+              19,
+              15,
+              10,
+              12,
+              13
+            ]
+          ]
+        },
+        "E3": {
+          "objective": "stock",
+          "paths": [
+            [
+              1,
+              2,
+              3,
+              5,
+              8,
+              11,
+              10,
+              12,
+              13
+            ],
+            [
+              1,
+              2,
+              19,
+              22,
+              11,
+              10,
+              12,
+              13
+            ]
+          ]
+        },
+        "electrical": {
+          "objective": "electrical",
+          "paths": [
+            [
+              1,
+              2,
+              19,
+              21
+            ]
+          ]
+        }
+      }
+    },
+    "attack": {
+      "corridor": {
+        "approach": {
+          "base": 0.76,
+          "maxNoiseBonus": 0.2
+        },
+        "entry": {
+          "base": 0.86,
+          "maxNoiseBonus": 0.12
+        }
+      },
+      "stock": {
+        "approach": {
+          "base": 0.76,
+          "maxNoiseBonus": 0.2
+        },
+        "entry": {
+          "base": 0.86,
+          "maxNoiseBonus": 0.12
+        }
+      },
+      "stayShare": 0.6,
+      "stockCounterattack": {
+        "gate": "G01",
+        "chance": 0.75,
+        "route": "E2"
+      }
+    },
     "retreat": {
-      "destinations": [
+      "stock": [
         9,
+        6,
+        11
+      ],
+      "corridor": [
+        17,
         6,
         7
       ],
-      "stepSeconds": 1,
-      "intervalFactor": 1.5
+      "office": [
+        6,
+        7,
+        9,
+        11
+      ]
+    },
+    "recovery": {
+      "intervalFactor": 1.25,
+      "freeMoves": 1
     },
     "difficulty": {
       "oddSteps": [
@@ -893,11 +1104,11 @@ window.NathGame.localConfig = {
         10
       ],
       "intervalReductionPerStep": 8,
-      "targetBonusLevels": [
+      "maidTargetBonusLevels": [
         2,
         8
       ],
-      "targetBonusIncreasePerStep": 40,
+      "maidTargetBonusIncreasePerStep": 40,
       "abilityLevel": 4,
       "reactionLevel": 6,
       "reactionReduction": 11

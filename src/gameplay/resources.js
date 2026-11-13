@@ -45,11 +45,13 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
   let blackoutAt = energy === 0 ? 0 : Infinity;
   let hours = 0;
 
-  function segment(now, until, input, observation) {
+  const radioAvailable = now => now < blackoutAt + power.radioGraceSeconds;
+
+  function segment(now, until, input, observation, gates = input.gates) {
     const radioUntil = blackoutAt + power.radioGraceSeconds;
     const radio = input.radio && now < radioUntil;
     const drain = powerEnabled && energy > 0
-      ? (computerOn ? power.computerDrain : 0) + input.gates.size * power.gateDrain : 0;
+      ? (computerOn ? power.computerDrain : 0) + gates.size * power.gateDrain : 0;
     const powerEnds = drain > 0 ? now + energy / drain : Infinity;
     const rate = sanityEnabled ? sanityRate(sanityRules, { ...observation, radio, blackout: energy === 0 }) : 0;
     const progress = seconds => dynamicClock ? clockProgress(clock, sanity, rate, seconds)
@@ -83,10 +85,11 @@ function createResources({ night: defaults, sanity: sanityRules, power }, night 
 
   return {
     segment,
+    radioAvailable,
     computerOn: () => computerOn,
     toggleComputer() { if (energy > 0) computerOn = !computerOn; },
     snapshot: now => ({ sanity, energy, hours, computerOn, blackout: energy === 0,
-      radioAvailable: now < blackoutAt + power.radioGraceSeconds })
+      radioAvailable: radioAvailable(now) })
   };
 }
 

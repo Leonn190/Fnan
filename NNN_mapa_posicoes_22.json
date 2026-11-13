@@ -4,7 +4,7 @@
   "fonte": "config/map.json",
   "total_posicoes": 26,
   "total_ligacoes": 35,
-  "ligacoes_bidirecionais": true,
+  "ligacoes_bidirecionais": false,
   "posicoes": [
     {
       "id": 1,
@@ -100,7 +100,7 @@
       "conexoes": [
         2,
         3,
-        14,
+        15,
         25
       ]
     },
@@ -144,7 +144,7 @@
         9,
         11,
         12,
-        14
+        15
       ]
     },
     {
@@ -186,8 +186,7 @@
         7.9
       ],
       "conexoes": [
-        12,
-        14
+        12
       ]
     },
     {
@@ -199,8 +198,6 @@
         11.1
       ],
       "conexoes": [
-        7,
-        10,
         13,
         15
       ]
@@ -215,6 +212,8 @@
       ],
       "conexoes": [
         6,
+        7,
+        10,
         14,
         16,
         17,

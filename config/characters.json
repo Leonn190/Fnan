@@ -41,15 +41,11 @@
     ],
     "interval": 24,
     "reaction": 3.5,
-    "target": 10,
-    "targetBonus": 10,
+    "routes": ["C1", "C2", "C3", "E1", "E2", "E3"],
     "audioModifier": -30,
     "doorChance": [
       70,
       94
-    ],
-    "extraRetreat": [
-      11
     ]
   },
   "gotica": {
@@ -91,8 +87,7 @@
     ],
     "interval": 26,
     "reaction": 4.5,
-    "target": 10,
-    "targetBonus": 10,
+    "routes": ["C1", "C2", "C3", "E1", "E2"],
     "audioModifier": 50,
     "staticChance": [
       75,
@@ -139,8 +134,7 @@
     ],
     "interval": 21,
     "reaction": 4.5,
-    "target": 21,
-    "targetBonus": 20,
+    "routes": ["C1", "C2", "C3", "E1", "E2", "electrical"],
     "audioModifier": 50,
     "firstIntervalFactor": 0.6
   },
@@ -174,8 +168,12 @@
     ],
     "interval": 19,
     "reaction": 4.5,
-    "target": 10,
-    "targetBonus": 10,
+    "routes": ["C2", "E1", "E2"],
+    "routePaths": {
+      "C2": [[3, 7, 15, 14, 13]],
+      "E1": [[3, 5, 9, 10, 12, 13]],
+      "E2": [[3, 7, 15, 10, 12, 13]]
+    },
     "audioModifier": 20,
     "hidingPlaces": [
       23,
@@ -183,7 +181,6 @@
       25
     ],
     "hidingBonus": 5,
-    "corridorAdvancePenalty": -40,
     "extraIntervalReduction": 5
   },
   "maid": {
@@ -209,7 +206,6 @@
     ],
     "interval": 29,
     "reaction": 2.5,
-    "target": 13,
     "targetBonus": 10,
     "audioModifier": 20,
     "initialStationaryAttempts": 1,

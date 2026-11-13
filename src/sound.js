@@ -27,6 +27,8 @@ class SoundEngine {
     this.context = null;
     this.ambient = null;
     this.samples = new Map();
+    this.tones = new Set();
+    this.active = false;
   }
   preloadSamples() {
     for (const file of [...Object.values(sampleFiles), ...cameraMeows.flat()]) {
@@ -38,12 +40,14 @@ class SoundEngine {
   }
   playSample(name, volume = .45) {
     const audio = this.samples.get(sampleFiles[name] ?? name);
+    if (!audio) return;
     audio.volume = volume;
     audio.currentTime = 0;
     audio.play().catch(() => {});
   }
   setSampleLoop(name, volume) {
     const audio = this.samples.get(sampleFiles[name]);
+    if (!audio) return;
     if (volume === 0) {
       if (audio.loop) this.stopSample(name);
       return;
@@ -57,6 +61,7 @@ class SoundEngine {
   }
   stopSample(name) {
     const audio = this.samples.get(sampleFiles[name] ?? name);
+    if (!audio) return;
     audio.loop = false;
     audio.pause();
   }
@@ -74,12 +79,13 @@ class SoundEngine {
       if (!this.context) this.context = new Ctor();
       await this.context.resume();
       this.enabled = true;
-      this.startAmbience();
+      if (this.active) this.startAmbience();
+      else this.context.suspend().catch(() => {});
       return true;
     } catch { return false; }
   }
   startAmbience() {
-    if (!this.enabled || !this.context || this.ambient) return;
+    if (!this.active || this.context?.state !== 'running' || this.ambient) return;
     const osc = this.context.createOscillator();
     const filter = this.context.createBiquadFilter();
     const gain = this.context.createGain();
@@ -88,10 +94,33 @@ class SoundEngine {
     gain.gain.value=.018;
     osc.connect(filter).connect(gain).connect(this.context.destination);
     osc.start();
-    this.ambient = {osc,gain};
+    this.ambient = { osc, filter, gain };
+  }
+  startShift() {
+    this.active = true;
+    if (!this.enabled) return;
+    this.context.resume().then(() => this.startAmbience(), () => {});
+  }
+  stopShift() {
+    this.active = false;
+    this.stopSamples();
+    for (const voice of this.tones) {
+      voice.cleanup();
+      voice.osc.stop();
+    }
+    if (this.ambient) {
+      const { osc, filter, gain } = this.ambient;
+      this.ambient = null;
+      osc.stop();
+      osc.disconnect();
+      filter.disconnect();
+      gain.disconnect();
+    }
+    this.disconnectRadio();
+    if (this.enabled) this.context.suspend().catch(() => {});
   }
   tone({frequency=330, endingFrequency=120, duration=.12, volume=.06, wave='triangle'}={}) {
-    if (!this.enabled || !this.context || this.context.state!=='running') return;
+    if (!this.active || this.context?.state !== 'running') return;
     const osc=this.context.createOscillator();
     const gain=this.context.createGain();
     const t=this.context.currentTime;
@@ -101,6 +130,14 @@ class SoundEngine {
     gain.gain.setValueAtTime(.0001,t);
     gain.gain.exponentialRampToValueAtTime(volume,t+Math.min(.008,duration/2));
     gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    const voice = { osc, cleanup: () => {
+      if (!this.tones.delete(voice)) return;
+      osc.onended = null;
+      osc.disconnect();
+      gain.disconnect();
+    } };
+    this.tones.add(voice);
+    osc.onended = voice.cleanup;
     osc.connect(gain).connect(this.context.destination);
     osc.start(t);
     osc.stop(t+duration+.01);
@@ -110,16 +147,28 @@ class SoundEngine {
   connectRadio(media) {
     const context = this.context;
     // Local files play directly. Chromium silences file:// sources routed through Web Audio.
-    if (window.location?.protocol === 'file:' || this.radio || !context?.createStereoPanner) return;
+    if (window.location?.protocol === 'file:' || this.radio || !this.enabled || !context?.createStereoPanner) return;
+    // A media element can have only one MediaElementAudioSourceNode in this context.
+    this.radioSource ??= context.createMediaElementSource(media);
     const lowpass = context.createBiquadFilter();
     lowpass.type = 'lowpass';
     const panner = context.createStereoPanner();
     const gain = context.createGain();
     gain.gain.value = 0;
-    context.createMediaElementSource(media).connect(lowpass).connect(panner)
+    this.radioSource.connect(lowpass).connect(panner)
       .connect(gain).connect(context.destination);
     this.radio = { lowpass, panner, gain };
     media.volume = 1;
+  }
+
+  disconnectRadio() {
+    if (!this.radio) return;
+    const { lowpass, panner, gain } = this.radio;
+    this.radioSource.disconnect();
+    lowpass.disconnect();
+    panner.disconnect();
+    gain.disconnect();
+    this.radio = null;
   }
 
   mixRadio(media, pan, behindDoor) {
@@ -136,6 +185,13 @@ class SoundEngine {
     lowpass.frequency.setTargetAtTime(behindDoor ? 1250 : 14_000, now, .045);
     panner.pan.setTargetAtTime(pan * .85, now, .045);
     gain.gain.setTargetAtTime(volume, now, .045);
+  }
+
+  stats() {
+    let playingSamples = 0;
+    for (const audio of this.samples.values()) if (!audio.paused) playingSamples++;
+    return { context: this.context?.state ?? 'unavailable', tones: this.tones.size,
+      ambience: Boolean(this.ambient), radio: Boolean(this.radio), playingSamples, samples: this.samples.size };
   }
 }
 

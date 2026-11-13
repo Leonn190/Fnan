@@ -26,34 +26,27 @@
   },
   "imageCache": { "limit": 16, "parallel": 3 },
   "flashlight": {
-    "rates": {
-      "gotica": {
-        "advance": -4,
-        "retreat": 4
-      },
-      "yandere": {
-        "advance": -4,
-        "retreat": 4
-      },
-      "gatinha": {
-        "advance": 6,
-        "retreat": 0
-      }
+    "modifiers": {
+      "gotica": { "approach": -0.58, "entry": -0.65, "stayShareDelta": -0.40 },
+      "yandere": { "approach": -0.58, "entry": -0.65, "stayShareDelta": -0.40 },
+      "gatinha": { "approach": 0.18, "entry": 0.12, "stayShareDelta": 0 }
     },
-    "min": -90,
-    "max": 90,
-    "recovery": 1.5
+    "buildPerSecond": 0.25,
+    "decayPerSecond": 0.20,
+    "minimumAdvance": 0.05,
+    "maximumAdvance": 0.995
   },
   "noise": {
     "rates": {
-      "radio": 3,
-      "computer": 1.5,
-      "viewMoving": 0.2
+      "radio": 6,
+      "computer": 0.75,
+      "viewMoving": 0.25
     },
     "events": {
-      "closetRoundTrip": 15
+      "closetEnter": 5,
+      "closetExit": 5
     },
-    "decay": 2,
-    "max": null
+    "decay": 3,
+    "max": 40
   }
 }

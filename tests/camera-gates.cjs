@@ -9,7 +9,11 @@ const runningAnimations = new Set();
 class Element {
   constructor() {
     this.children = []; this.attrs = {}; this.dataset = {}; this.events = {};
-    this.style = { setProperty() {} };
+    const properties = new Map();
+    this.style = {
+      setProperty: (name, value) => properties.set(name, value),
+      getPropertyValue: name => properties.get(name) ?? ''
+    };
     const classes = new Set();
     this.classList = {
       add: c => classes.add(c), remove: c => classes.delete(c),
@@ -35,6 +39,9 @@ class Element {
   focus() {}
   setPointerCapture() {}
   addEventListener(event, action) { (this.events[event] ??= []).push(action); }
+  removeEventListener(event, action) {
+    this.events[event] = this.events[event]?.filter(listener => listener !== action) ?? [];
+  }
   closest() { return this.attrs.role === 'button' ? this : null; }
   fire(event, details) { for (const action of this.events[event] ?? []) action({ target: this, preventDefault() {}, ...details }); }
 }
@@ -103,6 +110,7 @@ const context = vm.createContext({
   },
   Image: class {
     complete = true;
+    removeAttribute() {}
     set src(value) {
       assert(fs.existsSync(path.join(root, value)), value);
       this.naturalWidth = 1;
@@ -209,7 +217,7 @@ assert.equal(nodes['office-gate'].disabled, true);
 const initialMap = nodes['map-canvas'].children[0].children;
 assert(initialMap.find(node => node.attrs['aria-label'] === 'Portões')
   .children.every(node => node.attrs['aria-disabled'] === 'true'));
-assert.equal(nodes['smores-room'].hidden, false);
+assert.equal(nodes['smores-room'].hidden, true);
 assert.equal(nodes['smores-vent'].hidden, true);
 nodes['office-monitor'].fire('click');
 nodes['open-cameras'].fire('click');
@@ -218,8 +226,8 @@ for (const [id, art] of [['CAM03', 'todas'], ['CAM04', 'open/platinada'], ['CAM0
   assert.equal(nodes['feed-art'].src, `./public/images/cameras/${id}/states/${art}.webp`);
 }
 initialMap.find(node => node.attrs['data-cam'] === 'CAM12').fire('click');
-assert.equal(nodes['shadow-feed'].hidden, false);
-assert.equal(nodes['shadow-feed'].dataset.phase, 'idle');
+step(now + 1);
+assert.equal(nodes['shadow-feed'].hidden, true);
 assert.equal(nodes['shadow-manifest'].hidden, true);
 initialMap.find(node => node.attrs['data-cam'] === 'CAM09').fire('click');
 assert.equal(nodes['shadow-feed'].hidden, true);
@@ -307,18 +315,35 @@ nodes['monitor-exit'].fire('click');
 assert.equal(nodes['computer-desktop'].hidden, true);
 nodes['office-monitor'].fire('click');
 assert.equal(nodes['computer-desktop'].hidden, false);
+const powerStart = now;
 nodes['desktop-power'].fire('click');
-assert.equal(nodes['computer-desktop'].hidden, true);
+assert.equal(nodes['computer-desktop'].hidden, false);
+assert.equal(nodes['computer-screen'].inert, true);
+assert.equal(nodes.game.dataset.monitorTransition, 'shutdown');
 assert.equal(nodes.game.getAttribute('data-computer-off'), '');
-assert.equal(nodes['office-monitor'].disabled, true);
 assert.equal(nodes['office-power'].getAttribute('aria-pressed'), 'false');
+step(powerStart + 1499);
+assert.equal(nodes.game.dataset.monitorTransition, 'shutdown');
+step(powerStart + 1500);
+assert.equal(nodes.game.dataset.monitorTransition, undefined);
+nodes['monitor-exit'].fire('click');
 nodes['office-monitor'].fire('click');
+assert.equal(nodes['computer-desktop'].hidden, false);
+assert.equal(nodes['computer-screen'].inert, true);
+nodes['open-cameras'].fire('click');
+assert.equal(nodes['cameras-view'].hidden, true);
+nodes['monitor-exit'].fire('click');
 assert.equal(nodes['computer-desktop'].hidden, true);
 nodes['office-power'].fire('click');
 assert.equal(nodes.game.getAttribute('data-computer-off'), null);
-assert.equal(nodes['office-monitor'].disabled, false);
-nodes['office-monitor'].fire('click');
+assert.equal(nodes.game.dataset.monitorTransition, 'boot');
+document.fire('keydown', { key: 's' });
 assert.equal(nodes['computer-desktop'].hidden, false);
+step(powerStart + 4499);
+assert.equal(nodes['computer-screen'].inert, true);
+step(powerStart + 4500);
+assert.equal(nodes['computer-screen'].inert, false);
+assert.equal(nodes.game.dataset.monitorTransition, undefined);
 assert.equal(nodes['cameras-view'].hidden, true);
 assert.match(nodes['task-time'].textContent, /^\d{2}:\d{2}$/);
 assert.match(nodes['task-date'].textContent, /^\d{2}\/\d{2}\/\d{4}$/);
@@ -618,8 +643,44 @@ press('a');
 step(closetStart + 2800);
 assert.equal(closet.dataset.view, 'door');
 assert.equal(closetBeam.hidden, true);
+const doorShift = () => Number.parseFloat(closet.style.getPropertyValue('--closet-door-shift'));
+const moveClosetMouse = fraction => closet.fire('pointermove', {
+  pointerType: 'mouse', clientX: fraction * nodes.game.clientWidth
+});
+moveClosetMouse(.5);
+moveClosetMouse(.8);
+step(closetStart + 3000);
+assert.equal(closet.dataset.view, 'door');
+assert(doorShift() < 0);
+moveClosetMouse(.99);
+step(closetStart + 3050);
+assert.equal(closet.dataset.view, 'side');
+assert.equal(closetExit.hidden, true);
+assert.equal(closetLight.hidden, true);
+step(closetStart + 3650);
+assert.equal(closet.dataset.view, 'back');
+assert.equal(closetBeam.hidden, true);
+moveClosetMouse(.5);
+moveClosetMouse(.99);
+step(closetStart + 4250);
+assert.equal(closet.dataset.view, 'door');
+assert.equal(doorShift(), 0);
+
+const touch = { pointerType: 'touch', isPrimary: true, pointerId: 7 };
+closet.fire('pointerdown', { ...touch, clientX: 900 });
+closet.fire('pointermove', { ...touch, clientX: 820 });
+step(closetStart + 4400);
+assert.equal(closet.dataset.view, 'door');
+assert(doorShift() < 0);
+closet.fire('pointermove', { ...touch, clientX: 260 });
+closet.fire('pointerup', { ...touch, clientX: 260 });
+step(closetStart + 5000);
+assert.equal(closet.dataset.view, 'back');
+press('a');
+step(closetStart + 5650);
+assert.equal(closet.dataset.view, 'door');
 closetExit.fire('click');
-step(closetStart + 3900);
+step(closetStart + 6750);
 assert.equal(nodes.game.dataset.mode, 'office');
 assert.equal(closet.hidden, true);
 assert.equal(musicBox.paused, true);
@@ -689,6 +750,9 @@ for (let attempt = 0; attempt < 7; attempt++) {
   assert.equal(nodes.playfield.inert, true);
   const chosen = scare.src;
   const source = chosen.split('?')[0];
+  const audio = attempt === 5 ? 'palhaça.ogg' : 'scream.wav';
+  assert.equal(decodeURI(scream.src), `./public/audio/jumpscares/${audio}`);
+  assert(fs.existsSync(path.join(root, decodeURI(scream.src))));
   if (attempt === 5) {
     assert.match(source, /palhaca-direita\.gif$/);
     assert.equal(nodes.game.dataset.mode, 'office');
@@ -760,6 +824,7 @@ for (const closetState of ['door', 'lit', 'turning']) {
   assert.equal(nodes.game.dataset.closetTransition, undefined);
   assert.equal(closetBeam.hidden, true);
   assert.equal(scare.src.split('?')[0], bottomGif);
+  assert.match(decodeURI(scream.src), /palhaça\.ogg$/);
   if (closetState !== 'door') assert.notEqual(scare.src, bottomGif);
   step(scareStart + 110);
   assert.equal(phase(), 'scare');
@@ -892,6 +957,8 @@ step(shadowEntry + 117_600);
 assert.equal(nodes.game.dataset.scare, 'shadow');
 assert.equal(nightmare.paused, true);
 assert.equal(scream.paused, false);
+assert.match(scream.src, /shadow\.ogg$/);
+assert(fs.existsSync(path.join(root, scream.src)));
 
 nodes['return-to-menu'].fire('click');
 Object.assign(characterRules.padrao, { start: 10, positions: [10, 12], interval: 5 });
@@ -905,7 +972,10 @@ assert.equal(playedSamples.at(-1), doorCreak);
 step(approachStart + 4_000);
 assert.equal(playedSamples.filter(file => file === doorCreak).length, 1);
 console.log('PASS: samples for both meow sets, flashlight, closet travel, doorway arrival, win and Shadow attack.');
-Object.assign(characterRules.yandere, { start: 19, positions: [19, 21], interval: 10 });
+Object.assign(characterRules.yandere, {
+  start: 19, positions: [19, 21], interval: 10, routes: ['electrical'],
+  routePaths: { electrical: [[19, 21]] }
+});
 Object.assign(characterRules.padrao, { start: 2, positions: [2, 19], interval: 14 });
 customStart({ yandere: 1, padrao: 1 });
 const faultStart = now;
@@ -953,15 +1023,15 @@ assert.equal(radio.paused, false);
 nodes['office-monitor'].fire('click');
 nodes['desktop-power'].fire('click');
 assert.equal(nodes.game.getAttribute('data-computer-off'), '');
-assert.equal(nodes['computer-desktop'].hidden, true);
+assert.equal(nodes['computer-desktop'].hidden, false);
 assert.equal(officeGate.disabled, true);
 step(faultStart + 16_000);
 assert.equal(officeGate.disabled, true);
-nodes['office-power'].fire('click');
+nodes['desktop-power'].fire('click');
 assert.equal(playedSamples.at(-1), '10_FNAF3_Rebooting.mp3');
 assert.equal(nodes.game.getAttribute('data-computer-off'), null);
 assert.equal(officeGate.disabled, false);
-nodes['office-monitor'].fire('click');
+step(faultStart + 19_000);
 assert.equal(nodes['camera-offline'].hidden, true);
 assert.equal(nodes['feed-art'].hidden, false);
 assert.equal(nodes['camera-audio'].disabled, false);

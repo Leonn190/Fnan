@@ -4,7 +4,7 @@ Fangame de terror com uma campanha de nove noites. **New Game** começa na Noite
 
 Os contadores de movimento começam após a pausa inicial de cada noite. A pausa dura 40 s nas noites 1 e 2, 30 s na 3, 25 s na 4, 20 s nas noites 5 e 6, 15 s na 7 e 12 s nas noites 8 e 9.
 
-**Custom Night** tem seis horas e permite escolher o nível de 0 a 10 para cada personagem. Na campanha e na Custom Night, animatrônicas de nível 0 ficam imóveis e suas habilidades ficam desativadas. A Palhaça dorme no armário, Smores fica sobre a mesa do escritório e Shadow fica ao fundo da CAM12. As outras aparecem nas câmeras de suas posições iniciais. O turno pode ser repetido após vitória ou derrota.
+**Custom Night** tem seis horas e permite escolher o nível de 0 a 10 para cada personagem. Na campanha e na Custom Night, as animatrônicas de nível 0 ficam imóveis nas câmeras de suas posições iniciais, e a Palhaça dorme no armário. Smores e Shadow só aparecem nos seus eventos, a partir do nível 1. O turno pode ser repetido após vitória ou derrota.
 
 **Projeto estático puro:** HTML + CSS + JavaScript com scripts locais. Não depende de Node.js, npm, Vite, Astro, bundlers, servidores próprios, banco de dados ou etapa de build. Desenvolvido para hospedar diretamente no **GitHub Pages**.
 
@@ -78,19 +78,35 @@ Ao alterar os JSONs, rode `node scripts/sync-local-config.cjs` para atualizar a 
 
 Execute `node tests/night-systems.cjs`, `node tests/movement.cjs` e `node tests/camera-gates.cjs` para validar as regras e os controles. Execute `node tests/image-cache.cjs` para conferir o cache. Os testes de arte `tests/test_cam05_images.py` e `tests/test_office_images.py` rodam diretamente com Python e Pillow.
 
+### Diagnóstico de desempenho
+
+Abra o jogo com `?perf=1`. O painel mostra FPS do RAF na última janela de um segundo, média dos períodos medidos na sessão, p95/p99, intervalos acima de 50 ms, custo do JS do jogo, Long Animation Frames (LoAF) quando disponíveis e recursos ativos. O custo de JS inclui as chamadas feitas pelo jogo no RAF. Layout, rasterização, decodificação em outras threads e composição podem ocorrer depois dele.
+
+As métricas de imagem contam entradas do Resource Timing, que incluem hits de cache. O tamanho RGBA estima um quadro por URL de imagem com dimensões conhecidas no DOM, incluindo imagens ocultas. A estimativa exclui backgrounds CSS, quadros adicionais de GIF e caches internos. O heap JS exposto por alguns navegadores tem granularidade e frequência de atualização próprias. Para memória do processo, GPU e bitmaps, compare o Gerenciador de Tarefas do navegador e os traces no mesmo hardware.
+
+Com Node 22 ou superior e Chrome instalado, rode na raiz do repositório. O cenário dura 25 minutos por padrão e registra uma linha JSON por janela, com FPS por modo, p95/p99, ações exercitadas, heap, recursos de imagem e contadores do Chrome DevTools.
+
+```powershell
+node scripts/perf-stress.cjs "C:/Program Files/Google/Chrome/Application/chrome.exe" 25 > perf-25min.log
+```
+
+O roteiro alterna noites 1, 5 e 9 e Custom Night com níveis zero, máximos e mistos. Exercita câmeras, portões, sons, rádio, armário, jumpscares do modo debug, tentativas e retornos ao menu. Para comparar revisões, passe o checkout como terceiro argumento e a pasta com `public/` como quarto. Faça as duas execuções em sequência, com a mesma resolução e configuração de GPU, e compare janelas de duração igual dentro do mesmo modo. Use `NNN_HEADED=1` no ambiente para executar com janela visível.
+
+Para investigar picos, grave 10–20 segundos no painel **Performance** do DevTools durante trocas de câmera e de portão, no começo e perto do final da sessão. Compare **Main** (JS, style/layout e paint), **Raster** (incluindo decode quando o navegador o reportar), **GPU/Compositor** e os eventos de rede. Use **Network** com cache normal para verificar quais URLs transferiram bytes e quais vieram do cache. O script também aceita `NNN_TRACE` com um caminho de arquivo JSON para exportar um trace curto que pode ser aberto no DevTools. Execute a coleta de trace em uma sessão própria para não incluir seu custo na comparação de FPS.
+
 A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Monitores ultrawide, incluindo modelos curvos, recebem bordas pretas nas laterais: escritório, câmeras, mapa e HUD usam a mesma área útil. A curvatura física não é detectável pelo navegador; a proporção da tela define as bordas. O movimento do panorama usa as bordas da área do jogo.
 
 ## Como jogar
 
-- Pressione **S** ou clique no monitor para abrir o computador. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela do monitor para voltar ao escritório. O botão ⏻ no monitor liga e desliga o computador. O menu Iniciar também permite desligá-lo.
+- Pressione **S** ou clique no monitor para vê-lo, mesmo com a tela apagada. Em **Câmeras**, selecione uma das doze câmeras na planta. Clique fora da tela para voltar ao escritório. O botão ⏻ liga o computador em 3 s e o desliga em 1,5 s. O menu Iniciar também permite desligá-lo.
 - No escritório, pressione **A** ou **D** para ir até a extremidade esquerda ou direita. Também é possível usar as bordas do panorama ou arrastar no touch. A porta esquerda fica sempre aberta. Olhar para ela impede travessias na aproximação.
-- Clique no botão rosa à direita do portão principal para fechar ou abrir o G01. Segure **W** ou pressione e segure no breu do portão para iluminar o corredor quando ele está aberto e a sala está vazia. A luz impede movimentos pelo corredor enquanto apontada para ele e afeta os pesos de Gótica, Yandere e Gatinha. A planta também controla o G01. O limite de portões fechados começa em zero na Noite 1 e aumenta em um por noite. Na Custom Night, o limite é três. Ao fechar outro portão no limite, o último que foi fechado reabre.
+- Clique no botão rosa à direita do portão principal para fechar ou abrir o G01. Segure **W** ou pressione e segure no breu do portão para iluminar o corredor quando ele está aberto e a sala está vazia. A luz reduz o avanço da Gótica e da Yandere, favorece a desistência delas e aumenta o avanço da Gatinha. A planta também controla o G01. O limite de portões fechados começa em zero na Noite 1 e aumenta em um por noite. Na Custom Night, o limite é três. Ao fechar outro portão no limite, o último que foi fechado reabre.
 - Use o botão **Reproduzir som nesta câmera** para atrair ou repelir personagens. O som dura 7 s na câmera de origem, inclusive depois de mudar de câmera, com recarga de 12 s desde o acionamento.
-- Se houver uma invasão, vire para a direita e clique na porta do armário técnico dentro do prazo. A proteção começa no clique. Espere as invasoras saírem antes de voltar ao escritório. No armário, pressione **D** para olhar o fundo ou **A** para voltar às frestas. As bordas da visão e o gesto horizontal também viram a câmera. Segure **W** ou pressione e segure sobre a Palhaça para iluminá-la e congelar seu contador. Clique nas frestas para sair.
+- Se houver uma invasão, vire para a direita e clique na porta do armário técnico dentro do prazo. A proteção começa no clique. Espere as invasoras saírem antes de voltar ao escritório. Dentro do armário, mova o mouse ou arraste para ajustar a visão. Leve o cursor à borda direita para girar até o fundo escuro. Volte o cursor ao centro e repita o movimento para completar a volta. **D** mira o fundo e **A** mira as frestas. Segure **W** ou pressione e segure sobre a Palhaça para iluminá-la e congelar seu contador. Clique nas frestas para sair.
 - O botão redondo do rádio toca uma das três faixas e reduz o contador da Palhaça. Cada entrada no armário registra um possível piso. O piso passa a valer se o contador cruzar o limiar para cima após o registro. O rádio, o computador, o movimento da visão e as viagens ao armário contribuem para o barulho.
 - Observe as barras no canto inferior esquerdo. Ver animatrônicas, ficar no armário e fechar o portão central reduzem a sanidade. A música ajuda a recuperá-la. Sanidade baixa favorece a Shadow e desacelera o relógio na Custom Night.
 - Ao ver **FIND ME**, abra as câmeras e encontre a Shadow antes do fim do prazo. Ela escolhe uma câmera por aparição e só pode se manifestar no retorno ao escritório.
-- Ao entrar na elétrica, a Yandere derruba os feeds e bloqueia os controles dos nove portões. Cada portão mantém sua posição física no momento da falha, e a Padrão ainda pode abri-lo. Quando a tela mostrar **SEM SINAL**, desligue o computador pelo botão ⏻ e volte a ligá-lo pelo botão de energia no escritório. O rádio, a lanterna e o armário continuam disponíveis conforme suas próprias regras. O prazo de busca da Shadow pausa enquanto as câmeras estão indisponíveis.
+- Ao entrar na elétrica, a Yandere derruba os feeds e bloqueia os controles dos nove portões. Cada portão mantém sua posição física no momento da falha, e a Padrão ainda pode abri-lo. Quando a tela mostrar **SEM SINAL**, desligue e ligue o computador pelo botão ⏻. O rádio, a lanterna e o armário continuam disponíveis conforme suas próprias regras. O prazo de busca da Shadow pausa enquanto as câmeras estão indisponíveis.
 - O computador ligado e os portões fechados consomem energia. No apagão, o computador para, o rádio ainda pode funcionar por 25 s e as perdas de sanidade dobram. O armário e a lanterna continuam disponíveis.
 - Abra `?debug=1` para acompanhar posições, dificuldades, bloqueios, contadores e o estado da câmera. Nesse modo, **J** testa os sustos.
 
@@ -109,14 +125,14 @@ A área do jogo tem largura máxima de 16:9, centralizada sobre fundo preto. Mon
 | `threats.json` | Permanência no escritório, Palhaça, Smores e posição da elétrica |
 | `controls.json` | Controles, transições e recursos audiovisuais |
 
-As posições têm sala e coordenadas na planta. Cada ligação em `config/map.json` representa circulação interna, passagem livre, portão ou saída externa. As 35 ligações atuais funcionam nos dois sentidos. A IA usa as passagens abertas para ponderar a distância até seu alvo. A permanência tem metade do peso base de uma ligação vizinha e uma porta fechada ainda pode ser tentada. A tentativa aguarda até 3 s. Se falhar, o próximo intervalo usa metade do valor aplicável, com a retenção configurada dos modificadores.
+As posições têm sala e coordenadas na planta. Cada ligação em `config/map.json` representa circulação interna, passagem livre, portão ou saída externa. G01 é unidirecional para a IA. A Padrão, a Gótica, a Yandere e a Gatinha sorteiam rotas sem repetir a última. O próximo ponto da rota favorece movimentos que aproximam a personagem dele. A permanência tem metade do peso base de uma ligação vizinha e uma porta fechada ainda pode ser tentada. Se a porta permanecer fechada por 3 s, a IA troca de rota. A observação e a lotação podem atrasar a tentativa.
 
 ### Portões e circulação
 
 | Portão | Passagem | Posições |
 |---|---|---|
-| G01 | Escritório e corredor central | 14 ↔ 13 |
-| G02 | Entrada oeste da VIP 2 | 7 ↔ 14 |
+| G01 | Escritório e corredor central | 14 → 13 |
+| G02 | Entrada oeste da VIP 2 | 7 ↔ 15 |
 | G03 | Entrada leste da VIP 2 | 2 ↔ 7 e 3 ↔ 7 |
 | G04 | Entrada oeste da VIP 1 | 6 ↔ 15 |
 | G05 | Entrada leste da VIP 1 | 2 ↔ 6 |
@@ -127,18 +143,18 @@ As posições têm sala e coordenadas na planta. Cada ligação em `config/map.j
 
 A circulação 26 fica fora do enquadramento da CAM07. A passagem P14 liga 26 ao fliperama (4), e P15 liga 26 ao esconderijo 24, no banheiro masculino. Foram removidas as ligações diretas 3 ↔ 4, 3 ↔ 24 e 4 ↔ 24. O esconderijo 25 fica dentro da VIP 2 e se liga a 7. O trajeto até o corredor oeste passa por 7 e G02.
 
-O estoque (10) leva à aproximação da porta esquerda (12), e P02 liga 12 ao escritório (13). Uma invasora no escritório faz quem estiver no estoque esperar antes de ocupar 12. A Maid usa G01 e o corredor central. As saídas externas conectam 8, 11 e 22 pelo perímetro e são exclusivas da Padrão. O acesso à elétrica (21) passa por P12 e é exclusivo da Yandere.
+O corredor avançado (14) recebe animatrônicas pelo corredor recuado (15). P03 liga o estoque (10) ao corredor recuado. O ataque pelo estoque passa pela porta esquerda (12) e por P02 até o escritório (13). Uma invasora no escritório faz quem estiver no estoque esperar antes de ocupar 12. A Maid segue sua navegação tradicional e ataca pelo corredor. As saídas externas conectam 8, 11 e 22 pelo perímetro e são exclusivas da Padrão. O acesso à elétrica (21) passa por P12 e é exclusivo da Yandere.
 
-A Padrão tenta abrir o portão quando a observação permite. As chances são 70% e 94%, conforme a habilidade. Após abrir, ela só cruza se as demais condições forem atendidas. A Gótica mantém sua estática temporária. A Maid avança seus estágios iniciais e sai de Serviço uma vez. Recuos percorrem uma ligação por vez com intervalo próprio e respeitam portões, observação e capacidade.
+A Padrão tenta abrir o portão quando a observação permite. As chances são 70% e 94%, conforme a habilidade. Após abrir, ela só cruza se as demais condições forem atendidas. A Gótica mantém sua estática temporária. Se a tentativa no G01 expirar, Padrão, Gótica, Yandere e Gatinha têm 75% de chance de redirecionar o ataque pelo corredor recuado até o estoque. Desistências e saídas do escritório reposicionam a personagem diretamente em um destino permitido. A recuperação aumenta o próximo intervalo em 25% e, para quem usa rotas, inclui uma tentativa livre.
 
-A vantagem avançada da Yandere começa em `movement.difficulty.abilityLevel` (nível 4). O campo `yandere.firstIntervalFactor` vale 0,60 e incide uma vez, após o cálculo do primeiro intervalo. Os intervalos seguintes continuam sujeitos à dificuldade normal. Uma nova entrada na elétrica pode causar outra falha após a recuperação.
+A vantagem avançada da Yandere começa em `movement.difficulty.abilityLevel` (nível 4). O campo `yandere.firstIntervalFactor` vale 0,60 e incide uma vez, após o cálculo do primeiro intervalo. Quando a elétrica concorre com outras rotas válidas, ela tem 15% de chance de ser escolhida. Uma nova falha pode ocorrer após a Yandere concluir outra rota e voltar à elétrica.
+
+No silêncio, a chance de avançar até a posição de ameaça é de 76% e a de invadir o escritório é de 86%. Com barulho máximo, sobem para 96% e 98%. A lanterna leva 4 s para atingir o efeito máximo e 5 s para dissipá-lo por completo. O áudio das câmeras continua sendo uma atração localizada.
 
 O temporizador de permanência de cada invasora conta desde a entrada dela no controle. O clique no armário decide se a permanência usa o tempo normal ou tardio. Em caso de eventos simultâneos, as ações registradas do jogador precedem a resolução das tentativas e dos ataques. O relógio usa tempo real transcorrido, inclusive com a aba oculta.
 
 ### Pendências da especificação e da arte
 
-- **P04** deixa o teto do barulho em `null`. O acúmulo segue as taxas confirmadas e o peso não fica negativo.
-- **P11** mantém em aberto limites gerais de acúmulo e um piso quantitativo para os pesos. O teto de magnitude da lanterna e os empates seguem as regras confirmadas.
 - As posições 8 e 11 ainda aguardam retratos próprios. As demais posições sem câmera continuam fora dos feeds.
 - O escritório e as câmeras CAM04, CAM05 e CAM12 têm variantes para G01, G08, G04/G05 e G06, respectivamente. G02, G03, G07 e G09 usam a arte original de cada cena. O mapa mostra a posição física desses quatro portões.
 

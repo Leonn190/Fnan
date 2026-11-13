@@ -22,6 +22,7 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   const progressKey = 'nnn.campaign.completed';
   let completed = readProgress();
   let pendingShift;
+  let musicFrame;
   const inputs = new Map();
 
   function readProgress() {
@@ -63,10 +64,20 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   }
 
   function fadeMusic() {
-    if (title.hidden || title.inert) return;
+    musicFrame = undefined;
+    if (title.hidden || title.inert || music.paused) return;
     const progress = Math.min(1, Math.max(0, (music.currentTime - settings.startSeconds) / settings.fadeSeconds));
     music.volume = settings.initialVolume + (settings.volume - settings.initialVolume) * progress;
-    if (progress < 1) requestAnimationFrame(fadeMusic);
+    if (progress < 1) musicFrame = requestAnimationFrame(fadeMusic);
+  }
+
+  function startMusicFade() {
+    if (musicFrame === undefined && music.volume !== settings.volume) fadeMusic();
+  }
+
+  function cancelMusicFade() {
+    if (musicFrame !== undefined) cancelAnimationFrame(musicFrame);
+    musicFrame = undefined;
   }
 
   function show() {
@@ -78,7 +89,7 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
     showCustom(false, continueButton.hidden ? start : continueButton);
     music.currentTime = settings.startSeconds;
     music.volume = settings.initialVolume;
-    music.addEventListener('playing', fadeMusic, { once: true });
+    cancelMusicFade();
     music.play().catch(() => {});
   }
 
@@ -88,6 +99,7 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
     introTitle.textContent = shift.label;
     title.inert = true;
     game.inert = true;
+    cancelMusicFade();
     music.pause();
     intro.dataset.phase = newspaper ? 'newspaper' : 'cover';
     intro.hidden = false;
@@ -137,6 +149,9 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
     play({ label: 'CUSTOM NIGHT', levels, rules: defaults });
   });
   entryButton.disabled = false;
+  music.addEventListener('playing', startMusicFade);
+  music.addEventListener('waiting', cancelMusicFade);
+  music.addEventListener('pause', cancelMusicFade);
   entryButton.addEventListener('click', enter, { once: true });
   return { show, play, playCampaign, recordWin };
 }

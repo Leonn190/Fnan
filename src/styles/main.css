@@ -96,7 +96,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .office-view,.computer-view{position:absolute;inset:0;overflow:hidden}
 .office-view{z-index:1;background:#09050d;touch-action:pan-y}
 .office-scene{position:absolute;left:50%;top:0;width:max(100cqw,300cqh);height:100%;transform:translateX(calc(-50% + var(--pan-shift,0px)))}
-.office-view:not([hidden]) .office-scene{will-change:transform}
 .office-art{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
 .shadow-office-art{position:absolute;inset:0}
 
@@ -115,19 +114,21 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 }
 :is(.office-power, .desktop-power):focus-visible { outline: 2px solid #ffe2f4; }
 .office-monitor-off {
-  display: none;
   position: absolute;
-  inset: 0;
-  /* Contorno da tela no panorama, seguindo a moldura e o laço. */
-  clip-path: polygon(22.76% 53.5%, 23.35% 53.5%, 23.63% 52.62%, 24.48% 52.35%, 37.94% 52.65%, 38.14% 78.72%, 22.76% 80.66%);
+  left: calc(100% * 480 / 2172);
+  top: calc(100% * 358 / 724);
+  width: calc(100% * 358 / 2172);
+  height: calc(100% * 240 / 724);
+  opacity: 0;
+  pointer-events: none;
 }
-.game[data-computer-off] .office-monitor-off { display: block; }
+.game[data-computer-off] .office-monitor-off { opacity: 1; }
 .office-blackout{display:none;position:absolute;inset:0;pointer-events:none;background:#030208eb}
 .game[data-blackout] .office-blackout{display:block}
 .game[data-blackout] .office-view[data-flashlight="true"] .office-blackout{
   mask-image:radial-gradient(ellipse 7% 20% at 50.5% 51.5%,transparent 32%,#000 100%);
 }
-.game[data-blackout] .closet-view[data-view="door"] :is(.closet-door-art,.closet-extra-layer){filter:brightness(.15)}
+.game[data-blackout] .closet-view :is(.closet-door-art,.closet-extra-layer){filter:brightness(.15)}
 .gate-light-hotspot{left:39.8%;top:27.2%;width:20.5%;height:48.4%;touch-action:none}
 .gate-light-hotspot:disabled{pointer-events:none}
 .gate-button-hotspot{left:67.5%;top:44.4%;width:2.2%;height:7.2%}
@@ -141,14 +142,17 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .closet-view,.closet-view img{position:absolute;inset:0;width:100%;height:100%}
 .closet-view{z-index:1;overflow:hidden;background:#000;touch-action:none}
 .closet-view:focus-visible{outline:none}
+.closet-angle{position:absolute;inset:0;pointer-events:none}
+.closet-door{transform:translateX(var(--closet-door-shift,0px))}
+.closet-back{transform:translateX(var(--closet-back-shift,-145cqw))}
+.closet-angle button{pointer-events:auto}
 .closet-view img{object-fit:cover;pointer-events:none}
 .closet-door-art,.closet-extra-layer{filter:brightness(.72)}
 .closet-beam{filter:brightness(3.1) saturate(.8);mask-image:radial-gradient(circle at 50% 55%,#000 15cqh,#000d 21cqh,#0005 30cqh,transparent 39cqh)}
-.closet-view[data-view="back"] :is(.closet-door-art,.closet-extra-layer){display:none}
 .closet-exit{inset:17% 5% 11%}
 .closet-light-hotspot{inset:16% 30% 12%}
 .game[data-mode="closet"] .hud-top{visibility:hidden}
-.game[data-mode="closet"]:has(.closet-view[data-view="back"]) :is(.screen-grain,.movement-debug,.toast){visibility:hidden}
+.game[data-mode="closet"]:has(.closet-view:not([data-view="door"])) :is(.screen-grain,.movement-debug,.toast){visibility:hidden}
 .closet-blackout{display:none;position:absolute;inset:0;z-index:31;background:#000}
 .game[data-closet-transition] .closet-blackout{display:block;animation:closet-blackout var(--closet-duration) both}
 .game[data-closet-transition="enter"] .office-view{animation:closet-duck var(--closet-duration) both}
@@ -179,6 +183,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 }
 .monitor-exit:focus-visible { outline-offset: -3px; }
 .monitor-frame {
+  --screen-outline: polygon(5.45% 0, 100% 0, 99.48% 100%, .59% 100%, 0 1.9%, 4.7% 1.9%, 5.2% 1.6%);
   position: relative;
   width: min(100cqw, calc(100cqh * 1672 / 941));
   aspect-ratio: 1672 / 941;
@@ -192,21 +197,79 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   height: calc(100% * 58 / 941);
   pointer-events: auto;
 }
+.monitor-frame::before,
 .computer-screen {
-  --taskbar-height: clamp(28px, 10cqh, 40px);
   position: absolute;
   /* Abertura da tela medida na arte de 1672 × 941, incluindo o recorte do laço. */
   left: calc(100% * 73 / 1672);
   top: calc(100% * 50 / 941);
   width: calc(100% * 1527 / 1672);
   height: calc(100% * 802 / 941);
-  clip-path: polygon(5.45% 0, 100% 0, 99.48% 100%, .59% 100%, 0 1.9%, 4.7% 1.9%, 5.2% 1.6%);
-  container-type: size;
+  clip-path: var(--screen-outline);
   pointer-events: auto;
+}
+.monitor-frame::before { content: ""; }
+.computer-screen {
+  --taskbar-height: clamp(28px, 10cqh, 40px);
+  --screen-line: polygon(2% 49.7%, 99% 49.7%, 99% 50.3%, 1% 50.3%, 1% 49.8%, 1.5% 49.8%, 1.75% 49.75%);
+  --screen-dot: polygon(49% 49.85%, 51% 49.85%, 51% 50.15%, 49% 50.15%, 49% 49.9%, 49% 49.9%, 49% 49.88%);
+  container-type: size;
   color: #fff;
   background: #2e2054 url("../../public/images/computer/wallpaper.webp") 58% center / cover no-repeat;
   font: 400 12px/1.35 'Segoe UI', Arial, sans-serif;
 }
+.computer-screen[inert] { pointer-events: none; }
+.game[data-computer-off]:not([data-monitor-transition="shutdown"]) .computer-screen,
+.game[data-computer-off]:not([data-monitor-transition="shutdown"]):is([data-mode="desktop"], [data-mode="cameras"])
+  :is(.hud-top, .resource-hud, .threat-alert, .toast, .movement-debug) {
+  visibility: hidden;
+}
+.game[data-monitor-transition="boot"] .computer-screen {
+  animation: screen-boot var(--monitor-duration) var(--monitor-elapsed) both;
+}
+.game[data-monitor-transition="shutdown"] .computer-screen {
+  animation: screen-shutdown var(--monitor-duration) var(--monitor-elapsed) both;
+}
+.game[data-monitor-transition="boot"] .office-monitor-off {
+  animation: office-monitor-boot var(--monitor-duration) var(--monitor-elapsed) both;
+}
+.game[data-monitor-transition="shutdown"] .office-monitor-off {
+  animation: office-monitor-shutdown var(--monitor-duration) var(--monitor-elapsed) both;
+}
+@keyframes screen-boot {
+  0%, 18% { opacity: 0; clip-path: var(--screen-line); }
+  19% { opacity: .65; clip-path: var(--screen-line); filter: brightness(1.15); }
+  37% { opacity: .85; clip-path: var(--screen-outline); filter: brightness(.65); }
+  46% { opacity: .64; filter: brightness(.45); }
+  68% { opacity: .88; filter: brightness(.77); }
+  100% { opacity: 1; filter: none; }
+}
+@keyframes screen-shutdown {
+  0% { opacity: 1; clip-path: var(--screen-outline); }
+  22% { opacity: .65; clip-path: var(--screen-outline); filter: brightness(.6); }
+  64% { opacity: .82; clip-path: var(--screen-line); filter: brightness(1.3); }
+  80% { opacity: .7; clip-path: var(--screen-dot); }
+  100% { opacity: 0; clip-path: var(--screen-dot); }
+}
+@keyframes office-monitor-boot {
+  0%, 18% { opacity: 1; }
+  30% { opacity: .66; }
+  46% { opacity: .76; }
+  100% { opacity: 0; }
+}
+@keyframes office-monitor-shutdown {
+  0% { opacity: 0; }
+  66% { opacity: .85; }
+  100% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game[data-monitor-transition] :is(.computer-screen, .office-monitor-off) {
+    animation: monitor-power-fade var(--monitor-duration) var(--monitor-elapsed) both;
+  }
+  .game[data-monitor-transition="boot"] .office-monitor-off,
+  .game[data-monitor-transition="shutdown"] .computer-screen { animation-direction: reverse; }
+}
+@keyframes monitor-power-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: no-preference) {
   .monitor-frame { animation: monitor-reveal .22s ease-out both; }
 }
@@ -422,7 +485,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .feed-art{width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(.77) contrast(1.13) saturate(.70);transform:scale(1.015);pointer-events:none;transition:filter .3s}
 .shadow-feed{position:absolute;inset:0;z-index:4;pointer-events:none}
 .shadow-feed img{position:absolute;left:38%;top:47%;height:55%;max-width:46%;object-fit:contain;transform:translate(-50%,-50%);filter:brightness(1.18) drop-shadow(0 0 14px #b29cd14d)}
-.shadow-feed[data-phase="idle"] img{left:57%;top:35%;height:24%;filter:brightness(.8)}
 .camera-feed:has(.shadow-feed[data-phase="found"]) .camera-static[data-kind="switch"]{visibility:hidden}
 .shadow-feed[data-phase="found"] img{animation:shadow-fade var(--shadow-found-duration) both}
 .shadow-feed[data-phase="found"]::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#f0ddff70 0 2px,#09031680 3px 9px);animation:shadow-signal var(--shadow-found-duration) steps(1,end) both}
@@ -583,6 +645,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
     radial-gradient(ellipse at 50% 48%,#14071226 12%,#060307b5 61%,#000 100%);
 }
 .game[data-defeat="scare"] :is(.office-view,.cameras-view){animation:scare-distortion .29s steps(3,end) infinite}
+.game[data-defeat="over"] .playfield{display:none}
+.playfield:has(.shift-complete:not([hidden])) :is(.office-view,.computer-view,.closet-view){visibility:hidden}
+.playfield:has(.shift-complete:not([hidden])) .cameras-view{display:none}
 @keyframes scare-distortion{
   0%,100%{transform:scale(1.06) skewX(-1.2deg)}
   40%{transform:translateX(.6%) scale(1.07) skewX(1.2deg)}
@@ -689,4 +754,4 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
-.perf-overlay{position:absolute;z-index:40;right:10px;bottom:10px;padding:6px 8px;color:#e5e9ee;background:#111d;font:11px var(--mono);pointer-events:none}
+.perf-overlay{position:absolute;z-index:40;right:10px;bottom:10px;max-width:calc(100% - 20px);padding:6px 8px;color:#e5e9ee;background:#111d;font:11px/1.35 var(--mono);pointer-events:none;white-space:pre-wrap}

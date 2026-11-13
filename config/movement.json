@@ -8,16 +8,43 @@
   "retryWindow": 3,
   "failedIntervalFactor": 0.5,
   "failedModifierRetention": 0.75,
-  "leftAttackChance": 75,
-  "leftApproachFactor": 0.45,
-  "retreat": {
-    "destinations": [
-      9,
-      6,
-      7
+  "routes": {
+    "bonusByLevel": [
+      { "minLevel": 1, "bonus": 12 },
+      { "minLevel": 4, "bonus": 16 },
+      { "minLevel": 8, "bonus": 20 }
     ],
-    "stepSeconds": 1,
-    "intervalFactor": 1.5
+    "electricalChance": 0.15,
+    "definitions": {
+      "C1": { "objective": "corridor", "paths": [[1, 2, 6, 15, 14, 13]] },
+      "C2": { "objective": "corridor", "paths": [[1, 2, 7, 15, 14, 13]] },
+      "C3": { "objective": "corridor", "paths": [[1, 2, 19, 15, 14, 13]] },
+      "E1": { "objective": "stock", "paths": [[1, 2, 3, 5, 9, 10, 12, 13]] },
+      "E2": { "objective": "stock", "paths": [[1, 2, 19, 15, 10, 12, 13]] },
+      "E3": { "objective": "stock", "paths": [[1, 2, 3, 5, 8, 11, 10, 12, 13], [1, 2, 19, 22, 11, 10, 12, 13]] },
+      "electrical": { "objective": "electrical", "paths": [[1, 2, 19, 21]] }
+    }
+  },
+  "attack": {
+    "corridor": {
+      "approach": { "base": 0.76, "maxNoiseBonus": 0.20 },
+      "entry": { "base": 0.86, "maxNoiseBonus": 0.12 }
+    },
+    "stock": {
+      "approach": { "base": 0.76, "maxNoiseBonus": 0.20 },
+      "entry": { "base": 0.86, "maxNoiseBonus": 0.12 }
+    },
+    "stayShare": 0.60,
+    "stockCounterattack": { "gate": "G01", "chance": 0.75, "route": "E2" }
+  },
+  "retreat": {
+    "stock": [9, 6, 11],
+    "corridor": [17, 6, 7],
+    "office": [6, 7, 9, 11]
+  },
+  "recovery": {
+    "intervalFactor": 1.25,
+    "freeMoves": 1
   },
   "difficulty": {
     "oddSteps": [
@@ -29,11 +56,11 @@
       10
     ],
     "intervalReductionPerStep": 8,
-    "targetBonusLevels": [
+    "maidTargetBonusLevels": [
       2,
       8
     ],
-    "targetBonusIncreasePerStep": 40,
+    "maidTargetBonusIncreasePerStep": 40,
     "abilityLevel": 4,
     "reactionLevel": 6,
     "reactionReduction": 11

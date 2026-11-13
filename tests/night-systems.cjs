@@ -406,7 +406,10 @@ assert.equal(boosted.state().outcome, 'loss');
 console.log('PASS: Smores radio rolls, vent timing, silence, room duration and movement/reaction reductions.');
 
 function tuneElectrical(config) {
-  Object.assign(config.characters.yandere, { start: 19, positions: [19, 21], interval: 5 });
+  Object.assign(config.characters.yandere, {
+    start: 19, positions: [19, 21], interval: 5, routes: ['electrical'],
+    routePaths: { electrical: [[19, 21]] }
+  });
   config.movement.jitter = { min: 0, max: 0 };
 }
 
@@ -447,10 +450,11 @@ for (const level of [1, 4]) {
   const next = run.game.diagnostics()[0].remaining;
   run.at(arrival + 1 + next + .001, { camera: 'CAM12' });
   assert.equal(run.game.diagnostics()[0].position, 19);
-  // Release the new attempt from observation.
+  // Release the next unplanned move from observation. Electrical is still the last route.
   run.at(arrival + 1 + next * 2 + 2, { radio: true });
-  assert.equal(run.state().electricalFault, true);
-  assert.equal(run.events.filter(([type]) => type === 'electricalFault').length, 2);
+  assert.equal(run.state().electricalFault, false);
+  assert.equal(run.game.diagnostics()[0].lastRoute, 'electrical');
+  assert.equal(run.events.filter(([type]) => type === 'electricalFault').length, 1);
 }
 
 const offBeforeFault = scenario({ levels: { yandere: 1 }, tune: tuneElectrical });
@@ -496,4 +500,4 @@ for (const find of [true, false]) {
   run.at(deadline + .01);
   assert.equal(run.state().outcome, find ? null : 'loss');
 }
-console.log('PASS: electrical entry, gate and camera controls, manual power cycle, repeat faults, blackout and paused Shadow search.');
+console.log('PASS: electrical route, gate and camera controls, manual power cycle, no immediate repeat, blackout and paused Shadow search.');

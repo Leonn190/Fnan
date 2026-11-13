@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { test } = require('node:test');
 
 global.window = { NathGame: {} };
 const loads = [];
@@ -7,69 +8,95 @@ global.Image = class {
     this.source = source;
     loads.push(this);
   }
-  decode() { return new Promise(resolve => { this.finishDecode = resolve; }); }
+  removeAttribute(name) {
+    assert.equal(name, 'src');
+    this.removed = true;
+  }
+  decode() { assert.fail('Speculative warming must not force image decode'); }
 };
 require('../src/image-cache.js');
-const { createImageCache, setImageSource } = window.NathGame;
+const { createImageCache, clearImageSource, setImageSource } = window.NathGame;
 
-async function test() {
+test('eviction and clear release active requests and leave late callbacks harmless', () => {
   const cache = createImageCache({ limit: 2, parallel: 1 });
   cache.warm(['old', 'queued']);
-  assert.deepEqual(loads.map(image => image.source), ['old']);
+  assert.deepEqual(cache.stats(), { ready: 0, pending: 1, queued: 1, cancelled: 0 });
+  const staleLoad = loads[0].onload;
   cache.warm(['recent', 'next']);
-  assert.equal(cache.size, 2);
-  assert.equal(loads.length, 1);
+  assert.deepEqual(loads.map(image => image.source), ['old', 'recent']);
+  assert.equal(loads[0].removed, true);
+  assert.equal(loads[0].onload, null);
+  staleLoad();
+  assert.deepEqual(cache.stats(), { ready: 0, pending: 1, queued: 1, cancelled: 1 });
 
+  const staleError = loads[1].onerror;
+  cache.clear();
+  assert.equal(loads[1].removed, true);
+  cache.warm(['recent']);
+  staleError();
+  assert.equal(cache.size, 1);
+  loads[2].onerror();
+  assert.equal(cache.size, 0);
+
+  cache.warm(['recent', 'other']);
+  loads[3].onload();
+  assert.equal(loads[3].removed, true);
+  assert.deepEqual(cache.stats(), { ready: 1, pending: 1, queued: 0, cancelled: 2 });
+  cache.cancelPending();
+  assert.equal(loads[4].removed, true);
+  cache.warm(['recent']);
+  assert.equal(loads.length, 5);
+
+  cache.warm(['other']);
+  loads[5].onload();
+  cache.markLoaded('recent');
+  cache.warm(['new']);
+  loads[6].onload();
+  cache.warm(['recent']);
+  assert.equal(loads.length, 7);
+  assert.equal(cache.size, 2);
+});
+
+test('only the current visible request can trigger its error handler', () => {
   const visible = {
     complete: false,
     naturalWidth: 0,
-    getAttribute: () => visible.src
+    getAttribute: () => visible.src ?? null,
+    removeAttribute: () => { delete visible.src; }
   };
   const errors = [];
   setImageSource(visible, 'old', () => errors.push('old'));
   const staleError = visible.onerror;
   setImageSource(visible, 'recent', () => errors.push('recent'));
-  staleError();
-  assert.deepEqual(errors, []);
-  setImageSource(visible, 'old', () => errors.push('new request for old'));
   visible.complete = true;
   staleError();
   assert.deepEqual(errors, []);
-  visible.complete = false;
-
-  loads[0].onload();
-  assert.equal(loads[0].finishDecode, undefined);
-  assert.deepEqual(loads.map(image => image.source), ['old', 'recent']);
-  loads[1].onload();
-  assert.equal(loads.length, 2);
-  cache.clear();
-  assert.equal(cache.size, 0);
-  cache.warm(['latest']);
-  setImageSource(visible, 'latest', () => errors.push('latest'));
-  loads[1].finishDecode();
-  await Promise.resolve();
-  assert.equal(visible.src, 'latest');
-  assert.deepEqual(loads.map(image => image.source), ['old', 'recent', 'latest']);
-
-  loads[2].onerror();
-  assert.equal(cache.size, 0);
-  cache.warm(['latest'], false);
-  loads[3].onload();
-  cache.warm(['other'], false);
-  loads[4].onload();
-  cache.touch('latest');
-  cache.warm(['new'], false);
-  loads[5].onload();
-  cache.warm(['latest']);
-  assert.equal(loads.length, 6);
-  assert.equal(cache.size, 2);
-  visible.complete = true;
   visible.onerror();
-  assert.deepEqual(errors, ['latest']);
-  console.log('PASS: bounded LRU and preload concurrency, clear during decode, retry, and latest image request.');
-}
+  assert.deepEqual(errors, ['recent']);
+  const clearedError = visible.onerror;
+  clearImageSource(visible);
+  clearedError();
+  assert.deepEqual(errors, ['recent']);
+  assert.equal(visible.src, undefined);
+});
 
-test().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
+test('a visible load supersedes its speculative request', () => {
+  const cache = createImageCache({ limit: 3, parallel: 1 });
+  cache.warm(['visible', 'alternate']);
+  const image = loads.at(-1);
+  cache.markLoaded('visible');
+  assert.equal(image.removed, true);
+  assert.equal(loads.at(-1).source, 'alternate');
+  assert.deepEqual(cache.stats(), { ready: 1, pending: 1, queued: 0, cancelled: 0 });
+});
+
+test('changing views preserves shared work and removes obsolete queued entries', () => {
+  const cache = createImageCache({ limit: 3, parallel: 1 });
+  cache.warmForView(['shared', 'old']);
+  const shared = loads.at(-1);
+  cache.warmForView(['shared', 'new']);
+  assert.equal(shared.removed, undefined);
+  shared.onload();
+  assert.equal(loads.at(-1).source, 'new');
+  assert.equal(cache.size, 2);
 });

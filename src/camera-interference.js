@@ -9,7 +9,10 @@ function createCameraInterference(overlay, band, feed, reducedMotion) {
 
   function clear() {
     if (!current) return;
-    for (const animation of animations) animation.cancel();
+    for (const animation of animations) {
+      animation.onfinish = null;
+      animation.cancel();
+    }
     animations = [];
     current = undefined;
     overlay.hidden = true;
@@ -46,10 +49,13 @@ function createCameraInterference(overlay, band, feed, reducedMotion) {
       })), timing));
     }
     for (const animation of animations) animation.currentTime = Math.max(0, now - start);
+    const pulse = current;
+    animations[0].onfinish = () => { if (current === pulse) clear(); };
   }
 
   return {
     play, clear,
+    get activeAnimations() { return animations.length; },
     setElectrical(active) {
       if (active === (current?.kind === 'electrical')) return;
       clear();

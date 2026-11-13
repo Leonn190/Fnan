@@ -119,6 +119,9 @@ function makeCameraMap({ canvas, onSelect, onToggleGate }) {
   let activeCamera;
   return {
     pulseAudio(id) { cameraNodes.get(id)?.classList.add('audio-pulse'); },
+    clearAudioPulses() {
+      for (const node of cameraNodes.values()) node.classList.remove('audio-pulse');
+    },
     setGate(id, closed) { setGateClosed(gateNodes.get(id), closed); },
     setGateControls(enabled) {
       for (const gate of gateNodes.values()) {

@@ -1,7 +1,6 @@
 {
   "closetTransitionsMs": {
     "enter": { "swap": 980, "duration": 1450 },
-    "turn": { "swap": 320, "duration": 640 },
     "exit": { "swap": 650, "duration": 1040 }
   },
   "jumpscare": {

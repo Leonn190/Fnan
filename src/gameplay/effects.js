@@ -7,7 +7,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 function createEffects(config, routes, actors) {
   const { cameraAudio, flashlight, noise } = config.effects;
   const noiseRates = Object.entries(noise.rates);
-  const { front, back, office, left, leftApproach } = config.map;
+  const { front, back } = config.map;
   const corridor = [front, back];
   let lure;
   let readyAt = 0;
@@ -24,57 +24,59 @@ function createEffects(config, routes, actors) {
   }
 
   function addNoise(actor, amount) {
-    actor.noise = clamp(actor.noise + amount, 0, noise.max ?? Infinity);
+    actor.noise = clamp(actor.noise + amount, 0, noise.max);
   }
 
   function integrate(dt, input) {
-    const rate = noiseRates.reduce((sum, [key, value]) => sum + (input[key] ? value : 0), 0);
+    let rate = 0;
+    for (const [key, value] of noiseRates) if (input[key]) rate += value;
+    const equilibrium = rate * noise.max / noise.decay;
+    const blend = -Math.expm1(-dt * noise.decay / noise.max);
     for (const actor of actors) {
-      addNoise(actor, dt * (rate || -noise.decay));
-      const rates = flashlight.rates[actor.key];
-      if (!rates) continue;
-      for (const direction of ['advance', 'retreat']) {
-        const value = actor.light[direction];
-        const lit = input.corridorLight && corridor.includes(actor.position);
-        actor.light[direction] = lit
-          ? clamp(value + rates[direction] * dt, flashlight.min, flashlight.max)
-          : Math.sign(value) * Math.max(0, Math.abs(value) - flashlight.recovery * dt);
-      }
+      addNoise(actor, (equilibrium - actor.noise) * blend);
+      if (!flashlight.modifiers[actor.key]) continue;
+      const lit = input.corridorLight && corridor.includes(actor.position);
+      const lightRate = lit ? flashlight.buildPerSecond : -flashlight.decayPerSecond;
+      actor.light = clamp(actor.light + lightRate * dt, 0, 1);
     }
+  }
+
+  function attackOdds(actor, objective, phase) {
+    const { base, maxNoiseBonus } = config.movement.attack[objective][phase];
+    const intensity = clamp(actor.noise / noise.max, 0, 1);
+    const light = objective === 'corridor' && flashlight.modifiers[actor.key];
+    const advance = clamp(base + maxNoiseBonus * intensity + (light ? light[phase] * actor.light : 0),
+      light ? flashlight.minimumAdvance : 0, light ? flashlight.maximumAdvance : 1);
+    const share = clamp(config.movement.attack.stayShare + (light ? light.stayShareDelta * actor.light : 0), 0, 1);
+    const stay = (1 - advance) * share;
+    return { advance, stay, abandon: 1 - advance - stay };
   }
 
   function weight(actor, to, now) {
     const from = actor.position;
     let result = 1;
-    if (from === leftApproach && to === left) result *= config.movement.leftApproachFactor * factor(actor.noise);
     if (lure && now < lure.ends) {
       const distance = lure.distance.get(to) ?? Infinity;
       if (distance < (lure.distance.get(from) ?? Infinity)) {
         result *= factor(actor.rule.audioModifier * cameraAudio.factors[distance] * actor.audioRetention);
       }
     }
-    if (corridor.includes(from)) {
-      const advancing = (from === back && to === front) || (from === front && to === office);
-      if (advancing) result *= factor(actor.rule.corridorAdvancePenalty ?? 0) * factor(actor.light.advance);
-      else if (from === front || to !== front) result *= factor(actor.light.retreat);
-    }
     if (actor.rule.hidingPlaces?.includes(to)) result *= factor(actor.rule.hidingBonus);
     return result;
   }
 
   return {
-    startAudio, integrate, weight,
+    startAudio, integrate, weight, attackOdds,
     staticActive: now => now < staticUntil,
     staticDeadline: now => now < staticUntil ? staticUntil : Infinity,
     triggerStatic: now => { staticUntil = now + config.effects.static.duration; },
     audioStatus: now => ({ remaining: Math.max(0, readyAt - now), camera: now < lure?.ends ? lure.camera : null }),
-    addNoiseEvent: event => actors.forEach(actor => addNoise(actor, noise.events[event])),
+    addNoiseEvent: event => actors.forEach(actor => addNoise(actor, noise.events[event] ?? 0)),
     retain(actor) {
       const retain = config.movement.failedModifierRetention;
       actor.audioRetention *= retain;
       actor.noise *= retain;
-      actor.light.advance *= retain;
-      actor.light.retreat *= retain;
+      actor.light *= retain;
     }
   };
 }
