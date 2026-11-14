@@ -16,7 +16,7 @@ from export_office_states import OFFICE, load
 
 CHARACTERS = ("original", "platinada", "yandere", "gotica", "maid")
 BASE = OFFICE / "states/open-lit.webp"
-OUTPUT = OFFICE / "states/corridor"
+OUTPUT = Path(__file__).resolve().parents[1] / "reserva/public/images/office/states/corridor"
 
 # Limites horizontais dos cinco recortes e pontos internos de suas silhuetas.
 SPRITE_BOUNDARIES = (0, 539, 934, 1275, 1630, 2172)

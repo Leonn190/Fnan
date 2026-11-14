@@ -24,11 +24,17 @@ jobs:
       - name: Baixar repositório
         uses: actions/checkout@v4
       - name: Configurar Pages
+        id: pages
         uses: actions/configure-pages@v5
-      - name: Enviar arquivos estáticos (sem build)
+      - name: Explicar a configuração necessária do Pages
+        if: failure() && steps.pages.outcome == 'failure'
+        run: echo "::error::Confira Settings > Pages > Build and deployment > Source > GitHub Actions no repositório e execute o workflow novamente."
+      - name: Preparar apenas os arquivos do jogo
+        run: node scripts/package-pages.cjs
+      - name: Enviar arquivos estáticos
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: dist
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4

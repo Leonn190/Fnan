@@ -94,8 +94,9 @@ function clearImageSource(image) {
 }
 
 // The visible element owns its request. Preload and decode callbacks never write to it.
-function setImageSource(image, source, onError = null, onLoad = null) {
-  if (image.getAttribute('src') === source) {
+function setImageSource(image, source, onError = null, onLoad = null, refreshPending = false) {
+  const unchanged = image.getAttribute('src') === source;
+  if (unchanged && (!refreshPending || image.complete)) {
     if (image.complete && image.naturalWidth === 0) onError?.();
     return;
   }
@@ -109,7 +110,7 @@ function setImageSource(image, source, onError = null, onLoad = null) {
     image.onload = null;
     onLoad();
   } : null;
-  image.src = source;
+  if (!unchanged) image.src = source;
 }
 
 Object.assign(window.NathGame, { createImageCache, clearImageSource, setImageSource });

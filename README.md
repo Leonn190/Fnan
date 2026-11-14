@@ -63,10 +63,10 @@ As imagens do menu, do computador, da Shadow e da Palhaça usam WebP sem perdas.
 
 1. Crie um repositório no GitHub e coloque **o conteúdo desta pasta** na raiz da branch `main`. `index.html` deve ficar na raiz, não dentro de outra pasta.
 2. Em **Settings → Pages → Build and deployment**, escolha **GitHub Actions** como fonte.
-3. O workflow `.github/workflows/pages.yml` publicará os arquivos estáticos do repositório automaticamente. Nenhum `npm install`, `npm run build` ou build local é necessário.
+3. O workflow `.github/workflows/pages.yml` monta o pacote em `dist/` com `node scripts/package-pages.cjs` e o publica. O pacote inclui os arquivos usados pelo jogo e deixa a reserva, as artes-fonte e as ferramentas de desenvolvimento no repositório.
 4. Acesse a URL indicada em **Settings → Pages**, normalmente `https://seu-usuario.github.io/nome-do-repo/`.
 
-Também funciona com a opção clássica **Deploy from a branch → main → /(root)** em repositórios que permitam essa modalidade. Os endereços são relativos (`./public/...`, `./src/...`) e funcionam tanto no site de projeto quanto no site de usuário.
+Se `Configure Pages` informar que o site está ausente, confira a fonte da etapa 2 e execute novamente o workflow na aba **Actions**. Os caminhos relativos funcionam tanto no site de projeto quanto no site de usuário.
 
 ## Testar localmente e enquadramento
 
@@ -181,7 +181,7 @@ O temporizador de permanência de cada invasora conta desde a entrada dela no co
 
 Cada câmera reúne o fundo, o PNG mestre e a planta técnica em `public/images/cameras/CAMxx/`. CAM01, CAM02, CAM04 e CAM07 a CAM12 compõem os recortes WebP de `layers/` sobre o fundo da câmera. CAM03, CAM05 e CAM06 usam quadros completos em `states/`. As câmeras com portão buscam a vista aberta vazia em `states/` (por exemplo, `CAM04/states/open/vazia.webp`). O fundo fechado padrão fica em `base.webp`. Os quadros `todas.webp` continuam disponíveis nos locais originais.
 
-As variantes substituídas estão em `reserva/public/images/cameras/`. Para reexportar os recortes e seu catálogo de posições, rode `python -B scripts/export_camera_layers.py` com Pillow e NumPy. A CAM09 usa duas máscaras para manter a Maid e suas sombras sobre o mesmo fundo.
+As variantes substituídas estão em `reserva/public/images/cameras/`. Para reexportar os recortes e seu catálogo de posições, rode `python -B scripts/export_camera_layers.py` com Pillow e NumPy. A CAM09 usa contornos por pose e máscaras de sombra de contato. As duas poses usam a parede, o piso e a iluminação da câmera vazia.
 
 O jogo pode selecionar a variante da loja com `NathGame.setCam01ShopState('original-platinada')` e a da recepção com `NathGame.setCam02ReceptionState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a sala vazia.
 
@@ -213,7 +213,7 @@ Os três estados da nova sala de controle estão em `public/images/office/states
 
 O escritório compõe as camadas das invasoras e da ocupante da porta lateral. As camadas de `public/images/office/characters/` compõem 101 combinações com o portão principal aberto no escuro, 101 com ele fechado e seis com o corredor iluminado e a sala vazia. Use `NathGame.setOfficeCharacterState([], 'yandere')` e pressione **W** para ver a Yandere na porta lateral com o corredor iluminado. Chame a função sem argumentos para esvaziar a cena. Para exportar os 208 panoramas em WebP, rode `python scripts/export_office_states.py <pasta-de-destino>` com Pillow. Acrescente `--lit-only` para exportar apenas os seis iluminados.
 
-As poses iluminadas do corredor usam `public/images/office/states/corridor-atlas.webp`, composto a partir dos recortes originais. Para reproduzir o atlas, rode `python -B scripts/export_office_corridor.py outros/arte/office/corridor-lineup.png --atlas public/images/office/states/corridor-atlas.webp` com Pillow.
+As poses iluminadas do corredor usam `public/images/office/states/corridor-atlas.webp`, composto a partir dos recortes originais. Para reproduzir o atlas, rode `python -B scripts/export_office_corridor.py outros/arte/office/corridor-lineup.png --atlas public/images/office/states/corridor-atlas.webp` com Pillow. As 111 renderizações antigas e seu manifesto estão em `reserva/public/images/office/states/corridor/`.
 
 Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. As 172 imagens em `public/images/office/closet/states/` cobrem de zero a três Nathzinhas na sala e até uma diferente na porta lateral. Camadas derivadas da arte original completam as frestas quando há quatro ou cinco invasoras. A Maid só aparece na sala e a Palhaça fica fora dessas combinações. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta. Para recriar as imagens a partir das artes de referência, rode `python -B scripts/export_closet_states.py` com Pillow. Para gerar as duas camadas adicionais, use `python -B scripts/export_closet_states.py public/images/office/closet/layers --overflow-layers`.
 

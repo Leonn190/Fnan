@@ -624,12 +624,14 @@ for (const [id, name] of Object.entries(previewNames)) {
   base.complete = true;
   base.naturalWidth = 1672;
   assert.equal(nodes['feed-layers'].hidden, true);
+  assert.equal(nodes['feed-scene'].style.visibility, 'hidden');
   for (const layer of layerNodes()) {
     layer.complete = true;
     layer.naturalWidth = 100;
     layer.onload();
   }
   assert.equal(nodes['feed-layers'].hidden, false);
+  assert.equal(nodes['feed-scene'].style.visibility, '');
   for (const layer of layerNodes()) { layer.complete = false; layer.naturalWidth = 0; }
   base.complete = false;
   base.naturalWidth = 0;
@@ -1369,6 +1371,7 @@ finishCameraLaunch();
 camera('CAM03');
 nodes['feed-art'].complete = true;
 nodes['feed-art'].naturalWidth = 1920;
+nodes['feed-art'].onload();
 gate('G01');
 step(now);
 const stareStart = now;

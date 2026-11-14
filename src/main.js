@@ -369,17 +369,20 @@ function setOfficeCharacterState(room = [], doorway = null) {
 }
 
 const feedLayerImages = [];
-const imageReady = image => image.complete && image.naturalWidth > 0;
+const imageReady = image => image?.complete && image.naturalWidth > 0;
+let feedRequest;
 
-function clearFeedLayers() {
+function clearFeed() {
+  feedRequest = undefined;
+  dom.feedScene.style.visibility = 'hidden';
+  clearImageSource(dom.feedArt);
   dom.feedLayers.hidden = true;
   for (const image of feedLayerImages) clearImageSource(image);
 }
 
 function showTechnical(cam) {
   dom.feedArt.hidden = true;
-  clearImageSource(dom.feedArt);
-  clearFeedLayers();
+  clearFeed();
   dom.tech.hidden = false;
   setImageSource(dom.techArt, cam.technical);
   setText(dom.techNumber, cam.id.replace('CAM', 'CAM '));
@@ -418,8 +421,7 @@ function updateCameraFeed(cam, warm = false) {
     dom.feedArt.hidden = true;
     dom.tech.hidden = true;
     imageCache.cancelPending();
-    clearImageSource(dom.feedArt);
-    clearFeedLayers();
+    clearFeed();
     clearImageSource(dom.techArt);
     dom.cameraOffline.hidden = !movement.electricalFault();
     interference.setElectrical(!dom.cameraOffline.hidden && state.mode === 'cameras');
@@ -442,23 +444,31 @@ function updateCameraFeed(cam, warm = false) {
   if (dom.feedArt.alt !== alt) dom.feedArt.alt = alt;
   const changed = dom.feedArt.getAttribute('src') !== source || feedLayerImages.some((image, index) =>
     image.getAttribute('src') !== (layers[index]?.[0] ?? null)) || layers.length > feedLayerImages.length;
-  if (changed) dom.feedLayers.hidden = true;
+  if (!changed) {
+    if (warm && watchingCameras()) warmCamera(cam, actors, frame);
+    return;
+  }
+  // A troca só aparece quando o fundo e todos os recortes pertencem ao mesmo quadro.
+  const request = feedRequest = {};
+  dom.feedScene.style.visibility = 'hidden';
+  dom.feedLayers.hidden = true;
   const showMissingArt = () => {
-    if (!movement.camerasAvailable() || CAMERAS[state.cameraIndex] !== cam) return;
+    if (feedRequest !== request || !movement.camerasAvailable() || CAMERAS[state.cameraIndex] !== cam) return;
     showTechnical(cam);
     announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
   };
   const syncVisibility = () => {
-    dom.feedLayers.hidden = dom.feedArt.hidden || !imageReady(dom.feedArt) ||
-      !feedLayerImages.some(image => image.getAttribute('src')) ||
-      feedLayerImages.some(image => image.getAttribute('src') && !imageReady(image));
+    if (feedRequest !== request || !imageReady(dom.feedArt)
+        || layers.some((_, index) => !imageReady(feedLayerImages[index]))) return;
+    dom.feedLayers.hidden = layers.length === 0;
+    dom.feedScene.style.visibility = '';
   };
   const loaded = url => () => {
     if (watchingCameras() && CAMERAS[state.cameraIndex] === cam) imageCache.markLoaded(url);
     syncVisibility();
   };
 
-  setImageSource(dom.feedArt, source, showMissingArt, loaded(source));
+  setImageSource(dom.feedArt, source, showMissingArt, loaded(source), true);
   if (dom.feedArt.hidden) return;
   if (layers.length) {
     const [width, height] = size;
@@ -480,7 +490,7 @@ function updateCameraFeed(cam, warm = false) {
         image.style.height = `${100 * h / height}%`;
       }
       image.hidden = false;
-      setImageSource(image, url, showMissingArt, loaded(url));
+      setImageSource(image, url, showMissingArt, loaded(url), true);
       if (dom.feedArt.hidden) return;
     }
   }
@@ -489,7 +499,7 @@ function updateCameraFeed(cam, warm = false) {
     clearImageSource(image);
   }
   syncVisibility();
-  if ((changed || warm) && watchingCameras()) {
+  if (watchingCameras()) {
     warmCamera(cam, actors, frame);
   }
 }
@@ -1051,8 +1061,8 @@ function stopShift() {
 }
 
 function releaseShiftImages() {
-  clearFeedLayers();
-  for (const image of [dom.feedArt, dom.techArt, dom.shadowOfficeArt, dom.shadowSprite,
+  clearFeed();
+  for (const image of [dom.techArt, dom.shadowOfficeArt, dom.shadowSprite,
     dom.smoresRoom, dom.smoresVent, ...officeLayers.map(layer => layer.image),
     ...closetExtras.map(layer => layer.image)]) clearImageSource(image);
   closetArtKey = undefined;
@@ -1335,7 +1345,7 @@ function gameInput() {
   return {
     camera,
     cameraPreview: state.characterPreviews.get(camera),
-    visibleCameraSource: camera && !dom.feedArt.hidden && imageReady(dom.feedArt)
+    visibleCameraSource: camera && !dom.feedArt.hidden && dom.feedScene.style.visibility !== 'hidden' && imageReady(dom.feedArt)
       ? dom.feedArt.getAttribute('src') : null,
     visibleCameraLayers: camera && !dom.feedLayers.hidden
       ? feedLayerImages.map(image => image.getAttribute('src')).filter(Boolean) : [],

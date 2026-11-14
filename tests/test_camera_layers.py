@@ -18,6 +18,12 @@ pose_regions = {
     "maid": (1230, 135, 1450, 441),
     "maid-saindo": (790, 231, 1115, 694),
 }
+# Pontos em coordenadas da arte original, longe da penumbra. Conferem
+# rosto, vestido, mãos e botas independentemente do alpha exportado.
+pose_details = {
+    "maid": [(1380, 203), (1376, 312), (1323, 386), (1216, 402), (1450, 440)],
+    "maid-saindo": [(855, 248), (1036, 399), (725, 360), (875, 602), (1068, 719)],
+}
 
 
 def max_channel_error(left, right):
@@ -61,11 +67,21 @@ for camera, catalog_entry in catalog.items():
             with Image.open(original) as image:
                 reference = image.convert("RGBA")
             if camera == "CAM09":
-                # A arte independente muda objetos e iluminação longe da Maid.
-                # Compare a pose e verifique que o lado esquerdo mantém a base.
-                region = pose_regions[keys[0]]
+                # As referências têm outro piso e outra luz. Mede a pose no
+                # interior opaco e testa detalhes em coordenadas independentes.
+                key = keys[0]
+                image, position = layers[key]
+                mask = Image.new("L", base.size)
+                mask.paste(image.getchannel("A"), position)
+                region = pose_regions[key]
                 diff = max_channel_error(frame.crop(region), reference.crop(region))
-                assert diff.mean() < 4.0, (original, diff.mean())
+                solid = np.asarray(mask.crop(region)) == 255
+                assert solid.sum() > 28000, original
+                assert diff[solid].mean() < 1.0, (original, diff[solid].mean())
+                for x, y in pose_details[key]:
+                    detail = (x - 3, y - 3, x + 4, y + 4)
+                    assert max_channel_error(frame.crop(detail), reference.crop(detail)).mean() < 4.0, (key, detail)
+                assert np.count_nonzero(np.asarray(mask)) < base.width * base.height * .12
                 left_wall = (0, 0, 600, base.height)
                 assert frame.crop(left_wall).tobytes() == base.crop(left_wall).tobytes()
             else:

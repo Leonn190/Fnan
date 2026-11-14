@@ -90,6 +90,28 @@ test('a visible load supersedes its speculative request', () => {
   assert.deepEqual(cache.stats(), { ready: 1, pending: 1, queued: 0, cancelled: 0 });
 });
 
+test('a pending source can serve the next frame without being requested again', () => {
+  let current;
+  let requests = 0;
+  const image = {
+    complete: false,
+    naturalWidth: 0,
+    getAttribute: () => current,
+    set src(source) { current = source; requests++; }
+  };
+  let loaded;
+  setImageSource(image, 'shared', null, () => { loaded = 'old frame'; }, true);
+  const stale = image.onload;
+  setImageSource(image, 'shared', null, () => { loaded = 'new frame'; }, true);
+  image.complete = true;
+  image.naturalWidth = 10;
+  stale();
+  assert.equal(loaded, undefined);
+  image.onload();
+  assert.equal(loaded, 'new frame');
+  assert.equal(requests, 1);
+});
+
 test('changing views preserves shared work and removes obsolete queued entries', () => {
   const cache = createImageCache({ limit: 3, parallel: 1 });
   cache.warmForView(['shared', 'old']);
