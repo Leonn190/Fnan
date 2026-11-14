@@ -510,11 +510,13 @@ assert(!isClosed('G05'));
 camera('CAM05'); check('closed-open');
 assert.equal(signal.dataset.kind, 'switch');
 assert(window.NathGame.setCam05VipState('original'));
+const vipOriginal = ['./public/images/cameras/CAM05/layers/open-open/original+ambiente.webp',
+  './public/images/cameras/CAM05/layers/open-open/original.webp'];
 gate('G04'); assertGatePulse();
 assert.match(nodes['feed-art'].src, /CAM05\/states\/open-open\/vazia\.webp$/);
-assert.deepEqual(feedLayers(), ['./public/images/cameras/CAM05/layers/open-open/original.webp']);
+assert.deepEqual(feedLayers(), vipOriginal);
 gate('G04'); assert.match(nodes['feed-art'].src, /CAM05\/states\/closed-open\/vazia\.webp$/);
-assert.deepEqual(feedLayers(), ['./public/images/cameras/CAM05/layers/open-open/original.webp']);
+assert.deepEqual(feedLayers(), vipOriginal);
 assert(window.NathGame.setCam05VipState('vazia'));
 nodes['close-cameras'].fire('click');
 nodes['close-desktop'].fire('click');
@@ -666,7 +668,8 @@ for (let assignment = 0; assignment < 27; assignment++) {
   const key = `palco-${stage.join('-') || 'vazio'}--salao-${floor.join('-')}`;
   assert(window.NathGame.setCam03StageState(key), key);
   assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM03/layers/palco-vazio.webp');
-  assert.deepEqual(feedLayers(), [...stage.map(id => `palco-${id}`), ...floor.map(id => `salao-${id}`)]
+  const poses = [...stage.map(id => `palco-${id}`), ...floor.map(id => `salao-${id}`)];
+  assert.deepEqual(feedLayers().filter(url => !url.includes('+ambiente')), poses
     .map(layer => `./public/images/cameras/CAM03/layers/${layer}.webp`));
   floorCases++;
 }
@@ -687,7 +690,8 @@ for (const id of ['CAM05', 'CAM06']) {
     const key = mask === total - 1 ? 'todas' : actors.join('-') || 'vazia';
     assert(preview(key), `${id} ${key}`);
     const expected = mask === total - 1 ? [] : Object.entries(catalog)
-      .filter(([name]) => name.split('+').every(actor => actors.includes(actor))).map(([, [source]]) => source);
+      .filter(([name]) => name.split('+').every(actor => actor === 'ambiente' || actors.includes(actor)))
+      .map(([, [source]]) => source);
     assert.deepEqual(feedLayers(), expected, `${id} ${key}`);
   }
   assert(preview('vazia'));
@@ -704,9 +708,10 @@ const closetFrame = (gateState, room = [], doorway = null) => {
   assert.equal(closetArt.src, ids.length
     ? `./public/images/office/closet/layers/base-${gateState}.webp`
     : `${closetRoot}/${gateState}/sala-vazia--porta-vazia.webp`);
-  assert.deepEqual(nodes['closet-extra'].children.filter(image => image.getAttribute('src')).map(image => image.src),
+  const overlays = nodes['closet-extra'].children.filter(image => image.getAttribute('src')).map(image => image.src);
+  assert.deepEqual(overlays.filter(url => !url.includes('+ambiente')),
     ids.map(id => `./public/images/office/closet/layers/${id}.webp`));
-  for (const src of [closetArt.src, ...ids.map(id => `./public/images/office/closet/layers/${id}.webp`)]) {
+  for (const src of [closetArt.src, ...overlays]) {
     assert(fs.existsSync(path.join(root, src)), src);
   }
   closetFrames[gateState].add(name);

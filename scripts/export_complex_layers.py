@@ -16,6 +16,7 @@ from export_office_states import CHARACTERS as CLOSET_CAST, load
 
 CAST = ("original", "yandere", "gotica", "platinada", "maid")
 SIMPLE_GATES = ("open-open", "open-closed", "closed-open", "closed-closed")
+SILHOUETTES = json.loads(Path(__file__).with_name("complex_silhouettes.json").read_text(encoding="utf-8"))
 # Contorno de palco em coordenadas normalizadas na máscara de remoção.
 # Fora dele fica apenas a contribuição fotométrica da cortina e do reflexo.
 STAGE_OUTLINES = {
@@ -52,6 +53,103 @@ def contour_mask(size, bounds, vertices, height_scale):
         for px, py in vertices
     ], fill=255)
     return np.asarray(mask.filter(ImageFilter.GaussianBlur(1.4)), dtype=np.float32) / 255
+
+
+def split_silhouette(layer, artwork, background, antialias):
+    """Separa variações do cenário, preservando a arte sobre o fundo registrado."""
+    if not artwork:
+        return layer, Image.new("RGBA", layer.size)
+    bounds = layer.getbbox()
+    x, y, right, bottom = bounds
+    # As pranchas de desenho têm dois pixels de margem, como os WebPs.
+    left, top = max(0, x - 2), max(0, y - 2)
+    right, bottom = min(layer.width, right + 2), min(layer.height, bottom + 2)
+    size = (right - left, bottom - top)
+    mask = Image.new("L", (size[0] * 4, size[1] * 4), 255 if "outline" not in artwork else 0)
+    draw = ImageDraw.Draw(mask)
+
+    def polygon(points, fill):
+        draw.polygon([(px * mask.width / 100, py * mask.height / 100) for px, py in points], fill=fill)
+
+    if "outline" in artwork:
+        polygon(artwork["outline"], 255)
+    for hole in artwork.get("holes", []):
+        polygon(hole, 0)
+    coverage = np.asarray(mask.resize(size, Image.Resampling.BOX)).copy()
+    if artwork.get("occluded_rows"):
+        # Na porta lateral a primeira ripa opaca atravessa o retrato.
+        # Os pixels quase pretos dessa faixa vieram do fundo, não da pose.
+        for start, stop in artwork["occluded_rows"]:
+            coverage[max(0, start - top):max(0, stop - top)] = 0
+    box = (left, top, right, bottom)
+    patch = layer.crop(box)
+    original = np.asarray(patch)
+    actor = original.copy()
+    support = original.copy()
+    actor[coverage < 128] = 0
+    support[coverage >= 128] = 0
+
+    # Subpixel da linha separa a silhueta de uma região de luz ou móvel.
+    # Aceita a divisão de alpha somente onde a composição de ambos fica
+    # idêntica, para evitar costuras de arredondamento no WebP.
+    edge = (coverage > 0) & (coverage < 255) & (original[..., 3] > 0)
+    weight = original[..., 3].astype(np.float32)
+    foreground_alpha = np.rint(weight * coverage / 255)
+    support_alpha = np.rint((weight - foreground_alpha) * 255 / np.maximum(255 - foreground_alpha, 1))
+    foreground_try, support_try = original.copy(), original.copy()
+    foreground_try[..., 3] = foreground_alpha
+    support_try[..., 3] = support_alpha
+    backdrop = background.crop(box)
+    reference = Image.alpha_composite(backdrop, patch)
+    trial = Image.alpha_composite(Image.alpha_composite(backdrop, Image.fromarray(support_try)),
+                                  Image.fromarray(foreground_try))
+    exact = edge & np.all(np.asarray(reference) == np.asarray(trial), axis=2) if antialias else np.zeros_like(edge)
+    actor[exact], support[exact] = foreground_try[exact], support_try[exact]
+
+    result = []
+    for pixels in (actor, support):
+        pixels[pixels[..., 3] == 0] = 0
+        image = Image.new("RGBA", layer.size)
+        image.paste(Image.fromarray(pixels), (left, top))
+        result.append(image)
+    return result
+
+
+def register_pose(layers, key, layer, artwork, base, folder, previous=()):
+    # No armário alguns recortes servem a dois fundos e podem cruzar outro
+    # retrato. Uma única contribuição por pixel conserva a ordem anterior.
+    actor, support = split_silhouette(layer, artwork, base, antialias="closet" not in folder.parts)
+    for name, image in ((key + '+ambiente', support), (key, actor)):
+        if image.getbbox():
+            layers[name] = save_layer(image, folder / f"{name}.webp",
+                                      [scene["layers"][name] for scene in previous if name in scene["layers"]])
+
+
+def layer_applies(key, selected):
+    return all(part == "ambiente" or part in selected for part in key.split("+"))
+
+
+def isolated_sheet(scene, output):
+    layers = scene["layers"]
+    width, height = 290, 330
+    sheet = Image.new("RGB", (width * 4, height * len(layers)), "#313136")
+    draw = ImageDraw.Draw(sheet)
+    for row, (key, (url, *_)) in enumerate(layers.items()):
+        image = open_rgba(url)
+        image.thumbnail((width - 14, height - 27))
+        # A primeira vista sinaliza a transparência com um xadrez.
+        checker = Image.new("RGBA", image.size, "#929292")
+        tiles = ImageDraw.Draw(checker)
+        for y in range(0, image.height, 12):
+            for x in range(0, image.width, 12):
+                if (x // 12 + y // 12) % 2:
+                    tiles.rectangle((x, y, x + 11, y + 11), fill="#c9c9c9")
+        for column, background in enumerate((checker, *(Image.new("RGBA", image.size, color)
+                for color in ("#000000", "#ffffff", "#3a9388")))):
+            background.alpha_composite(image)
+            sheet.paste(background, (column * width + 5, row * height + 23))
+        draw.text((5, row * height + 4), key, fill="white")
+    sheet.save(output, quality=94)
 
 
 def save_layer(image, target, shared=()):
@@ -115,8 +213,8 @@ def camera_scene(camera, gate="", shared=()):
             bounds = Image.fromarray(np.any(source != base, axis=2).astype(np.uint8)).getbbox()
             silhouette = contour_mask((width, height), bounds, VIP1_SUBJECTS[key], 100)
         layer = extract(base, source, covered, silhouette)
-        layers[key] = save_layer(layer, folder / "layers" / gate / f"{key}.webp",
-                                 [scene["layers"][key] for scene in shared])
+        register_pose(layers, key, layer, SILHOUETTES[camera][key],
+                      Image.fromarray(base.astype(np.uint8)).convert("RGBA"), folder / "layers" / gate, shared)
     return {"size": [width, height], "layers": layers}
 
 
@@ -128,7 +226,7 @@ def compare(base, scene, references, output=None, empty=None, columns=1, origina
     for index, (key, path, selected) in enumerate(references):
         frame = (empty if not selected and empty is not None else base).copy()
         for id, (layer, position) in decoded.items():
-            if all(part in selected for part in id.split("+")):
+            if layer_applies(id, selected):
                 frame.alpha_composite(layer, position)
         if original_layers and selected:
             # Teste independente do WebP arquivado: a geometria deve bater
@@ -190,6 +288,7 @@ def run(camera, output):
     print(camera, len(report), sorted(report.items(), key=lambda entry: entry[1]["mean"], reverse=True)[:5])
     if output:
         (output / f"{camera}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        isolated_sheet(scene, output / f"{camera}-isolado.jpg")
     write_catalog(camera, scene)
 
 
@@ -202,7 +301,7 @@ def vip_scene(output):
         for group in (("original", "yandere"), ("yandere", "maid")):
             frame = base.copy()
             for id, (url, x, y, _, _) in scene["layers"].items():
-                if id in group:
+                if layer_applies(id, group):
                     frame.alpha_composite(open_rgba(url), (x, y))
             key = "+".join(group)
             source = open_rgba(next(path for _, path, ids in references if ids == group))
@@ -221,6 +320,8 @@ def vip_scene(output):
             (output / f"CAM05-{gate}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         catalog[gate] = scene
     write_catalog("CAM05", catalog)
+    if output:
+        isolated_sheet(catalog["open-open"], output / "CAM05-isolado.jpg")
 
 
 def stage_scene(output):
@@ -246,9 +347,11 @@ def stage_scene(output):
                 present.alpha_composite(removals[absent])
         silhouette = contour_mask(trio.size, removals[id].getbbox(), STAGE_OUTLINES[id], 320)
         layer = extract(base, np.asarray(present.convert("RGB"), dtype=np.float32), covered, silhouette)
-        layers[f"palco-{id}"] = save_layer(layer, folder / "layers" / f"palco-{id}.webp")
+        key = f"palco-{id}"
+        register_pose(layers, key, layer, SILHOUETTES["CAM03"][key], empty_stage, folder / "layers")
     for id, layer in floor.items():
-        layers[f"salao-{id}"] = save_layer(layer, folder / "layers" / f"salao-{id}.webp")
+        key = f"salao-{id}"
+        register_pose(layers, key, layer, SILHOUETTES["CAM03"][key], empty_stage, folder / "layers")
     scene = {"size": list(trio.size), "base": f"./{base_path.as_posix()}", "layers": layers}
     refs = []
     for assignment in product(range(3), repeat=3):
@@ -266,6 +369,7 @@ def stage_scene(output):
     print("CAM03", len(report), sorted(report.items(), key=lambda entry: entry[1]["mean"], reverse=True)[:5])
     if output:
         (output / "CAM03.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        isolated_sheet(scene, output / "CAM03-isolado.jpg")
     write_catalog("CAM03", scene)
 
 
@@ -287,7 +391,9 @@ def closet_scene(output):
         pixels = np.asarray(layer).copy()
         pixels[np.all(np.asarray(patched) == np.asarray(base), axis=2)] = 0
         sources[key] = Image.fromarray(pixels)
-    layers = {key: save_layer(image, folder / "layers" / f"{key}.webp") for key, image in sources.items()}
+    layers = {}
+    for key, image in sources.items():
+        register_pose(layers, key, image, SILHOUETTES["closet"][key], base, folder / "layers")
     scene = {"size": list(base.size), "layers": layers, "bases": {}}
     for gate, background in (("open", base), ("closed", closed_gate(base))):
         base_path = folder / "layers" / f"base-{gate}.webp"
@@ -325,6 +431,8 @@ def closet_scene(output):
         if output:
             (output / f"armario-{gate}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     write_catalog("closet", scene)
+    if output:
+        isolated_sheet(scene, output / "armario-isolado.jpg")
 
 
 if __name__ == "__main__":

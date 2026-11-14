@@ -217,7 +217,7 @@ As poses iluminadas do corredor usam `public/images/office/states/corridor-atlas
 
 Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. A composição usa dois fundos e nove recortes, cinco para a sala e quatro para a porta lateral. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta.
 
-Para reproduzir e validar os recortes da CAM06, CAM03, CAM05 e do armário, rode `python -B scripts/export_complex_layers.py <CAM06|CAM03|CAM05|closet> --report <pasta>` com Pillow e NumPy. O relatório gera a referência, a composição e um mapa de diferenças para cada estado. Os quadros completos substituídos estão na árvore equivalente de `reserva/public/images/`.
+Para reproduzir e validar os recortes da CAM06, CAM03, CAM05 e do armário, rode `python -B scripts/export_complex_layers.py <CAM06|CAM03|CAM05|closet> --report <pasta>` com Pillow e NumPy. O relatório gera a referência, a composição e um mapa de diferenças para cada estado. A prancha `*-isolado.jpg` mostra cada recorte sobre xadrez, preto, branco e verde. Os contornos e vãos são editáveis em `scripts/complex_silhouettes.json`. Os WebPs `+ambiente` acompanham a pose correspondente e guardam as diferenças locais de cortina, piso, móveis ou iluminação que fazem parte da composição original. Os quadros completos substituídos estão na árvore equivalente de `reserva/public/images/`.
 
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 

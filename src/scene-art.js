@@ -4,6 +4,9 @@
 const ART_ORDER = ['original', 'yandere', 'gotica', 'platinada', 'maid'];
 const CORRIDOR_ORDER = ['original', 'platinada', 'yandere', 'gotica', 'maid'];
 const characterStateImages = cam => cam.characterStateImages ?? cam.stageStateImages ?? {};
+const selectedLayers = (scene, selected) => Object.entries(scene.layers)
+  .filter(([id]) => id.split('+').every(part => part === 'ambiente' || selected.includes(part)))
+  .map(([, layer]) => layer);
 const cameraLayerScene = (cam, gateKey) => {
   const scene = window.NathGame.cameraLayers?.[cam.id] ?? window.NathGame.complexLayers?.[cam.id];
   return gateKey ? scene?.[gateKey] : scene;
@@ -75,8 +78,7 @@ function cameraFrame(cam, key, isGateClosed) {
   const scene = cameraLayerScene(cam, gateKey);
   if (!scene || art) return { key, gateKey, source: art ?? base };
   const selected = cameraLayerKeys(cam, key);
-  const layers = Object.entries(scene.layers)
-    .filter(([id]) => id.split('+').every(part => selected.includes(part))).map(([, layer]) => layer);
+  const layers = selectedLayers(scene, selected);
   return { key, gateKey, source: layers.length ? scene.base ?? base : base, layers, size: scene.size };
 }
 
@@ -95,7 +97,8 @@ function cameraActorFrame(cam, actors, config, isGateClosed, preview) {
 
 function closetFrame(gate, occupants, doorway) {
   const scene = window.NathGame.complexLayers.closet;
-  const layers = [scene.layers[`porta-${doorway}`], ...occupants.map(id => scene.layers[`sala-${id}`])].filter(Boolean);
+  const selected = [`porta-${doorway}`, ...occupants.map(id => `sala-${id}`)];
+  const layers = selected.flatMap(id => [scene.layers[`${id}+ambiente`], scene.layers[id]].filter(Boolean));
   const empty = `./public/images/office/closet/states/${gate}/sala-vazia--porta-vazia.webp`;
   return { source: layers.length ? scene.bases[gate] : empty, layers, size: scene.size };
 }
