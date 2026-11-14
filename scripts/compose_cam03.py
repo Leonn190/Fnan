@@ -24,7 +24,8 @@ def load_layers(prefix, size):
     return layers
 
 
-def main(salao):
+def main(salao, output):
+    output.mkdir(parents=True, exist_ok=True)
     with Image.open(STATES / "todas.webp") as source:
         trio = source.convert("RGBA")
 
@@ -40,7 +41,7 @@ def main(salao):
                 frame.alpha_composite(removals[character])
             stage_key = "-".join(group)
             if not salao:
-                frame.convert("RGB").save(STATES / f"{stage_key}.webp", lossless=True)
+                frame.convert("RGB").save(output / f"{stage_key}.webp", lossless=True)
                 continue
 
             for size in range(1, len(offstage) + 1):
@@ -50,10 +51,12 @@ def main(salao):
                         composite.alpha_composite(floor_layers[character])
                     floor_key = "-".join(floor_group)
                     name = f"palco-{stage_key or 'vazio'}--salao-{floor_key}.webp"
-                    composite.convert("RGB").save(STATES / name, lossless=True, method=2)
+                    composite.convert("RGB").save(output / name, lossless=True, method=2)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--salao", action="store_true", help="Exporta as cenas com personagens fora do palco")
-    main(parser.parse_args().salao)
+    parser.add_argument("output", type=Path, help="Pasta para os quadros de referência exportados")
+    args = parser.parse_args()
+    main(args.salao, args.output)

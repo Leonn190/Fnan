@@ -32,8 +32,8 @@ include('public/images', /(?:\.(webp|gif|svg)$|\/cameras\/CAM\d{2}\/technical\.p
 include('public/audio', /\/audio\/(?:menu\/[^/]+\.mp3|radio\/[^/]+\.mp3|metal\d{2}\.mp3)$/);
 for (const folder of ['01_camera_sinistra', '02_camera_pesadelo']) include(`public/${folder}`, /\.wav$/);
 
-// As variantes iluminadas exportadas são referências dos testes de arte.
-const runtimeFiles = files.filter(file => !/^public\/images\/office\/states\/(?:open-lit|corridor)\//.test(file));
+// As variantes iluminadas e os dois recortes antigos do armário servem aos testes de arte.
+const runtimeFiles = files.filter(file => !/^public\/images\/office\/(?:states\/(?:open-lit|corridor)\/|closet\/layers\/(?:yandere|platinada)\.webp$)/.test(file));
 fs.mkdirSync(destination, { recursive: true });
 if (fs.readdirSync(destination).length) throw new Error(`Use uma pasta vazia para publicar: ${destination}`);
 

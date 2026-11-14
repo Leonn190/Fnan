@@ -179,17 +179,17 @@ O temporizador de permanência de cada invasora conta desde a entrada dela no co
 | CAM11 | Área de retirada | Balcão vazio e quinze variantes com as Nathzinhas |
 | CAM12 | Corredor de serviço, leste | 16 combinações de personagens e portão G06 |
 
-Cada câmera reúne o fundo, o PNG mestre e a planta técnica em `public/images/cameras/CAMxx/`. CAM01, CAM02, CAM04 e CAM07 a CAM12 compõem os recortes WebP de `layers/` sobre o fundo da câmera. CAM03, CAM05 e CAM06 usam quadros completos em `states/`. As câmeras com portão buscam a vista aberta vazia em `states/` (por exemplo, `CAM04/states/open/vazia.webp`). O fundo fechado padrão fica em `base.webp`. Os quadros `todas.webp` continuam disponíveis nos locais originais.
+Cada câmera reúne o fundo, o PNG mestre e a planta técnica em `public/images/cameras/CAMxx/`. Todas as câmeras usam recortes WebP de `layers/` sobre o fundo da câmera nas combinações parciais. As câmeras com portão buscam a vista aberta vazia em `states/` (por exemplo, `CAM04/states/open/vazia.webp`). O fundo fechado padrão fica em `base.webp`. Os quadros `todas.webp` continuam disponíveis nos locais originais.
 
 As variantes substituídas estão em `reserva/public/images/cameras/`. Para reexportar os recortes e seu catálogo de posições, rode `python -B scripts/export_camera_layers.py` com Pillow e NumPy. A CAM09 usa contornos por pose e máscaras de sombra de contato. As duas poses usam a parede, o piso e a iluminação da câmera vazia.
 
 O jogo pode selecionar a variante da loja com `NathGame.setCam01ShopState('original-platinada')` e a da recepção com `NathGame.setCam02ReceptionState('original-platinada')`. Use `todas` para mostrar as quatro e `vazia` para restaurar a sala vazia.
 
-Na CAM03, a Padrão, a Yandere e a Gótica têm uma pose no palco e outra no salão. As 19 imagens com alguém fora do palco usam nomes como `palco-original--salao-yandere-gotica.webp`. Para conferir uma delas no jogo, use `NathGame.setCam03StageState('palco-original--salao-yandere-gotica')`.
+Na CAM03, a Padrão, a Yandere e a Gótica têm uma pose no palco e outra no salão. As 19 combinações com alguém fora do palco continuam acessíveis por chaves como `palco-original--salao-yandere-gotica`. Para conferir uma delas no jogo, use `NathGame.setCam03StageState('palco-original--salao-yandere-gotica')`.
 
 Na CAM04, o portão à esquerda acompanha o G08, entre a recepção e a parede sul do salão. Cada posição do portão tem 16 combinações de personagens. Selecione uma com `NathGame.setCam04HallState('gotica-platinada')`, `todas` ou `vazia`. A câmera começa com o portão aberto e mantém as personagens selecionadas ao alterná-lo. A Gótica tem um recorte específico para cada posição do portão.
 
-A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. G04 controla o portão esquerdo e G05, o direito. Cada configuração dos portões tem 16 combinações de personagens. Selecione uma com `NathGame.setCam05VipState('original-maid')`, `todas` ou `vazia`. A troca de portões mantém as personagens selecionadas, inclusive em reaberturas automáticas. Os recortes da Padrão e da Yandere incluem ajustes nas cadeiras conforme a referência ocupada. Os quatro fundos vazios estão documentados em `outros/prompts/CAM05_ESTADOS_PORTOES.md`.
+A CAM05 começa com os dois portões abertos, mostrando breu nas aberturas. G04 controla o portão esquerdo e G05, o direito. Cada configuração dos portões tem 16 combinações de personagens. Selecione uma com `NathGame.setCam05VipState('original-maid')`, `todas` ou `vazia`. A troca de portões mantém as personagens selecionadas, inclusive em reaberturas automáticas. Os recortes da Padrão e da Yandere incluem ajustes nas cadeiras conforme a referência ocupada. Duas pequenas camadas preservam a oclusão que muda quando a Yandere aparece junto da Padrão ou da Maid. Os quatro fundos vazios estão documentados em `outros/prompts/CAM05_ESTADOS_PORTOES.md`.
 
 A CAM06 usa o mesmo fundo para as 32 combinações de personagens. Selecione uma com `NathGame.setCam06VipState('original-platinada-maid')`, `todas` ou `vazia`. A cadeira da Padrão acompanha a posição em que ela aparece sentada na referência.
 
@@ -215,13 +215,15 @@ O escritório compõe as camadas das invasoras e da ocupante da porta lateral. A
 
 As poses iluminadas do corredor usam `public/images/office/states/corridor-atlas.webp`, composto a partir dos recortes originais. Para reproduzir o atlas, rode `python -B scripts/export_office_corridor.py outros/arte/office/corridor-lineup.png --atlas public/images/office/states/corridor-atlas.webp` com Pillow. As 111 renderizações antigas e seu manifesto estão em `reserva/public/images/office/states/corridor/`.
 
-Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. As 172 imagens em `public/images/office/closet/states/` cobrem de zero a três Nathzinhas na sala e até uma diferente na porta lateral. Camadas derivadas da arte original completam as frestas quando há quatro ou cinco invasoras. A Maid só aparece na sala e a Palhaça fica fora dessas combinações. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta. Para recriar as imagens a partir das artes de referência, rode `python -B scripts/export_closet_states.py` com Pillow. Para gerar as duas camadas adicionais, use `python -B scripts/export_closet_states.py public/images/office/closet/layers --overflow-layers`.
+Pelas frestas do armário, a cena acompanha as personagens do escritório e o G01. A composição usa dois fundos e nove recortes, cinco para a sala e quatro para a porta lateral. Use `NathGame.setOfficeCharacterState(['original', 'gotica'], 'yandere')` para testar a Padrão e a Gótica na sala com a Yandere na porta.
+
+Para reproduzir e validar os recortes da CAM06, CAM03, CAM05 e do armário, rode `python -B scripts/export_complex_layers.py <CAM06|CAM03|CAM05|closet> --report <pasta>` com Pillow e NumPy. O relatório gera a referência, a composição e um mapa de diferenças para cada estado. Os quadros completos substituídos estão na árvore equivalente de `reserva/public/images/`.
 
 O mapa da interface usa os **polígonos das salas, aberturas, posições e azimutes das 12 câmeras** em `src/data/game-data.js`. Na parede norte do salão, o G06 ocupa o trecho da antiga passagem azul P17, atrás do palco. As plantas técnicas V8 registram o layout original.
 
 ## Observações
 
-- As referências com personagens ficam em `outros/arte/cameras/CAMxx/` e as artes individuais em `outros/arte/animatronics/`. As máscaras do palco e os recortes do salão ficam em `outros/arte/cameras/CAM03/`. Use `python scripts/compose_cam03.py` para recompor as seis variantes parciais do palco e `python scripts/compose_cam03.py --salao` para exportar as 19 cenas com personagens fora do palco.
+- As referências com personagens ficam em `outros/arte/cameras/CAMxx/` e as artes individuais em `outros/arte/animatronics/`. As máscaras do palco e os recortes do salão ficam em `outros/arte/cameras/CAM03/`. Use `python scripts/compose_cam03.py <pasta>` para recompor as seis variantes parciais do palco e `python scripts/compose_cam03.py --salao <pasta>` para exportar as 19 cenas com personagens fora do palco.
 - O pacote V8 não incluía arquivos 3D `.glb`/`.gltf`; `public/models/` foi preparado sem modelos inventados.
 - Os efeitos de som são sintetizados localmente pelo navegador e começam após o primeiro clique ou tecla, conforme as regras do navegador.
 - A sala do escritório é uma **imagem panorâmica pré-renderizada**, não um cenário 3D em tempo real.

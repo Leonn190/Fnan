@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./src/styles/main.css">
   <script defer src="./src/data/game-data.js"></script>
   <script defer src="./src/data/camera-layers.js"></script>
+  <script defer src="./src/data/complex-layers.js"></script>
   <script defer src="./src/config.js"></script>
   <script defer src="./src/gameplay/routes.js"></script>
   <script defer src="./src/gameplay/effects.js"></script>
@@ -93,8 +94,10 @@
 
       <section class="closet-view" id="closet-view" data-view="door" aria-label="Interior do armário técnico" aria-description="Use A para olhar pelas frestas, D para olhar o fundo e W para a lanterna." tabindex="-1" hidden>
         <div class="closet-angle closet-door">
-          <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
-          <div id="closet-extra" aria-hidden="true"></div>
+          <div class="closet-composition" id="closet-composition">
+            <img class="closet-door-art" id="closet-door-art" src="./public/images/office/closet/states/open/sala-vazia--porta-vazia.webp" alt="Escritório de segurança visto pelas frestas da porta" fetchpriority="low" draggable="false">
+            <div class="feed-layers" id="closet-extra" aria-hidden="true" hidden></div>
+          </div>
           <button class="scene-hotspot closet-exit" id="closet-exit" type="button" aria-label="Abrir a porta e voltar ao escritório"></button>
         </div>
         <div class="closet-angle closet-back">

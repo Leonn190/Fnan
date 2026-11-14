@@ -77,7 +77,10 @@ for character, (x, y) in {
 
 for gate in ('open', 'closed'):
     for name, (box, portrait) in portraits.items():
-        with Image.open(closet_states / gate / name) as frame:
+        path = closet_states / gate / name
+        if not path.exists():
+            path = ROOT / 'reserva' / path.relative_to(ROOT)
+        with Image.open(path) as frame:
             difference = ImageChops.difference(frame.convert('RGB').crop(box), portrait)
         assert max(ImageStat.Stat(difference).mean) < 8, (gate, name)
 

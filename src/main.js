@@ -2,7 +2,7 @@
 'use strict';
 const {
   CAMERAS, OFFICE, makeCameraMap, SoundEngine, createMovement, createNightMenu,
-  cameraActorFrame, hasCameraState, officeCharacterImage, corridorSlots, loadConfig,
+  cameraActorFrame, hasCameraState, closetFrame, officeCharacterImage, corridorSlots, loadConfig,
   createImageCache, clearImageSource, setImageSource, createCameraInterference
 } = window.NathGame;
 const shopCamera = CAMERAS.find(cam => cam.id === 'CAM01');
@@ -44,7 +44,7 @@ const dom = {
   officeCloset: $('#office-closet'), officeRadio: $('#office-radio'),
   clownPeek: $('#clown-peek'), officeGate: $('#office-gate'), officeLight: $('#office-light'),
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
-  closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'),
+  closetScene: $('#closet-composition'), closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'),
   closetExtra: $('#closet-extra'),
   feedArt: $('#feed-art'), feedScene: $('#feed-scene'), feedLayers: $('#feed-layers'),
   tech: $('#technical-feed'), cameraScare: $('#camera-scare'),
@@ -171,14 +171,8 @@ const officeLayers = ['doorway', 'room'].flatMap(location => OFFICE.characters.m
   dom.officeCharacters.append(image);
   return { location, character, image };
 }));
-const closetExtras = OFFICE.characters.slice(3).map(id => {
-  const image = document.createElement('img');
-  image.className = 'closet-extra-layer';
-  image.alt = '';
-  image.hidden = true;
-  dom.closetExtra.append(image);
-  return { id, image };
-});
+const closetComposition = createSceneComposition(dom.closetScene, dom.closetDoorArt, dom.closetExtra);
+const cameraComposition = createSceneComposition(dom.feedScene, dom.feedArt, dom.feedLayers);
 
 const corridorSprites = [];
 let corridorKey;
@@ -329,20 +323,13 @@ function updateOfficeView() {
   if (artKey === closetArtKey) return;
   closetArtKey = artKey;
   const occupants = OFFICE.characters.filter(character => state.officeRoom.has(character));
-  const room = occupants.slice(0, 3).join('-') || 'vazia';
-  const doorway = OFFICE.doorwayCharacters.includes(state.officeDoorway) ? state.officeDoorway : 'vazia';
   const gate = closed ? 'closed' : 'open';
-  const closetSource = smoresInRoom ? SMORES_ART.closet
-    : `./public/images/office/closet/states/${gate}/sala-${room}--porta-${doorway}.webp`;
-  setImageSource(dom.closetDoorArt, closetSource);
+  const frame = smoresInRoom ? { source: SMORES_ART.closet } : closetFrame(gate, occupants, state.officeDoorway);
   dom.closetDoorArt.alt = smoresInRoom ? 'Smores visto pelas frestas da porta'
     : 'Escritório de segurança visto pelas frestas da porta';
-  dom.closetExtra.hidden = smoresInRoom;
-  for (const { id, image } of closetExtras) {
-    const visible = occupants.indexOf(id) >= 3;
-    if (visible && !image.getAttribute('src')) image.src = `./public/images/office/closet/layers/${id}.webp`;
-    image.hidden = !visible;
-  }
+  closetComposition.show(frame, () => {
+    if (frame.layers?.length || smoresInRoom) closetComposition.show(closetFrame(gate, [], null));
+  });
 }
 
 function setOfficeCharacterState(room = [], doorway = null) {
@@ -368,21 +355,75 @@ function setOfficeCharacterState(room = [], doorway = null) {
   return true;
 }
 
-const feedLayerImages = [];
-const imageReady = image => image?.complete && image.naturalWidth > 0;
-let feedRequest;
+function imageReady(image) {
+  return image?.complete && image.naturalWidth > 0;
+}
 
-function clearFeed() {
-  feedRequest = undefined;
-  dom.feedScene.style.visibility = 'hidden';
-  clearImageSource(dom.feedArt);
-  dom.feedLayers.hidden = true;
-  for (const image of feedLayerImages) clearImageSource(image);
+function createSceneComposition(container, base, stack) {
+  const images = [];
+  let current;
+
+  function clear() {
+    current = undefined;
+    container.style.visibility = 'hidden';
+    stack.hidden = true;
+    for (const image of [base, ...images]) clearImageSource(image);
+  }
+
+  function show({ source, layers = [], size }, onError = () => {}, onLoad) {
+    if (current?.source === source && current.layers.length === layers.length
+        && layers.every((layer, index) => layer === current.layers[index])) return false;
+    const frame = current = { source, layers };
+    container.style.visibility = 'hidden';
+    stack.hidden = true;
+    const failed = () => {
+      if (current === frame) onError();
+    };
+    const reveal = () => {
+      if (current !== frame || !imageReady(base) || layers.some((_, i) => !imageReady(images[i]))) return;
+      stack.hidden = layers.length === 0;
+      container.style.visibility = '';
+    };
+    const loaded = url => () => { onLoad?.(url); reveal(); };
+    setImageSource(base, source, failed, loaded(source), true);
+    if (current !== frame) return true;
+    if (layers.length) {
+      const [width, height] = size;
+      stack.style.setProperty('--feed-aspect', width / height);
+      for (const [index, [url, x, y, w, h]] of layers.entries()) {
+        if (!images[index]) {
+          const image = document.createElement('img');
+          image.alt = '';
+          image.draggable = false;
+          image.decoding = 'async';
+          images.push(image);
+          stack.append(image);
+        }
+        const image = images[index];
+        image.style.left = `${100 * x / width}%`;
+        image.style.top = `${100 * y / height}%`;
+        image.style.width = `${100 * w / width}%`;
+        image.style.height = `${100 * h / height}%`;
+        image.hidden = false;
+        setImageSource(image, url, failed, loaded(url), true);
+        if (current !== frame) return true;
+      }
+    }
+    for (const image of images.slice(layers.length)) {
+      image.hidden = true;
+      clearImageSource(image);
+    }
+    reveal();
+    return true;
+  }
+
+  return { clear, show, visibleLayers: () => stack.hidden ? []
+    : images.map(image => image.getAttribute('src')).filter(Boolean) };
 }
 
 function showTechnical(cam) {
   dom.feedArt.hidden = true;
-  clearFeed();
+  cameraComposition.clear();
   dom.tech.hidden = false;
   setImageSource(dom.techArt, cam.technical);
   setText(dom.techNumber, cam.id.replace('CAM', 'CAM '));
@@ -421,7 +462,7 @@ function updateCameraFeed(cam, warm = false) {
     dom.feedArt.hidden = true;
     dom.tech.hidden = true;
     imageCache.cancelPending();
-    clearFeed();
+    cameraComposition.clear();
     clearImageSource(dom.techArt);
     dom.cameraOffline.hidden = !movement.electricalFault();
     interference.setElectrical(!dom.cameraOffline.hidden && state.mode === 'cameras');
@@ -431,8 +472,7 @@ function updateCameraFeed(cam, warm = false) {
   dom.cameraOffline.hidden = true;
   const actors = movement.cameraActors(cam.id);
   const frame = currentCameraFrame(cam, actors);
-  const { source, layers = [], size } = frame;
-  if (!source) {
+  if (!frame.source) {
     showTechnical(cam);
     console.warn(`[FNAN] ${cam.id}: combinação sem imagem para a configuração atual.`);
     return;
@@ -442,66 +482,14 @@ function updateCameraFeed(cam, warm = false) {
   dom.feedArt.hidden = false;
   const alt = `Câmera ${cam.id}, cenário noturno`;
   if (dom.feedArt.alt !== alt) dom.feedArt.alt = alt;
-  const changed = dom.feedArt.getAttribute('src') !== source || feedLayerImages.some((image, index) =>
-    image.getAttribute('src') !== (layers[index]?.[0] ?? null)) || layers.length > feedLayerImages.length;
-  if (!changed) {
-    if (warm && watchingCameras()) warmCamera(cam, actors, frame);
-    return;
-  }
-  // A troca só aparece quando o fundo e todos os recortes pertencem ao mesmo quadro.
-  const request = feedRequest = {};
-  dom.feedScene.style.visibility = 'hidden';
-  dom.feedLayers.hidden = true;
-  const showMissingArt = () => {
-    if (feedRequest !== request || !movement.camerasAvailable() || CAMERAS[state.cameraIndex] !== cam) return;
+  const changed = cameraComposition.show(frame, () => {
+    if (!movement.camerasAvailable() || CAMERAS[state.cameraIndex] !== cam) return;
     showTechnical(cam);
     announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
-  };
-  const syncVisibility = () => {
-    if (feedRequest !== request || !imageReady(dom.feedArt)
-        || layers.some((_, index) => !imageReady(feedLayerImages[index]))) return;
-    dom.feedLayers.hidden = layers.length === 0;
-    dom.feedScene.style.visibility = '';
-  };
-  const loaded = url => () => {
+  }, url => {
     if (watchingCameras() && CAMERAS[state.cameraIndex] === cam) imageCache.markLoaded(url);
-    syncVisibility();
-  };
-
-  setImageSource(dom.feedArt, source, showMissingArt, loaded(source), true);
-  if (dom.feedArt.hidden) return;
-  if (layers.length) {
-    const [width, height] = size;
-    dom.feedLayers.style.setProperty('--feed-aspect', width / height);
-    for (const [index, [url, x, y, w, h]] of layers.entries()) {
-      if (!feedLayerImages[index]) {
-        const image = document.createElement('img');
-        image.alt = '';
-        image.draggable = false;
-        image.decoding = 'async';
-        feedLayerImages.push(image);
-        dom.feedLayers.append(image);
-      }
-      const image = feedLayerImages[index];
-      if (image.getAttribute('src') !== url) {
-        image.style.left = `${100 * x / width}%`;
-        image.style.top = `${100 * y / height}%`;
-        image.style.width = `${100 * w / width}%`;
-        image.style.height = `${100 * h / height}%`;
-      }
-      image.hidden = false;
-      setImageSource(image, url, showMissingArt, loaded(url), true);
-      if (dom.feedArt.hidden) return;
-    }
-  }
-  for (const image of feedLayerImages.slice(layers.length)) {
-    image.hidden = true;
-    clearImageSource(image);
-  }
-  syncVisibility();
-  if (watchingCameras()) {
-    warmCamera(cam, actors, frame);
-  }
+  });
+  if ((changed || warm) && watchingCameras() && !dom.feedArt.hidden) warmCamera(cam, actors, frame);
 }
 
 function updateMovementDebug() {
@@ -1061,10 +1049,10 @@ function stopShift() {
 }
 
 function releaseShiftImages() {
-  clearFeed();
+  cameraComposition.clear();
   for (const image of [dom.techArt, dom.shadowOfficeArt, dom.shadowSprite,
-    dom.smoresRoom, dom.smoresVent, ...officeLayers.map(layer => layer.image),
-    ...closetExtras.map(layer => layer.image)]) clearImageSource(image);
+    dom.smoresRoom, dom.smoresVent, ...officeLayers.map(layer => layer.image)]) clearImageSource(image);
+  closetComposition.clear();
   closetArtKey = undefined;
 }
 
@@ -1347,8 +1335,7 @@ function gameInput() {
     cameraPreview: state.characterPreviews.get(camera),
     visibleCameraSource: camera && !dom.feedArt.hidden && dom.feedScene.style.visibility !== 'hidden' && imageReady(dom.feedArt)
       ? dom.feedArt.getAttribute('src') : null,
-    visibleCameraLayers: camera && !dom.feedLayers.hidden
-      ? feedLayerImages.map(image => image.getAttribute('src')).filter(Boolean) : [],
+    visibleCameraLayers: camera ? cameraComposition.visibleLayers() : [],
     cameraObservationBlocked: document.hidden,
     findShadow: !document.hidden,
     view: office ? 'office' : closet && !state.closetTransition ? `closet-${dom.closet.dataset.view}` : camera ? 'cameras' : null,

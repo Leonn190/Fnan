@@ -5,7 +5,7 @@ const ART_ORDER = ['original', 'yandere', 'gotica', 'platinada', 'maid'];
 const CORRIDOR_ORDER = ['original', 'platinada', 'yandere', 'gotica', 'maid'];
 const characterStateImages = cam => cam.characterStateImages ?? cam.stageStateImages ?? {};
 const cameraLayerScene = (cam, gateKey) => {
-  const scene = window.NathGame.cameraLayers?.[cam.id];
+  const scene = window.NathGame.cameraLayers?.[cam.id] ?? window.NathGame.complexLayers?.[cam.id];
   return gateKey ? scene?.[gateKey] : scene;
 };
 const officeCharacterImage = (phase, id) => `./public/images/office/characters/${phase}/${id}.webp`;
@@ -40,6 +40,20 @@ function cameraLayerKeys(cam, key) {
     if (key === 'todas') return ['maid'];
     return key === 'maid' || key === 'maid-saindo' ? [key] : [];
   }
+  if (cam.id === 'CAM03') {
+    const positions = /^palco-(.+)--salao-(.+)$/.exec(key);
+    const stage = positions?.[1] ?? key;
+    const hall = positions?.[2] ?? '';
+    const stageIds = canonicalCameraCast(cam, stage === 'vazio' ? '' : stage);
+    const hallIds = canonicalCameraCast(cam, hall);
+    if ((stage && stage !== 'vazio' && !stageIds.length)
+        || (positions && !hallIds.length) || stageIds.some(id => hallIds.includes(id))) return [];
+    return [...stageIds.map(id => `palco-${id}`), ...hallIds.map(id => `salao-${id}`)];
+  }
+  return canonicalCameraCast(cam, key);
+}
+
+function canonicalCameraCast(cam, key) {
   const ids = key.split('-');
   const supported = cam.allCharacters.filter(id => ids.includes(id));
   return supported.join('-') === key ? supported : [];
@@ -47,7 +61,8 @@ function cameraLayerKeys(cam, key) {
 
 function hasCameraState(cam, key) {
   return typeof key === 'string' && (key === 'vazia' || Object.hasOwn(characterStateImages(cam), key)
-    || (Object.hasOwn(window.NathGame.cameraLayers ?? {}, cam.id) && cameraLayerKeys(cam, key).length > 0));
+    || ((window.NathGame.cameraLayers?.[cam.id] || window.NathGame.complexLayers?.[cam.id])
+      && cameraLayerKeys(cam, key).length > 0));
 }
 
 function cameraFrame(cam, key, isGateClosed) {
@@ -60,8 +75,9 @@ function cameraFrame(cam, key, isGateClosed) {
   const scene = cameraLayerScene(cam, gateKey);
   if (!scene || art) return { key, gateKey, source: art ?? base };
   const selected = cameraLayerKeys(cam, key);
-  const layers = Object.entries(scene.layers).filter(([id]) => selected.includes(id)).map(([, layer]) => layer);
-  return { key, gateKey, source: base, layers, size: scene.size };
+  const layers = Object.entries(scene.layers)
+    .filter(([id]) => id.split('+').every(part => selected.includes(part))).map(([, layer]) => layer);
+  return { key, gateKey, source: layers.length ? scene.base ?? base : base, layers, size: scene.size };
 }
 
 function cameraActorFrame(cam, actors, config, isGateClosed, preview) {
@@ -75,6 +91,13 @@ function cameraActorFrame(cam, actors, config, isGateClosed, preview) {
   const activeActorVisible = visibleActors.some(actor => actor.level !== 0);
   return { ...frame, occupied: Boolean(activeActorVisible
     && (frame.layers?.length || (frame.gateKey ? variant?.[frame.gateKey] : variant))) };
+}
+
+function closetFrame(gate, occupants, doorway) {
+  const scene = window.NathGame.complexLayers.closet;
+  const layers = [scene.layers[`porta-${doorway}`], ...occupants.map(id => scene.layers[`sala-${id}`])].filter(Boolean);
+  const empty = `./public/images/office/closet/states/${gate}/sala-vazia--porta-vazia.webp`;
+  return { source: layers.length ? scene.bases[gate] : empty, layers, size: scene.size };
 }
 
 function cameraObservation(config, cameraActors, input) {
@@ -134,6 +157,6 @@ function corridorSlots(front, back) {
 
 Object.assign(window.NathGame, {
   cameraStateKey, cameraFrame, cameraActorFrame, cameraObservation, sanityObservation,
-  characterStateImages, hasCameraState, officeCharacterImage, corridorSlots
+  characterStateImages, hasCameraState, officeCharacterImage, corridorSlots, closetFrame
 });
 })();

@@ -152,14 +152,18 @@ def export_overflow(output):
         layers[character].save(output / f"{character}.webp", lossless=True, method=6)
 
 
-def export(output):
-    base = load(CLOSET_SOURCES / "door-slats.png")
-    room_layers = room_art(base)
-    doorway_layers = {
+def doorway_art(base):
+    return {
         character: masked(load(CLOSET_SOURCES / name).crop((0, 0, *base.size)),
                           [[(541, 303), (698, 303), (698, 658), (541, 658)]], feather=3)
         for character, name in DOORWAY_SOURCES.items()
     }
+
+
+def export(output):
+    base = load(CLOSET_SOURCES / "door-slats.png")
+    room_layers = room_art(base)
+    doorway_layers = doorway_art(base)
     count = 0
     for gate, background in (("open", base), ("closed", closed_gate(base))):
         folder = output / gate
@@ -183,7 +187,7 @@ def export(output):
 
 if __name__ == "__main__":
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument("output", type=Path, nargs="?", default=CLOSET / "states")
+    parser.add_argument("output", type=Path, help="Pasta para os quadros de referência exportados")
     parser.add_argument("--overflow-layers", action="store_true", help="Exporta apenas as camadas de ocupantes extras")
     args = parser.parse_args()
     if args.overflow_layers:

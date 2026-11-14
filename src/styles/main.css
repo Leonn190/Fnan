@@ -149,7 +149,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .game[data-blackout] .office-view[data-flashlight="true"] .office-blackout{
   mask-image:radial-gradient(ellipse 7% 20% at 50.5% 51.5%,transparent 32%,#000 100%);
 }
-.game[data-blackout] .closet-view :is(.closet-door-art,.closet-extra-layer){filter:brightness(.15)}
+.game[data-blackout] .closet-composition{filter:brightness(.15)}
 .gate-light-hotspot{left:39.8%;top:27.2%;width:20.5%;height:48.4%;touch-action:none}
 .gate-light-hotspot:disabled{pointer-events:none}
 .gate-button-hotspot{left:67.5%;top:44.4%;width:2.2%;height:7.2%}
@@ -168,7 +168,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .closet-back{transform:translateX(var(--closet-back-shift,-145cqw))}
 .closet-angle button{pointer-events:auto}
 .closet-view img{object-fit:cover;pointer-events:none}
-.closet-door-art,.closet-extra-layer{filter:brightness(.72)}
+.closet-composition{position:absolute;inset:0;container-type:size;filter:brightness(.72)}
+.closet-composition .feed-layers img{inset:auto;object-fit:fill}
 .closet-beam{filter:brightness(3.1) saturate(.8);mask-image:radial-gradient(circle at 50% 55%,#000 15cqh,#000d 21cqh,#0005 30cqh,transparent 39cqh)}
 .closet-exit{inset:17% 5% 11%}
 .closet-light-hotspot{inset:16% 30% 12%}

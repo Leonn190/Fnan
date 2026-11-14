@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 global.window = {};
-for (const file of ['data/game-data', 'data/camera-layers', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
+for (const file of ['data/game-data', 'data/camera-layers', 'data/complex-layers', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
   'gameplay/gates', 'gameplay/electrical', 'gameplay/resources', 'gameplay/shadow', 'movement', 'scene-art']) {
   require('../src/' + file + '.js');
 }

@@ -511,8 +511,10 @@ camera('CAM05'); check('closed-open');
 assert.equal(signal.dataset.kind, 'switch');
 assert(window.NathGame.setCam05VipState('original'));
 gate('G04'); assertGatePulse();
-assert.match(nodes['feed-art'].src, /CAM05\/states\/open-open\/original\.webp$/);
-gate('G04'); assert.match(nodes['feed-art'].src, /CAM05\/states\/closed-open\/original\.webp$/);
+assert.match(nodes['feed-art'].src, /CAM05\/states\/open-open\/vazia\.webp$/);
+assert.deepEqual(feedLayers(), ['./public/images/cameras/CAM05/layers/open-open/original.webp']);
+gate('G04'); assert.match(nodes['feed-art'].src, /CAM05\/states\/closed-open\/vazia\.webp$/);
+assert.deepEqual(feedLayers(), ['./public/images/cameras/CAM05/layers/open-open/original.webp']);
 assert(window.NathGame.setCam05VipState('vazia'));
 nodes['close-cameras'].fire('click');
 nodes['close-desktop'].fire('click');
@@ -596,7 +598,7 @@ for (const cam of window.NathGame.CAMERAS) {
   const gateImages = Object.values(cam.gateStateImages?.images ?? {});
   const characterImages = Object.values(cam.characterStateImages ?? cam.stageStateImages ?? {})
     .flatMap(view => typeof view === 'string' ? [view] : Object.values(view));
-  const catalog = window.NathGame.cameraLayers[cam.id];
+  const catalog = window.NathGame.cameraLayers[cam.id] ?? window.NathGame.complexLayers[cam.id];
   const scenes = catalog?.layers ? [catalog] : Object.values(catalog ?? {});
   const overlays = scenes.flatMap(scene => Object.values(scene.layers).map(([source]) => source));
   for (const src of [cam.image, cam.technical, nodes['feed-art'].src, `${folder}/master.png`, ...gateImages, ...characterImages, ...overlays]) {
@@ -663,11 +665,33 @@ for (let assignment = 0; assignment < 27; assignment++) {
   if (!floor.length) continue;
   const key = `palco-${stage.join('-') || 'vazio'}--salao-${floor.join('-')}`;
   assert(window.NathGame.setCam03StageState(key), key);
-  assert.equal(nodes['feed-art'].src, `./public/images/cameras/CAM03/states/${key}.webp`);
+  assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM03/layers/palco-vazio.webp');
+  assert.deepEqual(feedLayers(), [...stage.map(id => `palco-${id}`), ...floor.map(id => `salao-${id}`)]
+    .map(layer => `./public/images/cameras/CAM03/layers/${layer}.webp`));
   floorCases++;
 }
 assert.equal(floorCases, 19);
 assert.equal(window.NathGame.setCam03StageState('palco-original--salao-original'), false);
+
+// As prévias dos dois VIPs continuam aceitando cada combinação canônica.
+for (const id of ['CAM05', 'CAM06']) {
+  const { CAMERAS, complexLayers } = window.NathGame;
+  const cam = CAMERAS.find(cam => cam.id === id);
+  const preview = window.NathGame[id === 'CAM05' ? 'setCam05VipState' : 'setCam06VipState'];
+  camera(id);
+  const total = 2 ** cam.allCharacters.length;
+  const gateKey = cam.gateStateImages?.gates.map(gate => isClosed(gate) ? 'closed' : 'open').join('-');
+  const catalog = gateKey ? complexLayers[id][gateKey].layers : complexLayers[id].layers;
+  for (let mask = 0; mask < total; mask++) {
+    const actors = cam.allCharacters.filter((_, index) => mask & (1 << index));
+    const key = mask === total - 1 ? 'todas' : actors.join('-') || 'vazia';
+    assert(preview(key), `${id} ${key}`);
+    const expected = mask === total - 1 ? [] : Object.entries(catalog)
+      .filter(([name]) => name.split('+').every(actor => actors.includes(actor))).map(([, [source]]) => source);
+    assert.deepEqual(feedLayers(), expected, `${id} ${key}`);
+  }
+  assert(preview('vazia'));
+}
 
 // Each legal office arrangement must preserve the lateral doorway occupant across G01.
 const { OFFICE, setOfficeCharacterState } = window.NathGame;
@@ -676,7 +700,15 @@ const closetRoot = './public/images/office/closet/states';
 const closetFrames = { open: new Set(), closed: new Set() };
 const closetFrame = (gateState, room = [], doorway = null) => {
   const name = `sala-${room.join('-') || 'vazia'}--porta-${doorway || 'vazia'}.webp`;
-  assert.equal(closetArt.src, `${closetRoot}/${gateState}/${name}`);
+  const ids = [...(doorway ? [`porta-${doorway}`] : []), ...room.map(id => `sala-${id}`)];
+  assert.equal(closetArt.src, ids.length
+    ? `./public/images/office/closet/layers/base-${gateState}.webp`
+    : `${closetRoot}/${gateState}/sala-vazia--porta-vazia.webp`);
+  assert.deepEqual(nodes['closet-extra'].children.filter(image => image.getAttribute('src')).map(image => image.src),
+    ids.map(id => `./public/images/office/closet/layers/${id}.webp`));
+  for (const src of [closetArt.src, ...ids.map(id => `./public/images/office/closet/layers/${id}.webp`)]) {
+    assert(fs.existsSync(path.join(root, src)), src);
+  }
   closetFrames[gateState].add(name);
 };
 const visibleOfficeLayers = () => nodes['office-characters'].children
@@ -710,9 +742,17 @@ for (let mask = 0; mask < (1 << officeCharacters.length); mask++) {
 assert.equal(officeCases, 202);
 for (const [gateState, names] of Object.entries(closetFrames)) {
   assert.equal(names.size, 86);
-  assert.deepEqual(new Set(fs.readdirSync(path.join(root, closetRoot, gateState))), names);
+  for (const name of names) {
+    assert(fs.existsSync(path.join(root, closetRoot, gateState, name))
+      || fs.existsSync(path.join(root, 'reserva', closetRoot, gateState, name)), name);
+  }
 }
 assert(setOfficeCharacterState(OFFICE.characters.slice(0, 4)));
+closetFrame('open', OFFICE.characters.slice(0, 4));
+assert(setOfficeCharacterState(OFFICE.characters));
+closetFrame('open', OFFICE.characters);
+gate('G01'); closetFrame('closed', OFFICE.characters);
+gate('G01');
 assert(!setOfficeCharacterState(['maid', 'maid']));
 assert(!setOfficeCharacterState(['original'], 'original'));
 assert(!setOfficeCharacterState([], 'desconhecida'));
@@ -883,7 +923,7 @@ assert.match(closetArt.src, /Smores nas Frestas/);
 assert.equal(nodes['closet-extra'].hidden, true);
 step(smoresStart + 51_000);
 assert.equal(roomArt.hidden, true);
-assert.equal(nodes['closet-extra'].hidden, false);
+assert.equal(nodes['closet-extra'].hidden, true);
 assert(!closetArt.src.includes('Smores'));
 customStart({});
 console.log('PASS: Smores custom difficulty, layered office and closet art, vent and office gate sounds.');
@@ -1372,6 +1412,11 @@ camera('CAM03');
 nodes['feed-art'].complete = true;
 nodes['feed-art'].naturalWidth = 1920;
 nodes['feed-art'].onload();
+for (const image of layerNodes()) {
+  image.complete = true;
+  image.naturalWidth = 100;
+  image.onload();
+}
 gate('G01');
 step(now);
 const stareStart = now;

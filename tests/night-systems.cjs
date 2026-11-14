@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 global.window = {};
-for (const file of ['data/game-data', 'data/camera-layers', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
+for (const file of ['data/game-data', 'data/camera-layers', 'data/complex-layers', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
   'gameplay/gates', 'gameplay/electrical', 'gameplay/resources', 'gameplay/shadow', 'scene-art', 'movement']) {
   require('../src/' + file + '.js');
 }
