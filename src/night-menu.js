@@ -25,6 +25,9 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   let completed = readProgress();
   let pendingShift;
   let musicFrame;
+  let glitchTimer;
+  let lastGlitchArt;
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   const inputs = new Map();
 
   function readProgress() {
@@ -62,7 +65,28 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   function showCustom(open, focus) {
     titleContent.hidden = open;
     customScreen.hidden = !open;
+    updateGlitches();
     focus.focus();
+  }
+
+  function updateGlitches() {
+    clearTimeout(glitchTimer);
+    delete title.dataset.glitch;
+    delete title.dataset.doubleGlitch;
+    title.toggleAttribute('data-page-hidden', Boolean(document.hidden));
+    if (title.hidden || title.inert || !customScreen.hidden || document.hidden || reducedMotion?.matches) return;
+
+    // Sample outside the gameplay RNG and avoid showing the same art twice in a row.
+    const random = window.crypto.getRandomValues(new Uint16Array(4));
+    glitchTimer = setTimeout(() => {
+      lastGlitchArt = lastGlitchArt === undefined ? random[0] % 3 : (lastGlitchArt + 1 + random[0] % 2) % 3;
+      const double = random[1] < 16384;
+      const duration = (double ? 410 : 230) + random[2] / 65535 * 165;
+      title.style.setProperty('--glitch-duration', `${duration}ms`);
+      title.toggleAttribute('data-double-glitch', double);
+      title.dataset.glitch = String(lastGlitchArt);
+      glitchTimer = setTimeout(updateGlitches, duration);
+    }, 4800 + random[3] / 65535 * 10500);
   }
 
   function fadeMusic() {
@@ -101,6 +125,7 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
     introTitle.textContent = shift.label;
     title.inert = true;
     game.inert = true;
+    updateGlitches();
     cancelMusicFade();
     music.pause();
     intro.dataset.phase = newspaper ? 'newspaper' : 'cover';
@@ -159,6 +184,8 @@ function createNightMenu(config, { prepareShift, startShift, onEnter }) {
   music.addEventListener('playing', startMusicFade);
   music.addEventListener('waiting', cancelMusicFade);
   music.addEventListener('pause', cancelMusicFade);
+  document.addEventListener('visibilitychange', updateGlitches);
+  reducedMotion?.addEventListener('change', updateGlitches);
   entryButton.addEventListener('click', enter, { once: true });
   return { show, play, playCampaign, recordWin };
 }

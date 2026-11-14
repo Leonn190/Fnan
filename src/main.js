@@ -1583,6 +1583,7 @@ function tick(now) {
 }
 
 document.addEventListener('visibilitychange', () => {
+  dom.game.toggleAttribute('data-page-hidden', Boolean(document.hidden));
   cancelGameFrame();
   state.lastFrame = performance.now();
   resetPerformance();

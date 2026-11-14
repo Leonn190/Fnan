@@ -20,18 +20,29 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .playfield{position:absolute;inset:0}
 .title-screen{background:#030203;color:#f5f1f2}
 .title-art{position:absolute;z-index:-1;inset:0;width:100%;height:100%;object-fit:cover;object-position:right center;filter:brightness(.8);pointer-events:none}
-.title-glitch{opacity:0;filter:brightness(.8) contrast(1.1) saturate(1.18);animation:title-glitch 31s step-end 5.2s infinite}
-.title-glitch--middle{animation-delay:14.1s}
-.title-glitch--back{animation-delay:23.8s}
+.title-glitch{opacity:0;filter:brightness(.8) contrast(1.1) saturate(1.18)}
+.title-screen[data-glitch="0"] [data-glitch-art="0"],
+.title-screen[data-glitch="1"] [data-glitch-art="1"],
+.title-screen[data-glitch="2"] [data-glitch-art="2"]{
+  animation:var(--title-glitch-animation,title-glitch) var(--glitch-duration) step-end both;
+}
+.title-screen[data-double-glitch]{--title-glitch-animation:title-glitch-double}
 @keyframes title-glitch{
-  0%{opacity:1;transform:translateX(-.7%) scale(1.025);clip-path:inset(5% 0 0)}
-  .24%{opacity:1;transform:none;clip-path:inset(0)}
-  .65%,100%{opacity:0}
+  0%{opacity:.87;transform:translateX(-.7%) scale(1.025)}
+  24%{opacity:1;transform:none}
+  100%{opacity:0}
+}
+@keyframes title-glitch-double{
+  0%{opacity:.88;transform:translateX(-.7%) scale(1.025)}
+  30%{opacity:0;transform:none}
+  54%{opacity:.94;transform:translateX(.6%) scale(1.025)}
+  72%{opacity:1;transform:none}
+  100%{opacity:0}
 }
 .title-screen::before,.title-screen::after{content:"";position:absolute;inset:0;pointer-events:none}
 .title-screen::before{background:linear-gradient(90deg,#030203c9,transparent 63%),linear-gradient(0deg,#030203a8,transparent 28%)}
 .title-screen::after{background:repeating-linear-gradient(180deg,#0004 0 1px,transparent 1px 4px)}
-.title-screen .feed-noise{opacity:.035}
+.title-screen .feed-noise{--noise-opacity:.085;--noise-period:1.94s}
 .title-content{position:absolute;z-index:1;inset:0;display:flex;flex-direction:column;align-items:flex-start;gap:clamp(16px,7cqh,64px);padding:clamp(16px,12cqh,100px) clamp(24px,8cqw,120px);overflow:auto;text-shadow:0 2px 14px #000}
 .title-content h1{margin:0;font:400 clamp(34px,min(10.3cqw,20cqh),144px)/.94 Arial,sans-serif;letter-spacing:-.045em}
 .title-start{min-height:44px;padding:4px 0;border:0;background:none;font:700 clamp(22px,3.2cqw,40px)/1.2 var(--mono);text-shadow:inherit}
@@ -290,8 +301,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   94%, 100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .loading-spinner, .monitor-boot .loading-spinner { animation-play-state: paused; }
-  .monitor-boot .loading-spinner { animation-play-state: paused, running; }
+  .game[data-monitor-transition="boot"] .monitor-power-screen,
+  .monitor-boot, .monitor-shutdown,
+  .loading-spinner, .monitor-boot .loading-spinner { animation-name: none; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .monitor-frame { animation: monitor-reveal .22s ease-out both; }
@@ -547,12 +559,23 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 }
 .feed-color{position:absolute;inset:0;background:linear-gradient(90deg,#06102183 0%,transparent 18%,transparent 68%,#02030ace 100%),linear-gradient(180deg,#050c19ad,transparent 22%,transparent 68%,#0307129e);pointer-events:none}
 .feed-scanlines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0px,rgba(0,0,0,.13) 1px,transparent 2px,transparent 4px);opacity:.56;pointer-events:none}
-.feed-noise{position:absolute;inset:0;background:url("../../public/images/camera-grain.webp") repeat;opacity:.045;pointer-events:none}
+.feed-noise,.camera-static-grain{
+  /* Overscan covers the largest grain offset at every viewport size. */
+  position:absolute;inset:-32px;background:url("../../public/images/camera-grain.webp") repeat;pointer-events:none;
+}
+.feed-noise{--noise-opacity:.063;--noise-period:1.72s;opacity:var(--noise-opacity)}
 @keyframes noise-drift{
-  20%{transform:translate(-17px,23px)}
-  40%{transform:translate(11px,-17px)}
-  60%{transform:translate(-31px,-9px)}
-  80%{transform:translate(23px,13px)}
+  0%{transform:translate(0,0)}
+  16%{transform:translate(-17px,23px)}
+  35%{transform:translate(11px,-17px)}
+  50%{transform:translate(-31px,-9px)}
+  68%{transform:translate(23px,13px)}
+  86%{transform:translate(-7px,5px)}
+}
+@keyframes scanline-instability{
+  0%,32%,34%,78%,80%,100%{opacity:var(--scanline-opacity)}
+  33%{opacity:calc(var(--scanline-opacity) * .77)}
+  79%{opacity:calc(var(--scanline-opacity) * .88)}
 }
 .feed-corners{position:absolute;inset:12px 12px 45px;pointer-events:none;opacity:.36}
 .feed-corners i{position:absolute;width:25px;height:25px;border-color:#c9e6ec}
@@ -561,28 +584,19 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 .feed-corners i:nth-child(3){bottom:0;left:0;border-bottom:1px solid;border-left:1px solid}
 .feed-corners i:nth-child(4){bottom:0;right:0;border-bottom:1px solid;border-right:1px solid}
 .camera-static{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#08080852}
-.camera-static-grain{
-  position:absolute;inset:-32px;
-  background:url("../../public/images/camera-grain.webp") repeat;
-  opacity:.56;
-  animation:noise-drift .37s steps(1,end) infinite;
-}
+.camera-static-grain{opacity:.69}
 .camera-static-band{
   position:absolute;inset:0;
   background:linear-gradient(180deg,
-    transparent 13%,#101010c4 14%,#161616df 17%,#e3e3e399 17.4%,transparent 18%,
-    transparent 22%,#d2d2d266 22.4%,transparent 23%,
-    transparent 42%,#000b 43%,#000a 48%,#a0a0a070 48.3%,transparent 49%);
-}
-@media(prefers-reduced-motion:reduce){
-  .camera-static-grain{animation:none}
+    transparent 24%,#0a0a0ab8 25% 28%,#ebebebae 28% 28.6%,#c5c5c553 29%,transparent 35%,
+    transparent 38%,#ededed64 38.6%,transparent 39%,
+    transparent 62%,#090909bb 64% 69%,#dfdfdf91 69% 69.5%,#bfbfbf33 70%,transparent 73%);
 }
 .camera-offline{position:absolute;z-index:4;left:22px;top:25%;max-width:45%;padding:14px 16px;border-left:2px solid #ff8b9b;background:#0b070de8;color:#ffe4e8;pointer-events:none;font-family:var(--mono)}
 .camera-offline strong{font-size:clamp(15px,2.2cqw,28px);letter-spacing:.16em}
 .camera-offline small{display:block;margin-top:8px;color:#e7adb8;font-size:clamp(9px,1.2cqw,13px);line-height:1.5}
 .camera-static[data-kind="electrical"]{background:#111;opacity:.88}
-.camera-static[data-kind="electrical"] .camera-static-grain{animation-duration:.85s}
-.camera-static[data-kind="electrical"] .camera-static-band{transform:translateY(12%)}
+.camera-static[data-kind="electrical"] .camera-static-band{opacity:.74}
 .cameras-view:has(.camera-static[data-kind="electrical"]) .rec-light{animation:none;opacity:.25}
 .technical-feed{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:48px 18px 56px;background:radial-gradient(ellipse at center,#29324a 0%,#10172a 60%,#050711 100%)}
 .technical-frame{width:min(740px,76cqw);height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
@@ -771,7 +785,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
   background:repeating-linear-gradient(180deg,transparent 0 4px,#0002 4px 5px);
   pointer-events:none;
 }
-.game-over .feed-noise{opacity:.055}
+.game-over .feed-noise{--noise-opacity:.114;--noise-period:1.69s}
 .game-over-content{position:relative;padding:1.5rem;animation:game-over-reveal .32s ease-out both}
 .game-over-status{
   margin:0;color:#ef919d;font:700 clamp(9px,1.3cqw,14px)/1.5 var(--mono);letter-spacing:.3em;
@@ -792,6 +806,48 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ffd3e8;outline-
 }
 .game-over-return:hover,.game-over-return:focus-visible{background:#49111e;border-color:#ff8c9e}
 @keyframes game-over-reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes game-over-noise{
+  0%,26%,29%,65%,69%,100%{opacity:var(--noise-opacity)}
+  27%{opacity:.133}
+  67%{opacity:.096}
+}
+@keyframes signal-lost-pulse{
+  0%,28%,36%,64%,77%,100%{opacity:1}
+  32%{opacity:.67}
+  71%{opacity:.78}
+  74%{opacity:.56}
+}
+@keyframes electrical-band-roll{
+  0%{transform:translateY(-68%);opacity:.55}
+  38%{transform:translateY(-9%);opacity:.85}
+  46%{transform:translateY(-16%);opacity:.62}
+  100%{transform:translateY(78%);opacity:.78}
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .title-screen:not([inert],[data-page-hidden]):not(:has(.custom-night:not([hidden]))) .feed-noise,
+  .game[data-mode="cameras"]:not([data-computer-off],[data-monitor-transition],[data-defeat],[data-page-hidden])
+    .camera-feed:not(:has(.camera-static[data-kind="electrical"],.camera-scare:not([hidden]))) .feed-noise{
+    animation:noise-drift var(--noise-period) step-end infinite;
+  }
+  .game:not([inert],[data-page-hidden]) .game-over .feed-noise{
+    animation:noise-drift var(--noise-period) step-end infinite,game-over-noise 8.9s step-end infinite;
+  }
+  .game:not([inert],[data-page-hidden]) .game-over-status::before{animation:signal-lost-pulse 5.6s ease-in-out infinite}
+  .title-screen:not([inert],[data-page-hidden]):not(:has(.custom-night:not([hidden])))::after{
+    --scanline-opacity:1;animation:scanline-instability 12.4s step-end infinite;
+  }
+  .game[data-mode="cameras"]:not([data-computer-off],[data-monitor-transition],[data-defeat],[data-page-hidden])
+    .camera-feed:not(:has(.camera-static:not([hidden]),.camera-scare:not([hidden]))) .feed-scanlines{
+    --scanline-opacity:.56;animation:scanline-instability 10.9s step-end infinite;
+  }
+  .game[data-mode="cameras"]:not([data-computer-off],[data-monitor-transition],[data-defeat],[data-page-hidden])
+    .camera-static:not([hidden]) .camera-static-grain{animation:noise-drift .51s step-end infinite}
+  .game[data-mode="cameras"]:not([data-computer-off],[data-monitor-transition],[data-defeat],[data-page-hidden])
+    .camera-static[data-kind="electrical"] .camera-static-grain{animation-duration:.85s}
+  .game[data-mode="cameras"]:not([data-computer-off],[data-monitor-transition],[data-defeat],[data-page-hidden])
+    .camera-static[data-kind="electrical"] .camera-static-band{animation:electrical-band-roll 1.7s steps(9,end) infinite}
+}
 
 @container(max-width:760px){
   .hud-top{padding:calc(15px + env(safe-area-inset-top)) 15px 0}

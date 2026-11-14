@@ -33,15 +33,19 @@ function createCameraInterference(overlay, band, feed, reducedMotion) {
     overlay.dataset.kind = kind;
     overlay.hidden = false;
     const reduced = reducedMotion();
-    const levels = reduced ? [.22, .19, .15, .08, 0] : [1, .66, .86, .32, 0];
+    const levels = reduced ? [.22, .19, .15, .08, 0] : [1, .58, .88, .54, .72, .38, .21, 0];
+    const offsets = reduced ? [0, .11, .24, .53, 1] : [0, .08, .16, .29, .39, .55, .75, 1];
     const timing = { duration: durationMs, fill: 'both' };
     animations.push(overlay.animate(levels.map((level, index) => ({
-      opacity: level * intensity, offset: [0, .11, .24, .53, 1][index]
+      opacity: level * intensity, offset: offsets[index], easing: reduced ? 'linear' : 'steps(2, end)'
     })), timing));
     if (!reduced) {
-      animations.push(band.animate(['-24%', '12%', '4%', '32%', '61%', '79%'].map(y => ({
-        transform: `translateY(${y})`, easing: 'steps(3, end)'
-      })), timing));
+      animations.push(band.animate([
+        { transform: 'translateY(-48%)', offset: 0, easing: 'steps(4, end)' },
+        { transform: 'translateY(-10%)', offset: .26, easing: 'step-end' },
+        { transform: 'translateY(-19%)', offset: .34, easing: 'steps(9, end)' },
+        { transform: 'translateY(51%)', offset: 1 }
+      ], timing));
       animations.push(feed.animate([0, 1.1, -.75, .45, -.28, 0, 0].map((x, index) => ({
         transform: `translateX(${x * intensity}%) scale(${x ? 1.025 : 1.015})`,
         offset: [0, .05, .12, .22, .34, .5, 1][index],
