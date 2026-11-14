@@ -4,6 +4,10 @@
 const ART_ORDER = ['original', 'yandere', 'gotica', 'platinada', 'maid'];
 const CORRIDOR_ORDER = ['original', 'platinada', 'yandere', 'gotica', 'maid'];
 const characterStateImages = cam => cam.characterStateImages ?? cam.stageStateImages ?? {};
+const cameraLayerScene = (cam, gateKey) => {
+  const scene = window.NathGame.cameraLayers?.[cam.id];
+  return gateKey ? scene?.[gateKey] : scene;
+};
 const officeCharacterImage = (phase, id) => `./public/images/office/characters/${phase}/${id}.webp`;
 // Horizontal silhouettes in the panorama (2172 px) and the view through the slats (1671 px).
 const officeRoomBounds = {
@@ -30,24 +34,47 @@ function cameraStateKey(cam, actors, stagePosition) {
   return key === cam.allCharacters?.join('-') && Object.hasOwn(states, 'todas') ? 'todas' : key;
 }
 
+function cameraLayerKeys(cam, key) {
+  if (typeof key !== 'string') return [];
+  if (cam.id === 'CAM09') {
+    if (key === 'todas') return ['maid'];
+    return key === 'maid' || key === 'maid-saindo' ? [key] : [];
+  }
+  const ids = key.split('-');
+  const supported = cam.allCharacters.filter(id => ids.includes(id));
+  return supported.join('-') === key ? supported : [];
+}
+
+function hasCameraState(cam, key) {
+  return typeof key === 'string' && (key === 'vazia' || Object.hasOwn(characterStateImages(cam), key)
+    || (Object.hasOwn(window.NathGame.cameraLayers ?? {}, cam.id) && cameraLayerKeys(cam, key).length > 0));
+}
+
 function cameraFrame(cam, key, isGateClosed) {
   const gates = cam.gateStateImages?.gates;
   const gateKey = gates?.map(id => isGateClosed(id) ? 'closed' : 'open').join('-');
   const empty = cam.gateStateImages?.images ?? cam.image;
-  const variants = characterStateImages(cam)[key] ?? empty;
-  return { key, gateKey, source: gates ? variants?.[gateKey] ?? empty[gateKey] : variants };
+  const variant = Object.hasOwn(characterStateImages(cam), key) ? characterStateImages(cam)[key] : undefined;
+  const base = gates ? empty[gateKey] : empty;
+  const art = gates ? variant?.[gateKey] : variant;
+  const scene = cameraLayerScene(cam, gateKey);
+  if (!scene || art) return { key, gateKey, source: art ?? base };
+  const selected = cameraLayerKeys(cam, key);
+  const layers = Object.entries(scene.layers).filter(([id]) => selected.includes(id)).map(([, layer]) => layer);
+  return { key, gateKey, source: base, layers, size: scene.size };
 }
 
 function cameraActorFrame(cam, actors, config, isGateClosed, preview) {
   const visibleActors = actors.filter(actor => !config.controls.unillustratedCameraPositions.includes(actor.position));
   if (preview === undefined && cam.id === 'CAM09' && visibleActors.some(actor => actor.stage > 0)) {
-    return { key: 'maid-saindo', source: './public/images/cameras/CAM09/states/02-maid-saindo.webp', occupied: true };
+    return { ...cameraFrame(cam, 'maid-saindo', isGateClosed), occupied: true };
   }
   const key = preview ?? cameraStateKey(cam, visibleActors, config.map.stage);
   const frame = cameraFrame(cam, key, isGateClosed);
   const variant = characterStateImages(cam)[key];
   const activeActorVisible = visibleActors.some(actor => actor.level !== 0);
-  return { ...frame, occupied: Boolean(activeActorVisible && (frame.gateKey ? variant?.[frame.gateKey] : variant)) };
+  return { ...frame, occupied: Boolean(activeActorVisible
+    && (frame.layers?.length || (frame.gateKey ? variant?.[frame.gateKey] : variant))) };
 }
 
 function cameraObservation(config, cameraActors, input) {
@@ -56,6 +83,9 @@ function cameraObservation(config, cameraActors, input) {
   const onCamera = cameraActors(cam.id);
   const frame = cameraActorFrame(cam, onCamera, config, id => input.gates.has(id), input.cameraPreview);
   if (!frame.occupied || (input.visibleCameraSource !== undefined && frame.source !== input.visibleCameraSource)) return;
+  if (input.visibleCameraLayers !== undefined && frame.layers
+      && (frame.layers.length !== input.visibleCameraLayers.length
+        || frame.layers.some(([source], index) => source !== input.visibleCameraLayers[index]))) return;
 
   const illustrated = frame.key === 'todas' ? cam.allCharacters : frame.key.split('-');
   const { loss, cameraLossOverrides } = config.sanity;
@@ -104,6 +134,6 @@ function corridorSlots(front, back) {
 
 Object.assign(window.NathGame, {
   cameraStateKey, cameraFrame, cameraActorFrame, cameraObservation, sanityObservation,
-  characterStateImages, officeCharacterImage, corridorSlots
+  characterStateImages, hasCameraState, officeCharacterImage, corridorSlots
 });
 })();

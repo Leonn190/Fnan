@@ -270,9 +270,17 @@ assert.equal(nodes['smores-room'].hidden, true);
 assert.equal(nodes['smores-vent'].hidden, true);
 nodes['office-monitor'].fire('click');
 finishCameraLaunch();
-for (const [id, art] of [['CAM03', 'todas'], ['CAM04', 'open/platinada'], ['CAM09', '01-maid-sentada']]) {
+const layerNodes = () => nodes['feed-layers'].children.filter(image => image.getAttribute('src'));
+const feedLayers = () => layerNodes().map(image => image.src);
+const cameraFolder = id => `./public/images/cameras/${id}`;
+for (const [id, art, layers] of [
+  ['CAM03', 'states/todas', []],
+  ['CAM04', 'states/open/vazia', ['layers/open/platinada']],
+  ['CAM09', 'base', ['layers/maid']]
+]) {
   initialMap.find(node => node.attrs['data-cam'] === id).fire('click');
-  assert.equal(nodes['feed-art'].src, `./public/images/cameras/${id}/states/${art}.webp`);
+  assert.equal(nodes['feed-art'].src, `${cameraFolder(id)}/${art}.webp`);
+  assert.deepEqual(feedLayers(), layers.map(layer => `${cameraFolder(id)}/${layer}.webp`));
 }
 initialMap.find(node => node.attrs['data-cam'] === 'CAM12').fire('click');
 step(now + 1);
@@ -544,13 +552,19 @@ nodes['close-desktop'].fire('click');
 pressW(); office('lit');
 nodes['office-monitor'].fire('click'); finishCameraLaunch(); office('dark');
 // The southern hall gate controls only the large left shutter in CAM04.
-const checkHall = open => assert.equal(nodes['feed-art'].src,
-  `./public/images/cameras/CAM04/states/${open ? 'open' : 'closed'}/platinada.webp`);
+const checkHall = open => {
+  assert.equal(nodes['feed-art'].src, open ? './public/images/cameras/CAM04/states/open/vazia.webp'
+    : './public/images/cameras/CAM04/base.webp');
+  const cam = window.NathGame.CAMERAS.find(cam => cam.id === 'CAM04');
+  const frame = window.NathGame.cameraFrame(cam, 'platinada', () => !open);
+  assert.deepEqual(feedLayers(), Array.from(frame.layers, ([source]) => source));
+};
 camera('CAM04'); checkHall(true);
 gate('G08'); checkHall(false);
 gate('G08'); checkHall(true);
 camera('CAM09');
-assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09/states/01-maid-sentada.webp');
+assert.equal(nodes['feed-art'].src, './public/images/cameras/CAM09/base.webp');
+assert.deepEqual(feedLayers(), ['./public/images/cameras/CAM09/layers/maid.webp']);
 assert.equal(nodes['technical-feed'].hidden, true);
 gate('G08');
 camera('CAM04'); checkHall(false);
@@ -582,10 +596,60 @@ for (const cam of window.NathGame.CAMERAS) {
   const gateImages = Object.values(cam.gateStateImages?.images ?? {});
   const characterImages = Object.values(cam.characterStateImages ?? cam.stageStateImages ?? {})
     .flatMap(view => typeof view === 'string' ? [view] : Object.values(view));
-  for (const src of [cam.image, cam.technical, nodes['feed-art'].src, `${folder}/master.png`, ...gateImages, ...characterImages]) {
+  const catalog = window.NathGame.cameraLayers[cam.id];
+  const scenes = catalog?.layers ? [catalog] : Object.values(catalog ?? {});
+  const overlays = scenes.flatMap(scene => Object.values(scene.layers).map(([source]) => source));
+  for (const src of [cam.image, cam.technical, nodes['feed-art'].src, `${folder}/master.png`, ...gateImages, ...characterImages, ...overlays]) {
     assert(src.startsWith(`${folder}/`), src);
     assert(fs.existsSync(path.join(root, src)), src);
   }
+}
+const previewNames = {
+  CAM01: 'Shop', CAM02: 'Reception', CAM04: 'Hall', CAM07: 'Arcade', CAM08: 'Stockroom',
+  CAM09: 'Service', CAM10: 'Kitchen', CAM11: 'Pickup', CAM12: 'Corridor'
+};
+for (const [id, name] of Object.entries(previewNames)) {
+  const { CAMERAS, cameraFrame } = window.NathGame;
+  const cam = CAMERAS.find(cam => cam.id === id);
+  const preview = window.NathGame[`setCam${cam.number.toString().padStart(2, '0')}${name}State`];
+  camera(id);
+  assert.equal(preview('maid-yandere'), false);
+  const group = id === 'CAM09' ? 'maid-saindo' : 'original-yandere';
+  const selected = cameraFrame(cam, group, isClosed);
+  assert(preview(group));
+  assert.equal(nodes['feed-art'].src, selected.source);
+  assert.deepEqual(feedLayers(), Array.from(selected.layers, ([url]) => url));
+  assert.equal(feedLayers().length, id === 'CAM09' ? 1 : 2);
+  const base = nodes['feed-art'];
+  base.complete = true;
+  base.naturalWidth = 1672;
+  assert.equal(nodes['feed-layers'].hidden, true);
+  for (const layer of layerNodes()) {
+    layer.complete = true;
+    layer.naturalWidth = 100;
+    layer.onload();
+  }
+  assert.equal(nodes['feed-layers'].hidden, false);
+  for (const layer of layerNodes()) { layer.complete = false; layer.naturalWidth = 0; }
+  base.complete = false;
+  base.naturalWidth = 0;
+  if (cam.gateStateImages) {
+    const [shutter] = cam.gateStateImages.gates;
+    gate(shutter);
+    const alternate = cameraFrame(cam, group, isClosed);
+    assert.notEqual(alternate.source, selected.source);
+    assert.equal(base.src, alternate.source);
+    assert.deepEqual(feedLayers(), Array.from(alternate.layers, ([url]) => url));
+    gate(shutter);
+  }
+  assert(preview('todas'));
+  if (id === 'CAM09') assert.deepEqual(feedLayers(), [`${cameraFolder(id)}/layers/maid.webp`]);
+  else {
+    assert.match(base.src, /\/todas\.webp$/);
+    assert.deepEqual(feedLayers(), []);
+  }
+  assert(preview('vazia'));
+  assert.deepEqual(feedLayers(), []);
 }
 // Every character can be absent, on stage or in the hall, with no duplicates.
 camera('CAM03');

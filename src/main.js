@@ -2,10 +2,11 @@
 'use strict';
 const {
   CAMERAS, OFFICE, makeCameraMap, SoundEngine, createMovement, createNightMenu,
-  cameraActorFrame, characterStateImages, officeCharacterImage, corridorSlots, loadConfig,
+  cameraActorFrame, hasCameraState, officeCharacterImage, corridorSlots, loadConfig,
   createImageCache, clearImageSource, setImageSource, createCameraInterference
 } = window.NathGame;
 const shopCamera = CAMERAS.find(cam => cam.id === 'CAM01');
+const serviceCamera = CAMERAS.find(cam => cam.id === 'CAM09');
 const receptionCamera = CAMERAS.find(cam => cam.id === 'CAM02');
 const stageCamera = CAMERAS.find(cam => cam.id === 'CAM03');
 const hallCamera = CAMERAS.find(cam => cam.id === 'CAM04');
@@ -45,7 +46,8 @@ const dom = {
   closet: $('#closet-view'), closetExit: $('#closet-exit'), closetLight: $('#closet-light'),
   closetDoorArt: $('#closet-door-art'), closetBeam: $('#closet-beam'),
   closetExtra: $('#closet-extra'),
-  feedArt: $('#feed-art'), tech: $('#technical-feed'), cameraScare: $('#camera-scare'),
+  feedArt: $('#feed-art'), feedScene: $('#feed-scene'), feedLayers: $('#feed-layers'),
+  tech: $('#technical-feed'), cameraScare: $('#camera-scare'),
   techArt: $('#technical-art'), techNumber: $('#technical-number'),
   camNumber: $('#cam-number'), cameraOffline: $('#camera-offline'), cameraAudio: $('#camera-audio'),
   static: $('#camera-static'), threatAlert: $('#threat-alert'),
@@ -133,7 +135,7 @@ let radioMixPan;
 let radioMixHiding;
 const playedScares = new Map();
 const imageCache = createImageCache(config.effects.imageCache);
-const interference = createCameraInterference(dom.static, $('#camera-static-band'), dom.feedArt,
+const interference = createCameraInterference(dom.static, $('#camera-static-band'), dom.feedScene,
   () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 const signal = config.effects.static.visual;
 const changedCameras = new Set();
@@ -210,13 +212,16 @@ function announce(message) {
   toastTimeout = setTimeout(() => dom.toast.classList.remove('show'), 2350);
 }
 
-function warmCamera(cam, actors, source) {
+const frameSources = ({ source, layers = [] }) => [source, ...layers.map(([url]) => url)];
+
+function warmCamera(cam, actors, frame) {
   const alternatives = (cam.gateStateImages?.gates ?? []).map(gate =>
     cameraActorFrame(cam, actors, config, id => id === gate ? !movement.isGateClosed(id) : movement.isGateClosed(id),
-      state.characterPreviews.get(cam.id)).source);
+      state.characterPreviews.get(cam.id)));
   const next = CAMERAS[(state.cameraIndex + 1) % CAMERAS.length];
-  alternatives.push(currentCameraFrame(next).source);
-  imageCache.warmForView(alternatives.filter(alternative => alternative !== source));
+  alternatives.push(currentCameraFrame(next));
+  const current = new Set(frameSources(frame));
+  imageCache.warmForView([...new Set(alternatives.flatMap(frameSources))].filter(source => !current.has(source)));
 }
 
 const map = makeCameraMap({
@@ -363,9 +368,18 @@ function setOfficeCharacterState(room = [], doorway = null) {
   return true;
 }
 
+const feedLayerImages = [];
+const imageReady = image => image.complete && image.naturalWidth > 0;
+
+function clearFeedLayers() {
+  dom.feedLayers.hidden = true;
+  for (const image of feedLayerImages) clearImageSource(image);
+}
+
 function showTechnical(cam) {
   dom.feedArt.hidden = true;
   clearImageSource(dom.feedArt);
+  clearFeedLayers();
   dom.tech.hidden = false;
   setImageSource(dom.techArt, cam.technical);
   setText(dom.techNumber, cam.id.replace('CAM', 'CAM '));
@@ -392,9 +406,7 @@ function clearCameraScare() {
 
 // Prévia manual de arte, descartada na próxima alteração de ocupação da sala.
 function setCameraCharacterState(cam, key) {
-  if (typeof key !== 'string' || (key !== 'vazia' && !Object.hasOwn(characterStateImages(cam), key))) {
-    return false;
-  }
+  if (!hasCameraState(cam, key)) return false;
   state.characterPreviews.set(cam.id, key);
   if (CAMERAS[state.cameraIndex] === cam) updateCameraFeed(cam);
   updateMovementDebug();
@@ -407,6 +419,7 @@ function updateCameraFeed(cam, warm = false) {
     dom.tech.hidden = true;
     imageCache.cancelPending();
     clearImageSource(dom.feedArt);
+    clearFeedLayers();
     clearImageSource(dom.techArt);
     dom.cameraOffline.hidden = !movement.electricalFault();
     interference.setElectrical(!dom.cameraOffline.hidden && state.mode === 'cameras');
@@ -415,7 +428,8 @@ function updateCameraFeed(cam, warm = false) {
   interference.setElectrical(false);
   dom.cameraOffline.hidden = true;
   const actors = movement.cameraActors(cam.id);
-  const { source } = currentCameraFrame(cam, actors);
+  const frame = currentCameraFrame(cam, actors);
+  const { source, layers = [], size } = frame;
   if (!source) {
     showTechnical(cam);
     console.warn(`[FNAN] ${cam.id}: combinação sem imagem para a configuração atual.`);
@@ -426,16 +440,57 @@ function updateCameraFeed(cam, warm = false) {
   dom.feedArt.hidden = false;
   const alt = `Câmera ${cam.id}, cenário noturno`;
   if (dom.feedArt.alt !== alt) dom.feedArt.alt = alt;
-  const changed = dom.feedArt.getAttribute('src') !== source;
-  setImageSource(dom.feedArt, source, () => {
+  const changed = dom.feedArt.getAttribute('src') !== source || feedLayerImages.some((image, index) =>
+    image.getAttribute('src') !== (layers[index]?.[0] ?? null)) || layers.length > feedLayerImages.length;
+  if (changed) dom.feedLayers.hidden = true;
+  const showMissingArt = () => {
     if (!movement.camerasAvailable() || CAMERAS[state.cameraIndex] !== cam) return;
     showTechnical(cam);
     announce(`${cam.id}: imagem não encontrada; exibindo a planta técnica`);
-  }, () => {
-    if (watchingCameras() && CAMERAS[state.cameraIndex] === cam) imageCache.markLoaded(source);
-  });
+  };
+  const syncVisibility = () => {
+    dom.feedLayers.hidden = dom.feedArt.hidden || !imageReady(dom.feedArt) ||
+      !feedLayerImages.some(image => image.getAttribute('src')) ||
+      feedLayerImages.some(image => image.getAttribute('src') && !imageReady(image));
+  };
+  const loaded = url => () => {
+    if (watchingCameras() && CAMERAS[state.cameraIndex] === cam) imageCache.markLoaded(url);
+    syncVisibility();
+  };
+
+  setImageSource(dom.feedArt, source, showMissingArt, loaded(source));
+  if (dom.feedArt.hidden) return;
+  if (layers.length) {
+    const [width, height] = size;
+    dom.feedLayers.style.setProperty('--feed-aspect', width / height);
+    for (const [index, [url, x, y, w, h]] of layers.entries()) {
+      if (!feedLayerImages[index]) {
+        const image = document.createElement('img');
+        image.alt = '';
+        image.draggable = false;
+        image.decoding = 'async';
+        feedLayerImages.push(image);
+        dom.feedLayers.append(image);
+      }
+      const image = feedLayerImages[index];
+      if (image.getAttribute('src') !== url) {
+        image.style.left = `${100 * x / width}%`;
+        image.style.top = `${100 * y / height}%`;
+        image.style.width = `${100 * w / width}%`;
+        image.style.height = `${100 * h / height}%`;
+      }
+      image.hidden = false;
+      setImageSource(image, url, showMissingArt, loaded(url));
+      if (dom.feedArt.hidden) return;
+    }
+  }
+  for (const image of feedLayerImages.slice(layers.length)) {
+    image.hidden = true;
+    clearImageSource(image);
+  }
+  syncVisibility();
   if ((changed || warm) && watchingCameras()) {
-    warmCamera(cam, actors, source);
+    warmCamera(cam, actors, frame);
   }
 }
 
@@ -996,6 +1051,7 @@ function stopShift() {
 }
 
 function releaseShiftImages() {
+  clearFeedLayers();
   for (const image of [dom.feedArt, dom.techArt, dom.shadowOfficeArt, dom.shadowSprite,
     dom.smoresRoom, dom.smoresVent, ...officeLayers.map(layer => layer.image),
     ...closetExtras.map(layer => layer.image)]) clearImageSource(image);
@@ -1279,8 +1335,10 @@ function gameInput() {
   return {
     camera,
     cameraPreview: state.characterPreviews.get(camera),
-    visibleCameraSource: camera && !dom.feedArt.hidden && dom.feedArt.complete && dom.feedArt.naturalWidth
+    visibleCameraSource: camera && !dom.feedArt.hidden && imageReady(dom.feedArt)
       ? dom.feedArt.getAttribute('src') : null,
+    visibleCameraLayers: camera && !dom.feedLayers.hidden
+      ? feedLayerImages.map(image => image.getAttribute('src')).filter(Boolean) : [],
     cameraObservationBlocked: document.hidden,
     findShadow: !document.hidden,
     view: office ? 'office' : closet && !state.closetTransition ? `closet-${dom.closet.dataset.view}` : camera ? 'cameras' : null,
@@ -1937,6 +1995,7 @@ window.NathGame.setCam05VipState = key => setCameraCharacterState(vip1Camera, ke
 window.NathGame.setCam06VipState = key => setCameraCharacterState(vip2Camera, key);
 window.NathGame.setCam07ArcadeState = key => setCameraCharacterState(arcadeCamera, key);
 window.NathGame.setCam08StockroomState = key => setCameraCharacterState(stockroomCamera, key);
+window.NathGame.setCam09ServiceState = key => setCameraCharacterState(serviceCamera, key);
 window.NathGame.setCam10KitchenState = key => setCameraCharacterState(kitchenCamera, key);
 window.NathGame.setCam11PickupState = key => setCameraCharacterState(pickupCamera, key);
 window.NathGame.setCam12CorridorState = key => setCameraCharacterState(corridorCamera, key);

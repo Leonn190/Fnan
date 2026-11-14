@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 global.window = {};
-for (const file of ['data/game-data', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
+for (const file of ['data/game-data', 'data/camera-layers', 'gameplay/routes', 'gameplay/effects', 'gameplay/threats',
   'gameplay/gates', 'gameplay/electrical', 'gameplay/resources', 'gameplay/shadow', 'scene-art', 'movement']) {
   require('../src/' + file + '.js');
 }
@@ -170,6 +170,22 @@ observation(front, { view: 'office', officeBounds: [800, 1300] }, 100);
 observation(16, { camera: 'CAM09' }, 99.6, 'maid');
 observation(1, { camera: 'CAM03' }, 99.5, 'yandere');
 observation(1, { camera: 'CAM03', visibleCameraSource: null }, 100);
+const { cameraActorFrame, cameraObservation } = window.NathGame;
+const service = CAMERAS.find(cam => cam.id === 'CAM09');
+const maid = { key: 'maid', level: 1, position: 16, stage: 1, rule: { artId: 'maid' } };
+const leaving = cameraActorFrame(service, [maid], base, () => false);
+const seated = cameraActorFrame(service, [{ ...maid, stage: 0 }], base, () => false);
+assert.equal(leaving.source, seated.source);
+assert.equal(leaving.key, 'maid-saindo');
+assert.equal(seated.key, 'maid');
+const maidInput = { camera: service.id, gates: new Set(), visibleCameraSource: leaving.source };
+assert.equal(cameraObservation(base, () => [maid], { ...maidInput, visibleCameraLayers: [] }), undefined);
+assert.equal(cameraObservation(base, () => [maid], {
+  ...maidInput, visibleCameraLayers: seated.layers.map(([source]) => source)
+}), undefined);
+assert.equal(cameraObservation(base, () => [maid], {
+  ...maidInput, visibleCameraLayers: leaving.layers.map(([source]) => source)
+}).cameraLoss, base.sanity.loss.camera);
 for (const [key, position, camera, loss] of [
   ['yandere', 17, 'CAM10', .50], ['yandere', 4, 'CAM07', .50], ['yandere', 19, 'CAM12', .50],
   ['padrao', 17, 'CAM10', .40], ['gotica', 18, 'CAM11', .40], ['gotica', 3, 'CAM04', .40]

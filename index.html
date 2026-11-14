@@ -9,6 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="./public/images/branding/favicon.svg">
   <link rel="stylesheet" href="./src/styles/main.css">
   <script defer src="./src/data/game-data.js"></script>
+  <script defer src="./src/data/camera-layers.js"></script>
   <script defer src="./src/config.js"></script>
   <script defer src="./src/gameplay/routes.js"></script>
   <script defer src="./src/gameplay/effects.js"></script>
@@ -153,7 +154,10 @@
                   <button class="window-close" id="close-cameras" type="button" aria-label="Fechar Câmeras" title="Fechar"></button>
                 </header>
                 <div class="camera-feed" id="camera-feed">
-                  <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async" fetchpriority="high">
+                  <div class="feed-scene" id="feed-scene">
+                    <img class="feed-art" id="feed-art" alt="" draggable="false" decoding="async" fetchpriority="high">
+                    <div class="feed-layers" id="feed-layers" aria-hidden="true" hidden></div>
+                  </div>
                   <div class="technical-feed" id="technical-feed" hidden>
                     <div class="technical-frame">
                       <p class="technical-overline">MODO DE REFERÊNCIA</p>
